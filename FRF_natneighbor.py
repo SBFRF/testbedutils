@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-This projects is created to test out the creation of a tool for the natural neighbor interpolation algorithm
+This projects is created to test out the creation of a tool for 
+the natural neighbor interpolation algorithm  3 tools are created, based in linux
+the frf_grid_product creates the grid using the pyNGL library, then it is written
+the voroni creates a tesselation of the surface for each file
 
 assumes
 """
@@ -8,11 +11,12 @@ assumes
 import pytess as pt
 import numpy as np
 import csv
-#import arcpy
+import glob
 try:
     from PyNGL import Ngl as ngl
 except ImportError:
-    raise ImportError("download the PyNGL library from https://www.pyngl.ucar.edu/Download/ place in site packages of python distro")
+    raise ImportError("download the PyNGL library from https://www.pyngl.ucar.edu/Download/"\
+     "then place in site-packages of python distro. only works with linux and macOS")
 
 def frf_grid_product(fname_in, dxdy=5, header=0, **kwargs):
     """
@@ -59,10 +63,18 @@ def frf_grid_product(fname_in, dxdy=5, header=0, **kwargs):
     raw_z = []
     with open(fname, 'rb') as f:
         reader = csv.reader(f)
-        for row in reader:
-            raw_x.append(row[7])  # x in string format
-            raw_y.append(row[8])  # y in string format
-            raw_z.append(row[9])  # z in string format
+        try:        
+            for row in reader:
+                raw_x.append(row[7])  # x in string format
+                raw_y.append(row[8])  # y in string format
+                raw_z.append(row[9])  # z in string format
+            odd = 0
+        except IndexError:  # this is for the subset data sets, they have a different format
+            for row in reader:
+                raw_x.append(row[0])
+                raw_y.append(row[1])
+                raw_z.append(row[2])
+            odd = 1    
     # initializing values to make strictly nubmers, imported as strings
     num_x = np.zeros(len(raw_x) - header)
     num_y = np.zeros(len(raw_y) - header)
@@ -85,24 +97,33 @@ def frf_grid_product(fname_in, dxdy=5, header=0, **kwargs):
 #
 ##
 #
-    xgrid = np.arange(np.min(num_x), np.max(num_x), dx) # array of y coords
-    ygrid = np.arange(np.min(num_y), np.max(num_y), dy)  # array of x coords
+    if odd == 1:
+        xmin = np.min(num_x)
+        xmax = np.max(num_x)
+        ymin = np.min(num_y)
+        ymax = np.max(num_y)
+    xgrid = np.arange(xmin, xmax, dx) #np.min(num_x), np.max(num_x), dx) # array of y coords
+    ygrid = np.arange(ymin, ymax, dy) #np.min(num_y), np.max(num_y), dy)  # array of x coords
     grid_data = ngl.natgrid(num_x, num_y, num_z, xgrid, ygrid)
     try:
-        kwarg['plot']=1
-        plt.contourf(xgrid, ygrid, product.T)
-        cbar = plt.colorbar()
-        cbar.set_label('elevation [m]')
-        plt.xlabel('Cross Shore Distance [m]')
-        plt.ylabel('Alongshore Distance [m]')
-        plt.title('Gridded Bathymetry at the FRF')
-        plt.close()
+        if kwargs['plot']==1:
+            plt.figure(figsize=(5,5))            
+            plt.contourf(xgrid, ygrid, grid_data.T)
+            cbar = plt.colorbar()
+            cbar.set_label('elevation [m]')
+            plt.xlabel('Cross Shore Distance [m]')
+            plt.ylabel('Alongshore Distance [m]')
+            plt.title('Gridded Bathymetry at the FRF')
+            plt.savefig(fname_in+'plot.png')
+            plt.close()
+            print 'saved figure here: %s' % (fname_in + 'plot.png')
     except (NameError, KeyError):
         pass
     # packaging dict to return 
     product = { 'xgrid': xgrid,
                 'ygrid': ygrid,
-                'grid' : grid_data
+                'grid' : grid_data,
+                'vor_tup': tup,
               }
     return product    
 def write_grid(ofname, grid_dict):
@@ -122,7 +143,7 @@ def write_grid(ofname, grid_dict):
         for ix in range(0, np.size(grid, axis=1)):
             f.write("%f, %f, %f\n" % (xx[iy,ix], yy[iy,ix], grid[iy,ix]))
     f.close()
-def creat_vorpoly(tup):
+def creat_vorpoly(tup,ofname):
     """
     This function created voroni polygons based on a scattered data set
     it relys on the pytess library which can be pip installed eg pip install pytess
@@ -144,15 +165,30 @@ def creat_vorpoly(tup):
                     ys = [vorpolys[ii][1][pp][1], vorpolys[ii][1][pp+1][1]]
                 #print pp, ii
                 plt.plot(xs, ys, 'k-')
-        plt.figure(figsize=(5,5), edgecolor='red')
+        plt.figure(figsize=(8,8), edgecolor='red')
         plt.ylim([200, 1500])
         plt.xlim([-200, 1100])
         plt.title('example Veroni Tesselation of FRF survey data')
         plt.xlabel('xshore loc')
+        plt.savefig(ofname)
+        plt.close()
     
 ### actual code
-    # path to file, fed to tool
+# path to file, fed to tool
 fname =  'data/FRF_20140930_1093_FRF_NAVD88_LARC_GPS_UTC_v20151127.csv'
-header = 0  # length of header lines, place to start finding data
-grid_dict= frf_grid_product(fname, dxdy=5, header=0)
-write_grid('data/test1.csv',grid_dict)
+flist = glob.glob('data/*.csv')
+flist = [fname]
+grid_spacing = [1, 5, 10, 25, 50]
+for i in range(0, len(flist)):
+    print 'doing %s ' %flist[i]    
+    for x in range(0, len(grid_spacing)):
+        
+        fname = flist[i]
+        dxdy = grid_spacing[x]
+        ofname = fname[:-4]+'_grid%sm.csv' %dxdy
+        print 'doing grid spacing of: %s' %dxdy
+
+        grid_dict= frf_grid_product(fname, dxdy=dxdy, header=0, plot=1)
+        print 'writing file %s' %ofname
+        write_grid(ofname, grid_dict)
+        creat_vorpoly(grid_dict['vor_tup'],ofname+'vor.png')
