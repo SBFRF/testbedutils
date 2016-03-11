@@ -13,9 +13,7 @@ try:
     from PyNGL import Ngl as ngl
 except ImportError:
     raise ImportError("download the PyNGL library from https://www.pyngl.ucar.edu/Download/ place in site packages of python distro")
-# path to file, fed to tool
-fname =  'data/FRF_20140930_1093_FRF_NAVD88_LARC_GPS_UTC_v20151127.csv'
-header = 0  # length of header lines, place to start finding data
+
 def frf_grid_product(fname_in, dxdy=5, header=0, **kwargs):
     """
     This function will create a gridded product using the FRF coordinates.  It 
@@ -36,6 +34,11 @@ def frf_grid_product(fname_in, dxdy=5, header=0, **kwargs):
             if dxdy = False, then unique x and y grid cells can be defined 
             using kwargs of dx and dy 
     :param header: this is the length of file header to be skipped upon csv import
+    
+    **kwarg
+       dx = grid x spacing if not equal to dy
+       dy = grid y spacing if not equal to dx
+       plot = 1 turns a display plot on 
     
     :return:
     
@@ -84,10 +87,41 @@ def frf_grid_product(fname_in, dxdy=5, header=0, **kwargs):
 #
     xgrid = np.arange(np.min(num_x), np.max(num_x), dx) # array of y coords
     ygrid = np.arange(np.min(num_y), np.max(num_y), dy)  # array of x coords
-    product = ngl.natgrid(num_x, num_y, num_z, xgrid, ygrid)
-   
-
-
+    grid_data = ngl.natgrid(num_x, num_y, num_z, xgrid, ygrid)
+    try:
+        kwarg['plot']=1
+        plt.contourf(xgrid, ygrid, product.T)
+        cbar = plt.colorbar()
+        cbar.set_label('elevation [m]')
+        plt.xlabel('Cross Shore Distance [m]')
+        plt.ylabel('Alongshore Distance [m]')
+        plt.title('Gridded Bathymetry at the FRF')
+        plt.close()
+    except (NameError, KeyError):
+        pass
+    # packaging dict to return 
+    product = { 'xgrid': xgrid,
+                'ygrid': ygrid,
+                'grid' : grid_data
+              }
+    return product    
+def write_grid(ofname, grid_dict):
+    """
+    This function takes the gridded product created by frf_grid_prod and writes
+    the data to a csv file, it requires a dictionary in with the grid, and a list
+    for the x coordinates (xgrid) and a list for the y coordinates (ygrid)
+    
+    """
+    xcoord = grid_dict['xgrid']
+    ycoord = grid_dict['ygrid']
+    grid = grid_dict['grid'].T  # this grid produced is the
+                #transpose of the mesh grids produced below
+    xx, yy = np.meshgrid(xcoord, ycoord)
+    f= open(ofname,'w')
+    for iy in range(0, np.size(grid, axis=0)):
+        for ix in range(0, np.size(grid, axis=1)):
+            f.write("%f, %f, %f\n" % (xx[iy,ix], yy[iy,ix], grid[iy,ix]))
+    f.close()
 def creat_vorpoly(tup):
     """
     This function created voroni polygons based on a scattered data set
@@ -95,10 +129,10 @@ def creat_vorpoly(tup):
     tup is a list of tuples of the scatter data [(x_i,y_i)...,(x_i+1, y_i+1)] where
     i is the point number see help pt.voroni
     """     
-     vorpolys = pt.voronoi(tup)
+    vorpolys = pt.voronoi(tup)
         
-        from matplotlib import pyplot as plt
-        for ii in range(0, np.shape(vorpolys)[0]):
+    from matplotlib import pyplot as plt
+    for ii in range(0, np.shape(vorpolys)[0]):
         if vorpolys[ii][0] != None:
             #plt.plot(vorpolys[ii][0], 'rd')
             for pp in range(0, np.shape(vorpolys[ii][1])[0]):
@@ -116,10 +150,9 @@ def creat_vorpoly(tup):
         plt.title('example Veroni Tesselation of FRF survey data')
         plt.xlabel('xshore loc')
     
-    
-
-
-
-#for tt, line in enumerate(vorpolys)
-#http://gis.stackexchange.com/questions/16122/creating-shapefile-from-lat-long-values-using-arcpy
-#http://help.arcgis.com/en/arcgisdesktop/10.0/help/index.html#//00170000002p000000
+### actual code
+    # path to file, fed to tool
+fname =  'data/FRF_20140930_1093_FRF_NAVD88_LARC_GPS_UTC_v20151127.csv'
+header = 0  # length of header lines, place to start finding data
+grid_dict= frf_grid_product(fname, dxdy=5, header=0)
+write_grid('data/test1.csv',grid_dict)
