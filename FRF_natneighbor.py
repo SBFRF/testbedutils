@@ -12,6 +12,8 @@ import pytess as pt
 import numpy as np
 import csv
 import glob
+import datetime as DT
+from matplotlib import pyplot as plt
 try:
     from PyNGL import Ngl as ngl
 except ImportError:
@@ -61,10 +63,12 @@ def frf_grid_product(fname_in, dxdy=5, header=0, **kwargs):
     raw_x = []
     raw_y = []
     raw_z = []
+    frf=[]
     with open(fname, 'rb') as f:
         reader = csv.reader(f)
         try:        
             for row in reader:
+                frf.append(row[0])
                 raw_x.append(row[7])  # x in string format
                 raw_y.append(row[8])  # y in string format
                 raw_z.append(row[9])  # z in string format
@@ -74,7 +78,7 @@ def frf_grid_product(fname_in, dxdy=5, header=0, **kwargs):
                 raw_x.append(row[0])
                 raw_y.append(row[1])
                 raw_z.append(row[2])
-            odd = 1    
+            odd = 1     
     # initializing values to make strictly nubmers, imported as strings
     num_x = np.zeros(len(raw_x) - header)
     num_y = np.zeros(len(raw_y) - header)
@@ -90,13 +94,10 @@ def frf_grid_product(fname_in, dxdy=5, header=0, **kwargs):
 #
 ## do some data checks to ensure proper formatting being done
 # these are wrong below
-#assert lines[0][0] == 'x', 'File does not follow established format, check file'
-#assert lines[0][1] == 'y', 'File does not follow established format, check file'
-#assert lines[0][2] == 'z', 'File does not follow established format, check file'
-#assert size (raw_x) == same as size of reader  # not more lines , check make sure file imported proper
-#
-##
-#
+    assert frf[0] == 'FRF', 'input file may not be in the appropriate format, check file'
+    assert frf[-1] == 'FRF', 'input file may not be in the appropriate format, check file'
+    ##
+# Remove for tool
     if odd == 1:
         xmin = np.min(num_x)
         xmax = np.max(num_x)
@@ -116,7 +117,7 @@ def frf_grid_product(fname_in, dxdy=5, header=0, **kwargs):
             plt.title('Gridded Bathymetry at the FRF')
             plt.savefig(fname_in+'plot.png')
             plt.close()
-            print 'saved figure here: %s' % (fname_in + 'plot.png')
+            print 'saved figure here: %s' % (fname_in[:-4] + 'plot_%s.png' %dx)
     except (NameError, KeyError):
         pass
     # packaging dict to return 
@@ -175,20 +176,25 @@ def creat_vorpoly(tup,ofname):
     
 ### actual code
 # path to file, fed to tool
-fname =  'data/FRF_20140930_1093_FRF_NAVD88_LARC_GPS_UTC_v20151127.csv'
-flist = glob.glob('data/*.csv')
-flist = [fname]
-grid_spacing = [1, 5, 10, 25, 50]
+#fname =  'data/FRF_20140930_1093_FRF_NAVD88_LARC_GPS_UTC_v20151127.csv'
+flist = glob.glob('data/*LARC*.csv')
+#flist = [fname]
+grid_spacing = [50,25,10, 5,1]
 for i in range(0, len(flist)):
     print 'doing %s ' %flist[i]    
     for x in range(0, len(grid_spacing)):
         
         fname = flist[i]
         dxdy = grid_spacing[x]
-        ofname = fname[:-4]+'_grid%sm.csv' %dxdy
-        print 'doing grid spacing of: %s' %dxdy
-
+        ofname = fname[:-4]+'_grid%sm.xyz' %dxdy
+        print '\n-\n-doing grid spacing of: %s and file %s' %(dxdy,ofname)
+        DT.datetime.now()
         grid_dict= frf_grid_product(fname, dxdy=dxdy, header=0, plot=1)
-        print 'writing file %s' %ofname
+        DT.datetime.now()        
+        print 'writing file: %s' %ofname
         write_grid(ofname, grid_dict)
-        creat_vorpoly(grid_dict['vor_tup'],ofname+'vor.png')
+        #if x < 2:
+           # print 'starting voroni poly plotting'
+            #creat_vorpoly(grid_dict['vor_tup'], ofname+'vor_%s.png' %dxdy)
+        #DT.datetime.now()
+print 'program finished'
