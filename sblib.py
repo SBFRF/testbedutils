@@ -459,6 +459,73 @@ def wavestat(spec,dirbins,frqbins):
              }
     # print meta
     return Hm0, Tp, Tm, Tave, Dp, Dm, Dmp, vavgdir, sprdF, sprdD, stats
+def geo2STWangle(geo_angle_in, pierang=71.8, METin=1, fixanglesout=0):
+    """
+    This rotates an angle (angle_in) from geographic Meterological convention 0= True North
+    and puts it to an STWAVE angle 0 is onshore
+    variable pierang is the angle from shore to 90 degrees (shore coordinates) in geographic convention
+    ie the pier at Duck NC is at an angle of 71.8 degrees TN and this is assumed to be shore perpendicular
+
+    :param geo_angle_in:  an array or list of angles to be rotated from MET convention of angle from
+    :param pierang:  the angle of the pier, from this the azimuth is calculated (MET CONVENTION)
+    :param METin:  =1 if the input angle is in MET convention (angle from)
+    :param fixanglesout: if set to 1, will correct out angles to +/-180
+    :return: angle_out
+    """
+    assert len(np.shape(geo_angle_in))<=1,'function geo2STWangle not tested in more than 1 dimension'
+    azimuth = 270-pierang
+    geo_angle_in = np.array(geo_angle_in)
+    if METin == 1:
+        ocean_angle_in = angle_correct(geo_angle_in + 180) # to 'ocean' from 'MET' convention
+    else:
+        ocean_angle_in = geo_angle_in
+    rotate = angle_correct(90-azimuth) # converting azimuth to oceean convention
+    STWangle = angle_correct(rotate-ocean_angle_in)  # rotation of angles to grid convention
+    assert len(np.shape(STWangle)) < 2, 'This function handles only 1D arrays currently, try loop'
+    #  putting into +/- 180 degrees
+    if fixanglesout==1:
+        flip=np.argwhere(STWangle > 180)  # arguments that need to be flipped
+        STWangle[flip] -= 360
+    return STWangle
+
+def STWangle2geo(STWangle, pierang=71.8, METout=1):
+    """
+    This is the complementary function to geo2STWangle,  It takes STWAVE angles (local coordinate system with a towards
+     definition and + CCW)
+    and translates them into geospatial grid angles (with a MET -from- convention and a CW+ convention)
+
+    :rtype: 1D array of angles in geographic convention both met or ocean convention
+    :param gridangle: an array or list of angles to be rotated
+    :param pierang:  the (MET CONVENTION)
+    :param METout:  if left 1, this creates output into a MET conveinton with the definition in the from
+    :return: angle_out
+    """
+    assert len(np.shape(STWangle)) <=3, 'STWangle2geo has not been tested in greater than 3dimensions'
+    azimuth = 270-pierang # rotation of the Grid in local coordinate
+    rotate = angle_correct(90-azimuth) # putting azimuth into ocean (towards) convention
+    angle_out = rotate-STWangle
+    if METout == 1:
+        angle_out+=180
+    angle_out = angle_correct(angle_out) # correcting to < +360
+    return angle_out
+def whatisyesterday(now=DT.date.today(), string=1, days=1):
+    """
+    this function finds what yesterday's date string is in the format
+    of yyy-mm-dd
+    :params:
+    now:: the date to start counting backwards from
+    string:: (1) output is in stiring format (default)
+             (2) output is in datetime format 
+    days:: how many days to count backwards from 
+           default = 1 
+    
+    """
+    
+    yesterday=now-DT.timedelta(days)
+    if string ==1:
+        yesterday = DT.date.strftime(yesterday,'%Y-%m-%d')
+    return yesterday
+    
 
 def createDateList(start, end, delta):
     """
