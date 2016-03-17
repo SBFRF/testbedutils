@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sat Oct 10 10:18:53 2015
+Author: spicer bak, phd
+Contact: spicer.bak@usace.army.mil
+Association: USACE CHL Field Research Facility
 
-@author: u4hncasb
+
+my own library with useful functions and tips from which i found to be helpful
+on various general functions that don't fit into specific other codes
+this folder needs to be added to sys.path to use
 """
 import numpy as np
 import datetime as DT
 
 
-'''
-my own library with useful functions and tips from which i found to be helpful
-on various general functions that don't fit into specific other codes
-'''
-__name__
 def find_nearest(array,value):
 	'''
 	Function looks for value in array and returns the closest array value 
@@ -235,100 +235,236 @@ def pol2cart( r, theta):
 	x = r *np.cos(theta)
 	y = r *np.sin(theta) 
 	return x, y
+def angle_correct(angle_in,rad=0):
+    """
+    this function takes angles in that are both positve and negative
+    and corrects them to posivitve only
+    :param angle_in:
+    :param rad: radian =0 input angles are in degrees radian =1 input anglesa are in radian
+    :return:
+    """
+    angle_in = np.array(angle_in)
+    if rad == 0:
+        if (np.abs(angle_in) < 2*np.pi).all():
+            print ' WARNING angles are all < 2Pi , ensure that angles are in degrees not radians'
+        shape=np.shape(angle_in)
+        if len(shape) == 0:
+            posmask = angle_in >=360
+            negmask = angle_in < 0
+            while negmask.any() or posmask.any():
+                if negmask.any() == True:
+                    angle_in += 360
+                elif posmask.any() == True:
+                    angle_in -=360
+                posmask = angle_in >=360
+                negmask = angle_in < 0
+        if len(shape)==1:
+            posmask = angle_in >= 360
+            negmask = angle_in < 0
+            while negmask.any() or posmask.any():        
+                if negmask.any(): # filter negs out
+                    idxneg = np.where(negmask)
+                    angle_in[idxneg] += 360
+                if posmask.any():  # filter overly positives out
+                    idxpos = np.where(posmask)
+                    angle_in[idxpos] -= 360
+                posmask = angle_in >=360
+                negmask = angle_in < 0
+        elif len(shape) == 2:
+            for ii in range(0,np.size(angle_in,axis=0)):
+                angle_in_2=np.zeros((np.size(angle_in[ii,:])))  # initializing
+                angle_in_2=angle_in[ii,:] # taking small chunk 1D array
+                posmask = angle_in_2 >= 360  # seeing what's over 360
+                negmask = angle_in_2 < 0    # seeing what's under 0 
+                while negmask.any() or posmask.any():        
+                    if negmask.any(): # filter negs out
+                        idxneg = np.where(negmask)  # finding ids of where 
+                        if np.size(angle_in_2) == 1 and negmask == True:   # if there's only 1 instance
+                            angle_in_2 += 360
+                        else:
+                            angle_in_2[idxneg] += 360
+                    if posmask.any():  # filter overly positives out
+                        idxpos = np.where(posmask)
+                        if np.size(angle_in_2) == 1 and posmask == True:
+                            angle_in_2 -= 360
+                        else:
+                            angle_in_2[idxpos] -= 360
+                    posmask = angle_in_2 >=360
+                    negmask = angle_in_2 < 0
+                angle_in[ii,:]=angle_in_2
+               
+        elif len(shape) == 3:
+            for yy in range(0, np.size(angle_in,axis=1)):
+                angle_in_3 = np.zeros(np.size(angle_in,axis=1))
+                angle_in_3 = angle_in[:,yy,:]
+                for ii in range(0,np.size(angle_in,axis=0)):
+                    angle_in_2=np.zeros((np.size(angle_in_3[ii,:])))  # initializing
+                    angle_in_2=angle_in_3[ii,:] # taking small chunk 1D array
+                    posmask = angle_in_2 >= 360  # seeing what's over 360
+                    negmask = angle_in_2 < 0    # seeing what's under 0 
+                    while negmask.any() or posmask.any():        
+                        if negmask.any(): # filter negs out
+                            idxneg = np.where(negmask)  # finding ids of where 
+                            if np.size(angle_in_2) == 1 and negmask == True:   # if there's only 1 instance
+                                angle_in_2 += 360
+                            else:
+                                angle_in_2[idxneg] += 360
+                        if posmask.any():  # filter overly positives out
+                            idxpos = np.where(posmask)
+                            if np.size(angle_in_2) == 1 and posmask == True:
+                                angle_in_2 -= 360
+                            else:
+                                angle_in_2[idxpos] -= 360
+                        posmask = angle_in_2 >=360
+                        negmask = angle_in_2 < 0
+                    angle_in_3[ii,:]=angle_in_2
+                angle_in[:,yy,:]=angle_in_3
+    else:
+        print '<<ERROR>> this function only takes angles in as degrees right now'
+        raise
+    assert (angle_in <360).all() and (angle_in >=0).all(), 'The angle correction function didn''t work properly'
+    return angle_in
+    
 def wavestat(spec,dirbins,frqbins):
-	"""
-	this function will calculate the mean direction from a full spectrum
-	only calculates on one 2D spectrum at a time 
-	
-	Input:
-	%     spec  Frequency-direction spectra (2D)       shape(record,frqbin,dirbin)
-	%  frqbins  Frequency vector (not assumed constant)
-	%  dirbins  Direction vector (assumed constant)
-	%
-	% Outputs (MKS, Hz, degrees, degrees CW from true north):
-	%   Hmo   Significant wave height
-	%    Tp   Period of the peak energy in the frequency spectra, (1/Fp).  AKA Tpd, not to be
-	%           confused with parabolic fit to spectral period
-	%    Tm   Mean spectral period (Tm0,2, from moments 0 & 2), sqrt(m0/m2)
-	%  Tave   Average period, frequency sprectra weighted, from first moment (Tm0,1)
-	%    Dp   Peak direction at the peak frequency
-	%   Dmp   Mean direction at the peak frequency
-	%    Dm   Mean wave direction  
-	%  sprdF  Freq-spec spread (m0*m4 - m2^2)/(m0*m4)  (one definition)
-	%  sprdD  Directional spread (m0*m4 - m2^2)/(m0*m4)  (one definition, Kuik 1988, buoys), 
-	%         total sea-swell
-	%         sprdD = r2d * sqrt(2.0 * (1.0 - sqrt(Xcomp.^2 + Ycomp^2)));
-	%         where  Xcomp = sum(sin(Drad) .* Ds .* dwdir) ./ sum(Ds .* dwdir); 
-	%                Ycomp = sum(cos(Drad) .* Ds .* dwdir) ./ sum(Ds .* dwdir);
-	% sprdDhp  half-power direction width in direction spectra at peak freq (not currently incorporated)
-		
-	Code Translated by Spicer Bak from: fd2BulkStats.m written by Kent Hathaway
-		
-	"""
-#        from prep_data import prep_data as pd
-#        pd=pd()
-	# finding delta freqeucny (may change as in CDIP spectra)
-	frq=np.array(np.zeros(len(frqbins)+1)) #initializing frqbin bucket
-	frq[0]=frqbins[0]
-	frq[1:]=frqbins
-	df=np.diff(frq,n=1)
-	# finding delta degrees
-#        dtheta=np.median(pd.dtfun(dirbins)) #the delta degrees assuing constant
-	#frequency spec
-	fspec=np.sum(spec,axis=2) #fd spectra - sum across the frequcny bins to leave 1 x n-frqbins
-	# doing moments over 0.05 to 0.33 Hz (3-20s waves) (mainly for m4 sake)
-	[idx,vals]=sblib.findbtw(frqbins,0.05,0.5,type=3)        
-		
-	m0=np.sum(fspec*df,axis=1)
-	m1=np.sum(fspec[:,idx] * df[idx] * frqbins[idx],axis=1)
-	m2=np.sum(fspec[:,idx] * df[idx] * frqbins[idx]**2,axis=1)
-	m3=np.sum(fspec[:,idx] * df[idx] * frqbins[idx]**3,axis=1)
-	m4=np.sum(fspec[:,idx] * df[idx] * frqbins[idx]**4,axis=1)
-	
-	
-	#sigwave height
-	Hm0=4*np.sqrt(m0)
-	# period stuff
-	ipf=fspec.argmax(axis=1) # indix of max frequency
-	Tp=1/frqbins[ipf]        # peak period
-	Tm=np.sqrt(m0/m2)        # mean period
-	Tave=m0/m1               # average period - cmparible to TS Tm
-	
-	# directional stuff
-	Ds=np.sum(spec*np.tile(df,(len(dirbins),1)).T,axis=1) # directional spectra
-	Dsp=[]
-	for ii in range(0,len(ipf)):        
-		Dsp.append(spec[ii,ipf[ii],:])  #direction spectra at peak-f
-	Dsp=np.array(Dsp)
-	idp=Dsp.argmax(axis=1)              #index of direction at peak frquency
-	Dp=dirbin[idp]                      #peak direction
-	
-	Drad=np.deg2rad(dirbins)  # making a radian degree bin
-	# mean wave direction (e.g. Kuik 1988, USACE WIS)
-	Xcomp=np.sum(  np.sin(Drad) * Ds * dirbins,axis=1) / np.sum(Ds * dirbins,axis=1)
-	Ycomp=np.sum(  np.sin(Drad) * Ds * dirbins,axis=1) / np.sum(Ds * dirbins,axis=1)
-	Dm= np.rad2deg(np.arctan2( np.sum(np.sin(Drad) * Ds * dirbins,axis=1) , np.sum(  np.sin(Drad) * Ds * dirbins,axis=1))) # converting back to degrees
-	
-	
-	# Mean direction at the peak frequency
-	Dmp= np.rad2deg(np.arctan2( np.sum(np.sin(Drad) * Dsp * dirbins,axis=1) , np.sum(  np.sin(Drad) * Dsp * dirbins,axis=1))) # converting back to degrees
-	
-	# f-spec spread
-	sprdF= (m0*m4 - m2**2)/(m0*m4)
-	
-	#fd-spec spread
-	sprdD=np.rad2deg( np.sqrt(2.0* (1.0-sqrt(Xcomp**2 + Ycomp**2) )))
-	
-	#fd-spec spread, do a linear interp to get closer to half-power from the
-	# delta-deg increments
-	##### Exceprt from Kent's code for spreading - not sure how to handle
-	#        % fd-spec spread, do a linear interp to get closer to half-power
-	#% from the delta-deg increments
-	#hp = max(Dsp)/2;
-	#ihp=find(Dsp > hp);
-	#
-	#  % Left (d1) and right (d2) interps: Y=Dir, X=E   
-	#d1=interp1([Dsp(ihp(1)-1) Dsp(ihp(1)+1)], [dwdir(ihp(1)-1) dwdir(ihp(1)+1)], hp);  
-	#d2=interp1([Dsp(ihp(end)-1) Dsp(ihp(end)+1)], [dwdir(ihp(end)-1) dwdir(ihp(end)+1)], hp);  
-	#sprdDhp = d2 - d1;
-	return Hm0, Tp, Tm, Tave,  Dp, Dm, Dmp, sprdF, sprdD
+    """     
+    this function will calculate the mean direction from a full spectrum
+    only calculates on one 2D spectrum at a time 
+     
+    Input:
+        %     spec  Frequency-direction spectra (2D)       shape(record,frqbin,dirbin)
+        %  frqbins  Frequency vector (not assumed constant)
+        %  dirbins  Direction vector (assumed constant)
+        %
+    Outputs (MKS, Hz, degrees, degrees CW from true north):
+        %   Hmo   Significant wave height
+        %    Tp   Period of the peak energy in the frequency spectra, (1/Fp).  AKA Tpd, not to be
+        %           confused with parabolic fit to spectral period
+        %    Tm   Mean spectral period (Tm0,2, from moments 0 & 2), sqrt(m0/m2)
+        %  Tave   Average period, frequency sprectra weighted, from first moment (Tm0,1)
+        %    Dp   Peak direction at the peak frequency
+        %   Dmp   Mean direction at the peak frequency
+        %    Dm   Mean wave direction  
+        %  sprdF  Freq-spec spread (m0*m4 - m2^2)/(m0*m4)  (one definition)
+        %  sprdD  Directional spread (m0*m4 - m2^2)/(m0*m4)  (one definition, Kuik 1988, buoys), 
+        %         total sea-swell
+        %         sprdD = r2d * sqrt(2.0 * (1.0 - sqrt(Xcomp.^2 + Ycomp^2)));
+        %         where  Xcomp = sum(sin(Drad) .* Ds .* dwdir) ./ sum(Ds .* dwdir); 
+        %                Ycomp = sum(cos(Drad) .* Ds .* dwdir) ./ sum(Ds .* dwdir);
+        % sprdDhp  half-power direction width in direction spectra at peak freq (not currently incorporated)
+            return order [ Hm0, Tp, Tm, Tave,  Dp, Dm, Dmp, sprdF, sprdD, stats]
+        Code Translated by Spicer Bak from: fd2BulkStats.m written by Kent Hathaway
+            
+    """
+    # finding delta freqeucny (may change as in CDIP spectra)
+    frq = np.array(np.zeros(len(frqbins) + 1))  # initializing frqbin bucket
+    frq[0] = frqbins[0]
+    frq[1:] = frqbins
+    df = np.diff(frq, n=1)
+    dd = dirbins[2] - dirbins[1]  # assume constant directional bin size
+    # finding delta degrees
+    # frequency spec
+    fspec = np.sum(spec, axis=2) * dd  # fd spectra - sum across the frequcny bins to leave 1 x n-frqbins
+    # doing moments over 0.05 to 0.33 Hz (3-20s waves) (mainly for m4 sake)
+    [idx, vals] = self.findbtw(frqbins, 0.05, 0.5, type=3)
+
+    m0 = np.sum(fspec * df, axis=1)
+    m1 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx], axis=1)
+    m2 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx] ** 2, axis=1)
+    m3 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx] ** 3, axis=1)
+    m4 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx] ** 4, axis=1)
+    # sigwave height
+    Hm0 = 4 * np.sqrt(m0)
+    # period stuff
+    ipf = fspec.argmax(axis=1)  # indix of max frequency
+    Tp = 1 / frqbins[ipf]  # peak period
+    Tm = np.sqrt(m0 / m2)  # mean period
+    Tave = m0 / m1  # average period - cmparible to TS Tm
+    # directional stuff
+    Ds = np.sum(spec * np.tile(df, (len(dirbins), 1)).T, axis=1)  # directional spectra
+    Dsp = []
+    for ii in range(0, len(ipf)):
+        Dsp.append(spec[ii, ipf[ii], :])  # direction spectra at peak-f
+    Dsp = np.array(Dsp)
+    idp = Dsp.argmax(axis=1)  # index of direction at peak frquency
+    Dp = dirbins[idp]  # peak direction
+
+    Drad = np.deg2rad(dirbins)  # making a radian degree bin
+    # mean wave direction (e.g. Kuik 1988, USACE WIS)
+    Xcomp = np.sum(np.sin(Drad) * Ds * dirbins, axis=1) / np.sum(Ds * dirbins, axis=1)
+    Ycomp = np.sum(np.cos(Drad) * Ds * dirbins, axis=1) / np.sum(Ds * dirbins, axis=1)
+    Dm = np.rad2deg(np.arctan2(np.sum(np.sin(Drad) * Ds * dirbins, axis=1),
+                               np.sum(np.cos(Drad) * Ds * dirbins, axis=1)))  # converting back to degrees
+    for ii in range(0, np.size(Dm, axis=0)):
+        if Dm[ii] >= 360:
+            Dm[ii] = 360 - Dm[ii]
+        elif Dm[ii] < 0:
+            Dm[ii] = 360 + Dm[ii]
+            # Vector Dm (Hesser)
+    sint = np.sin(Drad)  # sine of dirbins
+    cost = np.cos(Drad)  # cosine of dirbins
+
+    sint2 = np.tile(sint, [len(frqbins), 1])  # 2d diretion size of the spectra
+    cost2 = np.tile(cost, [len(frqbins), 1])
+    delsq = np.tile(df, [len(dirbins), 1]).T
+    # summing across all directions
+    xsum = np.zeros(np.size(spec, axis=0))
+    ysum = np.zeros(np.size(spec, axis=0))
+    for ii in range(0, np.size(spec, axis=0)):
+        xsum[ii] = sum(np.sum(cost2 * delsq * spec[ii, :, :], axis=1))  # summing along directions, then
+        ysum[ii] = sum(np.sum(sint2 * delsq * spec[ii, :, :], axis=1))
+
+    vavgdir = np.arctan2(ysum, xsum)
+    vavgdir = np.rad2deg(vavgdir)
+    vavgdir = angle_correct(vavgdir)
+
+    # Mean direction at the peak frequency
+    Dmp = np.rad2deg(np.arctan2(np.sum(np.sin(Drad) * Dsp * dirbins, axis=1),
+                                np.sum(np.cos(Drad) * Dsp * dirbins, axis=1)))  # converting back to degrees
+    for ii in range(0, np.size(Dmp, axis=0)):
+        if Dmp[ii] >= 360:
+            Dmp[ii] = 360 - Dmp[ii]
+        elif Dmp[ii] < 0:
+            Dmp[ii] = 360 + Dmp[ii]
+    # f-spec spread
+    sprdF = (m0 * m4 - m2 ** 2) / (m0 * m4)
+
+    # fd-spec spread
+    sprdD = np.rad2deg(np.sqrt(2.0 * (1.0 - np.sqrt(Xcomp ** 2 + Ycomp ** 2))))
+    # fd-spec spread, do a linear interp to get closer to half-power from the
+    # delta-deg increments
+    ##### Exceprt from Kent's code for spreading - not sure how to handle
+    #        % fd-spec spread, do a linear interp to get closer to half-power
+    # % from the delta-deg increments
+    # hp = max(Dsp)/2;
+    # ihp=find(Dsp > hp);
+    #
+    #  % Left (d1) and right (d2) interps: Y=Dir, X=E   
+    # d1=interp1([Dsp(ihp(1)-1) Dsp(ihp(1)+1)], [dwdir(ihp(1)-1) dwdir(ihp(1)+1)], hp);
+    # d2=interp1([Dsp(ihp(end)-1) Dsp(ihp(end)+1)], [dwdir(ihp(end)-1) dwdir(ihp(end)+1)], hp);
+    # sprdDhp = d2 - d1;
+
+    # wrapping up data into dictionary
+    meta = 'Tp - peak period, Tm - mean period, Tave - average period, comparable to Time series mean period, Dp - peak direction, Dm - mean direction, Dmp - mean direction at peak frequency, vavgdir - Vector Averaged Mean Direction,sprdF - frequency spread, sprdD - directional spread'
+    stats = {'Hm0': Hm0,
+             'Tp': Tp,
+             'Tm': Tm,
+             'Tave': Tave,
+             'Dp': Dp,
+             'Dm': Dm,
+             'Dmp': Dmp,
+             'VecAvgMeanDir': vavgdir,
+             'sprdF': sprdF,
+             'sprdD': sprdD,
+             'meta': meta
+             }
+    # print meta
+    return Hm0, Tp, Tm, Tave, Dp, Dm, Dmp, vavgdir, sprdF, sprdD, stats
+
+def createDateList(start, end, delta):
+    """
+    creates a generator of dates 
+    """
+    curr = start
+    while curr <= end:
+        yield curr
+        curr +=delta
