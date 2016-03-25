@@ -17,9 +17,12 @@ def makegif(flist, ofname, size=None, dt=0.5):
     """
     This function uses imageio to create gifs from a list of images
 
+    kwargs for mimwrite http://imageio.readthedocs.org/en/latest/format_gif.html#gif
+
     :param flist: a sorted list of files to be made into gifs (including path)
     :param ofname: output gif filename (including path)
     :param size: size of pictures (default not resized)
+    :param loop: number of loops to do, 0 is default and infinite
     :return:
     """
     # images = [Image.open(fn) for fn in flist]
@@ -33,7 +36,7 @@ def makegif(flist, ofname, size=None, dt=0.5):
             im.thumbnail(size, Image.ANTIALIAS)
     for filename in flist:
         images.append(imageio.imread(filename))
-    imageio.mimsave(ofname, images)
+    imageio.mimwrite(ofname, images, duration=dt)
 
 
 def find_nearest(array,value):
