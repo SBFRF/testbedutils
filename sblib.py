@@ -11,27 +11,32 @@ this folder needs to be added to sys.path to use
 """
 import numpy as np
 import datetime as DT
-try:
-    import images2gif
-except ImportError:
-    import sys
-    sys.path.append('/home/number/sblib')
-    import images2gif
+import imageio
 from PIL import Image
 def makegif(flist, ofname, size=None, dt=0.5):
     """
-    This function uses images2gif python script (link below) to make a gif from a string of images
-    http://python-learning-tools.googlecode.com/svn-history/r16/trunk/images2gif.py
-    :param flist: a sorted list of files to be made into gifs
+    This function uses imageio to create gifs from a list of images
+
+    kwargs for mimwrite http://imageio.readthedocs.org/en/latest/format_gif.html#gif
+
+    :param flist: a sorted list of files to be made into gifs (including path)
     :param ofname: output gif filename (including path)
     :param size: size of pictures (default not resized)
+    :param loop: number of loops to do, 0 is default and infinite
     :return:
     """
-    images = [Image.open(fn) for fn in flist]
-
-    for im in images:
-        im.thumbnail(size, Image.ANTIALIAS)
-    images2gif.writeGif(ofname, images, duration=dt)
+    # images = [Image.open(fn) for fn in flist]
+    #
+    # for im in images:
+    #     im.thumbnail(size, Image.ANTIALIAS)
+    # images2gif.writeGif(ofname, images, duration=dt, nq=15)
+    images =[]
+    if size != None:
+        for im in images:
+            im.thumbnail(size, Image.ANTIALIAS)
+    for filename in flist:
+        images.append(imageio.imread(filename))
+    imageio.mimwrite(ofname, images, duration=dt)
 
 
 def find_nearest(array,value):
