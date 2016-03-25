@@ -11,16 +11,32 @@ this folder needs to be added to sys.path to use
 """
 import numpy as np
 import datetime as DT
+import images2gif
+from PIL import Image
+def makegif(flist, ofname, size=None, dt=0.5):
+    """
+    This function uses images2gif python script (link below) to make a gif from a string of images
+    http://python-learning-tools.googlecode.com/svn-history/r16/trunk/images2gif.py
+    :param flist: a sorted list of files to be made into gifs
+    :param ofname: output gif filename (including path)
+    :param size: size of pictures (default not resized)
+    :return:
+    """
+    images = [Image.open(fn) for fn in flist]
+
+    for im in images:
+        im.thumbnail(size, Image.ANTIALIAS)
+    images2gif.writeGif(ofname, images, duration=dt)
 
 
 def find_nearest(array,value):
 	'''
 	Function looks for value in array and returns the closest array value 
 	(to 'value') and index of that value 
-	
 	''' 
 	idx = (np.abs(array-value)).argmin()
 	return array[idx],idx
+ 
 def SBcleanangle(directions,deg=360):
       '''
 	This function cleans an array of angles (in degrees) to all positive 
@@ -34,6 +50,7 @@ def SBcleanangle(directions,deg=360):
 		elif directions[ii]<0:
 			directions[ii]=directions[ii]+360
       return directions
+
 def FRFcoord(p1,p2):
     '''
     #  function [ALat, ALon, spN, spE, Y, X] = frfCoord(p1, p2)
@@ -325,7 +342,7 @@ def angle_correct(angle_in,rad=0):
     assert (angle_in <360).all() and (angle_in >=0).all(), 'The angle correction function didn''t work properly'
     return angle_in
     
-def wavestat(spec,dirbins,frqbins):
+def waveStat(spec,dirbins,frqbins):
     """     
     this function will calculate the mean direction from a full spectrum
     only calculates on one 2D spectrum at a time 
@@ -508,7 +525,7 @@ def STWangle2geo(STWangle, pierang=71.8, METout=1):
         angle_out+=180
     angle_out = angle_correct(angle_out) # correcting to < +360
     return angle_out
-def whatisyesterday(now=DT.date.today(), string=1, days=1):
+def whatIsYesterday(now=DT.date.today(), string=1, days=1):
     """
     this function finds what yesterday's date string is in the format
     of yyy-mm-dd
@@ -526,7 +543,6 @@ def whatisyesterday(now=DT.date.today(), string=1, days=1):
         yesterday = DT.date.strftime(yesterday,'%Y-%m-%d')
     return yesterday
     
-
 def createDateList(start, end, delta):
     """
     creates a generator of dates 
