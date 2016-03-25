@@ -11,22 +11,29 @@ this folder needs to be added to sys.path to use
 """
 import numpy as np
 import datetime as DT
-import images2gif
+import imageio
 from PIL import Image
 def makegif(flist, ofname, size=None, dt=0.5):
     """
-    This function uses images2gif python script (link below) to make a gif from a string of images
-    http://python-learning-tools.googlecode.com/svn-history/r16/trunk/images2gif.py
-    :param flist: a sorted list of files to be made into gifs
+    This function uses imageio to create gifs from a list of images
+
+    :param flist: a sorted list of files to be made into gifs (including path)
     :param ofname: output gif filename (including path)
     :param size: size of pictures (default not resized)
     :return:
     """
-    images = [Image.open(fn) for fn in flist]
-
-    for im in images:
-        im.thumbnail(size, Image.ANTIALIAS)
-    images2gif.writeGif(ofname, images, duration=dt)
+    # images = [Image.open(fn) for fn in flist]
+    #
+    # for im in images:
+    #     im.thumbnail(size, Image.ANTIALIAS)
+    # images2gif.writeGif(ofname, images, duration=dt, nq=15)
+    images =[]
+    if size != None:
+        for im in images:
+            im.thumbnail(size, Image.ANTIALIAS)
+    for filename in flist:
+        images.append(imageio.imread(filename))
+    imageio.mimsave(ofname, images)
 
 
 def find_nearest(array,value):
