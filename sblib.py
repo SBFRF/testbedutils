@@ -11,7 +11,12 @@ this folder needs to be added to sys.path to use
 """
 import numpy as np
 import datetime as DT
-import images2gif
+try:
+    import images2gif
+except ImportError:
+    import sys
+    sys.path.append('/home/number/sblib')
+    import images2gif
 from PIL import Image
 def makegif(flist, ofname, size=None, dt=0.5):
     """
