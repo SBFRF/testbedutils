@@ -8,7 +8,13 @@ the voroni creates a tesselation of the surface for each file
 assumes
 """
 
-import pytess as pt
+try:
+    import pytess as pt
+except ImportError:
+    print 'no pytess module found, pip installing now'
+    import os
+    os.system('pip install pytess')
+    import pytess as pt
 import numpy as np
 import csv
 import glob
@@ -46,25 +52,25 @@ def frf_grid_product(fname_in, dxdy=5, header=0, **kwargs):
        dy = grid y spacing if not equal to dx
        plot = 1 turns a display plot on 
     
-    :return:
-    
+    :return:  data dictionary with x coords, y coords, z grid, and a tuple for x and y for voroni
+        polygon creation
     """
     xmax = 950
     xmin = 50
     ymax = 1100
     ymin = -100
+
     if dxdy == False:
         dx = kwargs['dx']
         dy = kwargs['dy']
     else:
         dx = dy = dxdy    
     # import file with given path above
-    #lines = np.genfromtxt(fname, delimiter=',', dtype=None)
     raw_x = []
     raw_y = []
     raw_z = []
     frf=[]
-    with open(fname, 'rb') as f:
+    with open(fname_in, 'rb') as f:
         reader = csv.reader(f)
         try:        
             for row in reader:
@@ -83,13 +89,13 @@ def frf_grid_product(fname_in, dxdy=5, header=0, **kwargs):
     num_x = np.zeros(len(raw_x) - header)
     num_y = np.zeros(len(raw_y) - header)
     num_z = np.zeros(len(raw_z) - header)
-    tup=[]
+    tup = []
     # making strings into floating point numbers
     for ii in range(header,len(raw_x)):
         num_x[ii-1] = float(raw_x[ii])
         num_y[ii-1] = float(raw_y[ii])
         num_z[ii-1] = float(raw_z[ii])
-        tup.append((float(raw_x[ii]),float(raw_y[ii])))  #, float(raw_z[ii])))
+        tup.append((float(raw_x[ii]), float(raw_y[ii])))  #, float(raw_z[ii])))
 
 #
 ## do some data checks to ensure proper formatting being done
@@ -97,18 +103,12 @@ def frf_grid_product(fname_in, dxdy=5, header=0, **kwargs):
     assert frf[0] == 'FRF', 'input file may not be in the appropriate format, check file'
     assert frf[-1] == 'FRF', 'input file may not be in the appropriate format, check file'
     ##
-# Remove for tool
-    if odd == 1:
-        xmin = np.min(num_x)
-        xmax = np.max(num_x)
-        ymin = np.min(num_y)
-        ymax = np.max(num_y)
     xgrid = np.arange(xmin, xmax, dx) #np.min(num_x), np.max(num_x), dx) # array of y coords
     ygrid = np.arange(ymin, ymax, dy) #np.min(num_y), np.max(num_y), dy)  # array of x coords
     grid_data = ngl.natgrid(num_x, num_y, num_z, xgrid, ygrid)
     try:
-        if kwargs['plot']==1:
-            plt.figure(figsize=(5,5))            
+        if kwargs['plot']==1 or kwargs['plot'] == True:
+            plt.figure(figsize=(5, 5))
             plt.contourf(xgrid, ygrid, grid_data.T)
             cbar = plt.colorbar()
             cbar.set_label('elevation [m]')
@@ -121,12 +121,12 @@ def frf_grid_product(fname_in, dxdy=5, header=0, **kwargs):
     except (NameError, KeyError):
         pass
     # packaging dict to return 
-    product = { 'xgrid': xgrid,
-                'ygrid': ygrid,
-                'grid' : grid_data,
-                'vor_tup': tup,
-              }
-    return product    
+    product = {'xgrid': xgrid,
+               'ygrid': ygrid,
+               'zgrid' : grid_data,
+               'vor_tup': tup}
+    return product
+
 def write_grid(ofname, grid_dict):
     """
     This function takes the gridded product created by frf_grid_prod and writes
@@ -144,6 +144,7 @@ def write_grid(ofname, grid_dict):
         for ix in range(0, np.size(grid, axis=1)):
             f.write("%f, %f, %f\n" % (xx[iy,ix], yy[iy,ix], grid[iy,ix]))
     f.close()
+
 def creat_vorpoly(tup,ofname):
     """
     This function created voroni polygons based on a scattered data set
@@ -197,4 +198,3 @@ for i in range(0, len(flist)):
            # print 'starting voroni poly plotting'
             #creat_vorpoly(grid_dict['vor_tup'], ofname+'vor_%s.png' %dxdy)
         #DT.datetime.now()
-print 'program finished'
