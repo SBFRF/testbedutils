@@ -13,6 +13,92 @@ import numpy as np
 import datetime as DT
 import imageio
 from PIL import Image
+import csv
+
+def load_FRF_Transect(fname):
+    """
+    This function import a FRF transect csv file
+    Comma Separated Value (CSV) ASCII data.  Column Header (not included in the file):
+    Locality,Profile,SurveyNumber,Latitude,Longitude,Northing,Easting,FRF_offshore,
+    FRF_longshore,Elevation,Ellipsoid,Date,Time,time_sec.
+
+        Data Column headings Explanation:
+
+        1) Locality Code (character) - "39" represents Duck, NC
+        2) Profile Number (integer)
+        3) Survey Number (integer) - sequential since initial survey
+        4) Latitude (decimal degrees)
+        5) Longitude (decimal degrees)
+        6) Northing (decimal meters) - NAD83 North Carolina State Plane Coordinate
+        7) Easting (decimal meters) - NAD83 North Carolina State Plane Coordinates
+        8) FRF offshore coordinate: distance offshore from the local baseline
+        9) FRF longshore coordinate: distance alongshore from the local origin
+        10) Elevation - relative to the North American Vertical Datum in meters (NAVD88)
+        11) Ellipsoid - optional, if used this is the geographic ellipsoid of the point
+        12) Date - date data point was collected (YYYYMMDD)
+        13) Time (hhmmss): Time data point was collected - in 24-hr Eastern Standard Time (EST)
+        14) Time_sec: Time (EST) data point was collected in seconds past midnight
+
+        Filename - the filename includes 7 fields with details about the contents of the file:
+
+        1) Location (FRF)
+        2) Survey Job (FRF)
+        3) Survey Date (YYYYMMDD)
+        4) Survey Number
+        5) Vertical Datum (NAVD88)
+        6) Vessel used (LARC)
+        7) Survey Instrument (GPS)
+
+    :param fname: name/location of a FRF measured bathymetry transect file
+    :return: dictionary of all fields
+    )
+    """
+    import pytz
+    c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13 = [], [], [], [], [], [], [], [], [], [], [], [], [],[]
+    with open(fname, 'rb') as csvfile:  # opening the file
+        reader = csv.reader(csvfile, delimiter=',')  # reading the lines
+        for row in reader:
+            c0.append(str(row[0]))       # Locality Code
+            c1.append(int(row[1]))       # Profile number
+            c2.append(int(row[2]))       # survey number
+            c3.append(float(row[3]))     # Latitude
+            c4.append(float(row[4]))     # Longitude
+            c5.append(float(row[5]))     # Northing
+            c6.append(float(row[6]))     # Easting
+            c7.append(float(row[7]))     # FRF xshore
+            c8.append(float(row[8]))     # FRF Long shore
+            c9.append(float(row[9]))     # Elevation (NAVD88)
+            c10.append(float(row[10]))   # Ellipsoid
+            c11.append(row[11])   # YYMMDD
+            c12.append(row[12])   # hhmmss
+        #    c13.append(row[13])   seconds past midnight
+    # convert EST to UTC
+    #EST2UTC = 4  # add 4 hours to EST to convert hour to UTC
+    time = []
+    for ii in range(0, len(c12)):
+
+        EST = DT.datetime(int(c11[ii][0:4]), int(c11[ii][4:6]), int(c11[ii][6:]),
+                          int(c12[ii][:2]), int(c12[ii][2:4]), int(c12[ii][4:]),
+                          tzinfo=pytz.timezone('EST'))
+        time.append(EST.astimezone(pytz.timezone('UTC')).replace(tzinfo=None))  # converting to UTC, and removing UTC metadata
+
+
+    bathyDict = {'Locality_Code': np.array(c0),
+                 'Profile_number': np.array(c1),
+                 'Survey_number': np.array(c2),
+                 'Latitude': np.array(c3),
+                 'Longitude': np.array(c4),
+                 'Northing': np.array(c5),
+                 'Easting': np.array(c6),
+                 'FRF_Xshore': np.array(c7),
+                 'FRF_Yshore': np.array(c8),
+                 'Elevation': np.array(c9),
+                 'Ellipsoid': np.array(c10),
+                 'time': np.array(time),                # datetime object
+                 'meta': 'date and Time has been converted to a UTC datetimeta object, elevation is in NAVD88',
+                  }
+    return bathyDict
+
 def makegif(flist, ofname, size=None, dt=0.5):
     """
     This function uses imageio to create gifs from a list of images
@@ -63,7 +149,15 @@ def SBcleanangle(directions,deg=360):
 
 def FRFcoord(p1,p2):
     '''
-    #  function [ALat, ALon, spN, spE, Y, X] = frfCoord(p1, p2)
+    #  returns a dictionary of data with keys:
+        'StateplaneE':spE,
+        'StateplaneN':spN,
+        'FRF_Y':Y,
+        'FRF_X':X,
+        'Lat'
+        'Lon'
+
+     [ ALat, ALon, spN, spE, Y, X] = frfCoord(p1, p2)
     #
     #  15 Dec 2014
     #  Kent Hathaway.
@@ -155,7 +249,7 @@ def FRFcoord(p1,p2):
 	   ALat = ALatLeng/DegLat + ALat0    #% was 60 * ALatLeng./DegLat + ALat0;
 	   ALon = ALonLeng/DegLon + ALon0
 
-    elif (p1 > -10000 & p1 < 10000) and (p2 > -10000 & p2 < 10000):  # FRF input 
+    elif (p1 > -10000 and p1 < 10000) and (p2 > -10000 and p2 < 10000):  # FRF input
 	   X=p1
 	   Y=p2;
 	   R = np.sqrt(p1**2 + p2**2);
@@ -177,7 +271,12 @@ def FRFcoord(p1,p2):
     else:   
           print '<EE> Cound not determine input type, returning NaNs'
           ALat=float('NaN'); ALon=float('NaN'); spN=float('NaN'); spE=float('NaN'); Y=float('NaN'); X=float('NaN');
-    coords={'StateplaneE':spE,'StateplaneN':spN,'FRF_Y':Y,'FRF_X':X,'Lat':ALat,'Lon':ALon}
+    coords={'StateplaneE':spE,
+            'StateplaneN':spN,
+            'FRF_Y':Y,
+            'FRF_X':X,
+            'Lat':ALat,
+            'Lon':ALon}
     return coords
 
 
