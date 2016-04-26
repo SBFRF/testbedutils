@@ -17,6 +17,7 @@ except ImportError:
     import pytess as pt
 import numpy as np
 import csv
+from collections import Counter
 import glob
 import datetime as DT
 from matplotlib import pyplot as plt
@@ -50,16 +51,24 @@ def frf_grid_product(fname_in, dxdy=5, header=0, **kwargs):
     **kwarg
        dx = grid x spacing if not equal to dy
        dy = grid y spacing if not equal to dx
-       plot = 1 turns a display plot on 
+       plot = 1 turns a display plot on
+       xmax = FRF max Xshore value to grid (w/o kwarg default 950)
+       xmin = FRF min Xshore value to grid (w/o kwarg default 50)
+       ymax = FRF max Yshore value to grid (w/o kwarg default 1100)
+       xmin = FRF min Yshore value to grid (w/o kwarg default -100)
     
     :return:  data dictionary with x coords, y coords, z grid, and a tuple for x and y for voroni
         polygon creation
     """
-    xmax = 950
-    xmin = 50
-    ymax = 1100
-    ymin = -100
+    miniSurveyThresh = 22 # number of lines that are needed to grid a full survey
+    # counting number of fields to ensure
+    fileFields = fname_in.replace('/','_').split('_')
+    field_count = Counter(fileFields)
 
+    if field_count['FRF'] >= 2:
+        Full = True  # its a full survey
+    else:
+        Full = False
     if dxdy == False:
         dx = kwargs['dx']
         dy = kwargs['dy']
@@ -68,24 +77,18 @@ def frf_grid_product(fname_in, dxdy=5, header=0, **kwargs):
     # import file with given path above
     raw_x = []
     raw_y = []
-    raw_z = []
+    lnNum, raw_z = [], []
     frf=[]
     with open(fname_in, 'rb') as f:
         reader = csv.reader(f)
-        try:        
-            for row in reader:
-                frf.append(row[0])
-                raw_x.append(row[7])  # x in string format
-                raw_y.append(row[8])  # y in string format
-                raw_z.append(row[9])  # z in string format
+        for row in reader:
+            frf.append(row[0])
+            lnNum.append(row[1])  # line number (named from y in frf coord)
+            raw_x.append(row[7])  # x in string format
+            raw_y.append(row[8])  # y in string format
+            raw_z.append(row[9])  # z in string format
             odd = 0
-        except IndexError:  # this is for the subset data sets, they have a different format
-            for row in reader:
-                raw_x.append(row[0])
-                raw_y.append(row[1])
-                raw_z.append(row[2])
-            odd = 1     
-    # initializing values to make strictly nubmers, imported as strings
+    # initializing values to make strictly numbers, imported as strings
     num_x = np.zeros(len(raw_x) - header)
     num_y = np.zeros(len(raw_y) - header)
     num_z = np.zeros(len(raw_z) - header)
@@ -96,10 +99,43 @@ def frf_grid_product(fname_in, dxdy=5, header=0, **kwargs):
         num_y[ii-1] = float(raw_y[ii])
         num_z[ii-1] = float(raw_z[ii])
         tup.append((float(raw_x[ii]), float(raw_y[ii])))  #, float(raw_z[ii])))
+    # count line numbers in file
+    lineCount = len(Counter(lnNum).keys())
 
-#
+
+# assigning coordinate bounds for grid
+    try:
+        xmax = kwargs['xmax']
+    except KeyError:
+        if lineCount > miniSurveyThresh and Full==True:
+            xmax = 950
+        else:
+            xmax = np.max(num_x)
+    try:
+        xmin = kwargs['xmin']
+    except KeyError:
+        if lineCount > miniSurveyThresh and Full==True:
+            xmin = 50
+        else:
+            xmin = np.min(num_x)
+    try:
+        ymax = kwargs['ymax']
+    except KeyError:
+        if lineCount > miniSurveyThresh and Full == True:
+            ymax = 1100
+        else:
+            ymax = np.max(num_y)
+    try:
+        ymin = kwargs['ymin']
+    except KeyError:
+        if lineCount > miniSurveyThresh and Full == True:
+            ymin = -100
+        else:
+            ymin = np.min(num_y)
+
+        #
 ## do some data checks to ensure proper formatting being done
-# these are wrong below
+
     assert frf[0] == 'FRF', 'input file may not be in the appropriate format, check file'
     assert frf[-1] == 'FRF', 'input file may not be in the appropriate format, check file'
     ##
@@ -142,7 +178,7 @@ def write_grid(ofname, grid_dict):
     f= open(ofname,'w')
     for iy in range(0, np.size(grid, axis=0)):
         for ix in range(0, np.size(grid, axis=1)):
-            f.write("%f, %f, %f\n" % (xx[iy,ix], yy[iy,ix], grid[iy,ix]))
+            f.write("%f, %f, %f\n" % (xx[iy, ix], yy[iy, ix], grid[iy, ix]))
     f.close()
 
 def creat_vorpoly(tup,ofname):
