@@ -73,7 +73,7 @@ def load_FRF_Transect(fname):
             c12.append(row[12])   # hhmmss
         #    c13.append(row[13])   seconds past midnight
     # convert EST to UTC
-    #EST2UTC = 4  # add 4 hours to EST to convert hour to UTC
+
     time = []
     for ii in range(0, len(c12)):
 
@@ -339,12 +339,25 @@ def roundtime(dt=None, roundTo=60):
 	   dt : datetime.datetime object, default now.
 	   roundTo : Closest number of seconds to round to, default 1 minute.
 	   Author: Thierry Husson 2012 - Use it as you want but don't blame me.
+	   modified by SB to include lists of datetime objects,
+	   returned as a list if it came in as a list, if it came in as a datetime object
+	   it is returned as such
 	   """
-	   if dt == None : dt = DT.datetime.now()
-	   seconds = (dt - dt.min).seconds
-	   # // is a floor division, not a comment on following line:
-	   rounding = (seconds+roundTo/2) // roundTo * roundTo
-	   return dt + DT.timedelta(0,rounding-seconds,-dt.microsecond)  
+        if len(dt) > 1:
+           dtlist = dt
+        elif len(dt) == 1:
+            dtlist = [dt]
+        elif len(dt) == None:
+            dtlist = [DT.datetime.now()]
+        for ii, dt in enumerate(dtlist):
+	        seconds = (dt - dt.min).seconds
+	        # // is a floor division, not a comment on following line:
+	        rounding = (seconds+roundTo/2) // roundTo * roundTo
+            dtlist[ii] = dt + DT.timedelta(0,rounding-seconds,-dt.microsecond)
+        if len(dtlist) == 1:
+            dtlist = dtlist[0]
+
+	   return dtlist
 	   
 def cart2pol(x,y):
 	''' 
