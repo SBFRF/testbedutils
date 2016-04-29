@@ -335,30 +335,37 @@ def sbfindbtw(data,lwth,upth,type=0):
 					
 	return indices, vals
 def roundtime(dt=None, roundTo=60):
-	   """Round a datetime object to any time laps in seconds
-	   dt : datetime.datetime object, default now.
-	   roundTo : Closest number of seconds to round to, default 1 minute.
-	   Author: Thierry Husson 2012 - Use it as you want but don't blame me.
-	   modified by SB to include lists of datetime objects,
-	   returned as a list if it came in as a list, if it came in as a datetime object
-	   it is returned as such
-	   """
-        if len(dt) > 1:
-           dtlist = dt
-        elif len(dt) == 1:
-            dtlist = [dt]
-        elif len(dt) == None:
-            dtlist = [DT.datetime.now()]
-        for ii, dt in enumerate(dtlist):
-	        seconds = (dt - dt.min).seconds
-	        # // is a floor division, not a comment on following line:
-	        rounding = (seconds+roundTo/2) // roundTo * roundTo
-            dtlist[ii] = dt + DT.timedelta(0,rounding-seconds,-dt.microsecond)
-        if len(dtlist) == 1:
-            dtlist = dtlist[0]
+    """"Round a datetime object to any time laps in seconds
+       dt : datetime.datetime object, default now.
+       roundTo : Closest number of seconds to round to, default 1 minute.
+       Author: Thierry Husson 2012 - Use it as you want but don't blame me.
+       modified by SB to include lists of datetime objects,
+       returned as a list if it came in as a list, if it came in as a datetime object
+       it is returned as such
+    """
+    # making dt a list
 
-	   return dtlist
-	   
+    if len(dt) > 1:
+       dtlist = dt
+    elif len(dt) == 1:
+        dtlist = [dt]
+    elif len(dt) == None:
+        dtlist = [DT.datetime.now()]
+    # checking to make datetime
+    #if type(dt[0] != DT.datetime):
+        # trying to convert epoch time to datetime object  if need be but doen'st solve problem currently working on
+
+
+    # looping through list
+    for ii, dt in enumerate(dtlist):
+        seconds = (dt - dt.min).seconds
+        # // is a floor division, not a comment on following line:
+        rounding = (seconds+roundTo/2) // roundTo * roundTo
+        dtlist[ii] = dt + DT.timedelta(0,rounding-seconds,-dt.microsecond)
+    if len(dtlist) == 1:
+        dtlist = dtlist[0]
+    return dtlist
+
 def cart2pol(x,y):
 	''' 
 	this translates from cartesian coords to polar coordinates (radians)
@@ -366,7 +373,7 @@ def cart2pol(x,y):
 	r = np.sqrt(x**2 + y**2)
 	theta = np.arctan2(y, x)
 	return r, theta
-	
+
 def pol2cart( r, theta):
 	''' 
 	this translates from polar coords (radians) to polar coordinates
