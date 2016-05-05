@@ -69,10 +69,10 @@ def frf_grid_product(fname_in, dxdy=5, header=0, **kwargs):
         Full = True  # its a full survey
     else:
         Full = False
-    if dxdy == False:
+    try:
         dx = kwargs['dx']
         dy = kwargs['dy']
-    else:
+    except (NameError, KeyError):
         dx = dy = dxdy    
     # import file with given path above
     raw_x = []
@@ -87,14 +87,13 @@ def frf_grid_product(fname_in, dxdy=5, header=0, **kwargs):
             raw_x.append(row[7])  # x in string format
             raw_y.append(row[8])  # y in string format
             raw_z.append(row[9])  # z in string format
-            odd = 0
     # initializing values to make strictly numbers, imported as strings
     num_x = np.zeros(len(raw_x) - header)
     num_y = np.zeros(len(raw_y) - header)
     num_z = np.zeros(len(raw_z) - header)
     tup = []
     # making strings into floating point numbers
-    for ii in range(header,len(raw_x)):
+    for ii in range(header, len(raw_x)):
         num_x[ii-1] = float(raw_x[ii])
         num_y[ii-1] = float(raw_y[ii])
         num_z[ii-1] = float(raw_z[ii])
@@ -106,28 +105,28 @@ def frf_grid_product(fname_in, dxdy=5, header=0, **kwargs):
 # assigning coordinate bounds for grid
     try:
         xmax = kwargs['xmax']
-    except KeyError:
-        if lineCount > miniSurveyThresh and Full==True:
+    except (NameError, KeyError):
+        if lineCount > miniSurveyThresh and Full == True:
             xmax = 950
         else:
             xmax = np.max(num_x)
     try:
         xmin = kwargs['xmin']
-    except KeyError:
-        if lineCount > miniSurveyThresh and Full==True:
+    except (NameError, KeyError):
+        if lineCount > miniSurveyThresh and Full == True:
             xmin = 50
         else:
             xmin = np.min(num_x)
     try:
         ymax = kwargs['ymax']
-    except KeyError:
+    except (KeyError, NameError):
         if lineCount > miniSurveyThresh and Full == True:
             ymax = 1100
         else:
             ymax = np.max(num_y)
     try:
         ymin = kwargs['ymin']
-    except KeyError:
+    except (KeyError, NameError):
         if lineCount > miniSurveyThresh and Full == True:
             ymin = -100
         else:
@@ -143,7 +142,7 @@ def frf_grid_product(fname_in, dxdy=5, header=0, **kwargs):
     ygrid = np.arange(ymin, ymax, dy) #np.min(num_y), np.max(num_y), dy)  # array of x coords
     grid_data = ngl.natgrid(num_x, num_y, num_z, xgrid, ygrid)
     try:
-        if kwargs['plot']==1 or kwargs['plot'] == True:
+        if kwargs['plot'] == 1 or kwargs['plot'] == True:
             plt.figure(figsize=(5, 5))
             plt.contourf(xgrid, ygrid, grid_data.T)
             cbar = plt.colorbar()
@@ -211,26 +210,32 @@ def creat_vorpoly(tup,ofname):
         plt.savefig(ofname)
         plt.close()
     
-### actual code
-# path to file, fed to tool
-#fname =  'data/FRF_20140930_1093_FRF_NAVD88_LARC_GPS_UTC_v20151127.csv'
-flist = glob.glob('data/*LARC*.csv')
-#flist = [fname]
-grid_spacing = [50,25,10, 5,1]
-for i in range(0, len(flist)):
-    print 'doing %s ' %flist[i]    
-    for x in range(0, len(grid_spacing)):
-        
-        fname = flist[i]
-        dxdy = grid_spacing[x]
-        ofname = fname[:-4]+'_grid%sm.xyz' %dxdy
-        print '\n-\n-doing grid spacing of: %s and file %s' %(dxdy,ofname)
-        DT.datetime.now()
-        grid_dict= frf_grid_product(fname, dxdy=dxdy, header=0, plot=1)
-        DT.datetime.now()        
-        print 'writing file: %s' %ofname
-        write_grid(ofname, grid_dict)
-        #if x < 2:
-           # print 'starting voroni poly plotting'
-            #creat_vorpoly(grid_dict['vor_tup'], ofname+'vor_%s.png' %dxdy)
-        #DT.datetime.now()
+# ### actual code
+# # path to file, fed to tool
+# #fname =  'data/FRF_20140930_1093_FRF_NAVD88_LARC_GPS_UTC_v20151127.csv'
+# flist = glob.glob('data/*LARC*.csv')
+# #flist = [fname]
+# grid_spacing = [50,25,10, 5,1]
+# for i in range(0, len(flist)):
+#     print 'doing %s ' %flist[i]
+#     for x in range(0, len(grid_spacing)):
+#
+#         fname = flist[i]
+#         dxdy = grid_spacing[x]
+#         ofname = fname[:-4]+'_grid%sm.xyz' %dxdy
+#         print '\n-\n-doing grid spacing of: %s and file %s' %(dxdy,ofname)
+#         DT.datetime.now()
+#         grid_dict= frf_grid_product(fname, dxdy=dxdy, header=0, plot=1)
+#         DT.datetime.now()
+#         print 'writing file: %s' %ofname
+#         write_grid(ofname, grid_dict)
+#         #if x < 2:
+#            # print 'starting voroni poly plotting'
+#             #creat_vorpoly(grid_dict['vor_tup'], ofname+'vor_%s.png' %dxdy)
+#         #DT.datetime.now()
+filelist = glob.glob(files)
+for fname in filelist:
+    gridDict = nn.frf_grid_product(fname, dxdy=10)
+    ofname = fname[:-4] + '_grid.txt'
+    nn.write_grid(ofname=ofname, grid_dict=gridDict)
+    # put plotting functing that saves file here
