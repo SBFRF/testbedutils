@@ -4,18 +4,16 @@ this is a project to convert the FRF transect data into a gridded natural neighb
 
 ### What is this repository for? ###
 
-* Quick summary
-* Version
+* this needs a 
+* Version 0.1
 * [Learn Markdown](https://bitbucket.org/tutorials/markdowndemo)
 
 ### How do I get set up? ###
 
-* Summary of set up
-* Configuration
-* Dependencies
-* Database configuration
-* How to run tests
-* Deployment instructions
+* download the PyNGL library from https://www.pyngl.ucar.edu/Download/ then place in site-packages of python distro. This library only works with linux and macOS
+* 
+* if an import error is encountered during the Ngl import, that is searching for the libgfortran.so.3 library (or something similar?) this is related to the gcc version or direction.  A 'conda install gcc' should redirect proper paths/versions to interact with the Ngl library properly
+
 
 ### Contribution guidelines ###
 
@@ -25,5 +23,5 @@ this is a project to convert the FRF transect data into a gridded natural neighb
 
 ### Who do I talk to? ###
 
-* Repo owner or admin
-* Other community or team contact
+* Author: Spicer Bak
+* Contact: Spicer.Bak@Usace.army.mil
