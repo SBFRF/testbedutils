@@ -14,6 +14,9 @@ import datetime as DT
 import imageio
 from PIL import Image
 import csv
+from matplotlib import colors as mc
+from matplotlib import pyplot as plt
+
 
 def load_FRF_Transect(fname):
     """
@@ -54,34 +57,33 @@ def load_FRF_Transect(fname):
     )
     """
     import pytz
-    c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13 = [], [], [], [], [], [], [], [], [], [], [], [], [],[]
+    c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13 = [], [], [], [], [], [], [], [], [], [], [], [], [], []
     with open(fname, 'rb') as csvfile:  # opening the file
         reader = csv.reader(csvfile, delimiter=',')  # reading the lines
         for row in reader:
-            c0.append(str(row[0]))       # Locality Code
-            c1.append(int(row[1]))       # Profile number
-            c2.append(int(row[2]))       # survey number
-            c3.append(float(row[3]))     # Latitude
-            c4.append(float(row[4]))     # Longitude
-            c5.append(float(row[5]))     # Northing
-            c6.append(float(row[6]))     # Easting
-            c7.append(float(row[7]))     # FRF xshore
-            c8.append(float(row[8]))     # FRF Long shore
-            c9.append(float(row[9]))     # Elevation (NAVD88)
-            c10.append(float(row[10]))   # Ellipsoid
-            c11.append(row[11])   # YYMMDD
-            c12.append(row[12])   # hhmmss
-        #    c13.append(row[13])   seconds past midnight
+            c0.append(str(row[0]))  # Locality Code
+            c1.append(int(row[1]))  # Profile number
+            c2.append(int(row[2]))  # survey number
+            c3.append(float(row[3]))  # Latitude
+            c4.append(float(row[4]))  # Longitude
+            c5.append(float(row[5]))  # Northing
+            c6.append(float(row[6]))  # Easting
+            c7.append(float(row[7]))  # FRF xshore
+            c8.append(float(row[8]))  # FRF Long shore
+            c9.append(float(row[9]))  # Elevation (NAVD88)
+            c10.append(float(row[10]))  # Ellipsoid
+            c11.append(row[11])  # YYMMDD
+            c12.append(row[12])  # hhmmss
+            #    c13.append(row[13])   seconds past midnight
     # convert EST to UTC
 
     time = []
     for ii in range(0, len(c12)):
-
         EST = DT.datetime(int(c11[ii][0:4]), int(c11[ii][4:6]), int(c11[ii][6:]),
                           int(c12[ii][:2]), int(c12[ii][2:4]), int(c12[ii][4:]),
                           tzinfo=pytz.timezone('EST'))
-        time.append(EST.astimezone(pytz.timezone('UTC')).replace(tzinfo=None))  # converting to UTC, and removing UTC metadata
-
+        time.append(
+            EST.astimezone(pytz.timezone('UTC')).replace(tzinfo=None))  # converting to UTC, and removing UTC metadata
 
     bathyDict = {'Locality_Code': np.array(c0),
                  'Profile_number': np.array(c1),
@@ -94,10 +96,11 @@ def load_FRF_Transect(fname):
                  'FRF_Yshore': np.array(c8),
                  'Elevation': np.array(c9),
                  'Ellipsoid': np.array(c10),
-                 'time': np.array(time),                # datetime object
+                 'time': np.array(time),  # datetime object
                  'meta': 'date and Time has been converted to a UTC datetimeta object, elevation is in NAVD88',
-                  }
+                 }
     return bathyDict
+
 
 def makegif(flist, ofname, size=None, dt=0.5):
     """
@@ -116,7 +119,7 @@ def makegif(flist, ofname, size=None, dt=0.5):
     # for im in images:
     #     im.thumbnail(size, Image.ANTIALIAS)
     # images2gif.writeGif(ofname, images, duration=dt, nq=15)
-    images =[]
+    images = []
     if size != None:
         for im in images:
             im.thumbnail(size, Image.ANTIALIAS)
@@ -125,29 +128,31 @@ def makegif(flist, ofname, size=None, dt=0.5):
     imageio.mimwrite(ofname, images, duration=dt)
 
 
-def find_nearest(array,value):
-	'''
+def find_nearest(array, value):
+    '''
 	Function looks for value in array and returns the closest array value 
 	(to 'value') and index of that value 
-	''' 
-	idx = (np.abs(array-value)).argmin()
-	return array[idx],idx
- 
-def SBcleanangle(directions,deg=360):
-      '''
+	'''
+    idx = (np.abs(array - value)).argmin()
+    return array[idx], idx
+
+
+def SBcleanangle(directions, deg=360):
+    '''
 	This function cleans an array of angles (in degrees) to all positive 
 	values ranging from 0 to 360
 	
 	Currently is designed for only degree angles
 	'''
-      for ii in range(0,len(directions)):
-		if directions[ii]>=360:            
-			directions[ii]=directions[ii]-360
-		elif directions[ii]<0:
-			directions[ii]=directions[ii]+360
-      return directions
+    for ii in range(0, len(directions)):
+        if directions[ii] >= 360:
+            directions[ii] = directions[ii] - 360
+        elif directions[ii] < 0:
+            directions[ii] = directions[ii] + 360
+    return directions
 
-def FRFcoord(p1,p2):
+
+def FRFcoord(p1, p2):
     '''
     #  returns a dictionary of data with keys:
         'StateplaneE':spE,
@@ -197,91 +202,97 @@ def FRFcoord(p1,p2):
     p2= 36.18359977;  p1=-75.74548109;
     SP:  p1 = 902307.92; 	p2 = 274771.22; 
     '''
+    assert np.size(p1) == 1, 'This function does not support lists or arrays '
     r2d = 180.0 / np.pi;
 
-    Eom=901951.6805;               #% E Origin State Plane
-    Nom=274093.1562;               #% N Origin State Plane
-    #ALat0=10.65583950;            % Origin Lat minutes
-    #ALon0=44.9811435;             % Origin Lon minutes
-    ALat0=36.1775975;              #% Origin Lat minutes
-    ALon0=75.7496860;              #% Origin Lon minutes
-    DegLat = 110963.35726;         #% m/deg Lat
-    DegLon = 89953.36413;          #% m/deg long
-    GridAngle=18.1465 /r2d;
+    Eom = 901951.6805;  # % E Origin State Plane
+    Nom = 274093.1562;  # % N Origin State Plane
+    # ALat0=10.65583950;            % Origin Lat minutes
+    # ALon0=44.9811435;             % Origin Lon minutes
+    ALat0 = 36.1775975;  # % Origin Lat minutes
+    ALon0 = 75.7496860;  # % Origin Lon minutes
+    DegLat = 110963.35726;  # % m/deg Lat
+    DegLon = 89953.36413;  # % m/deg long
+    GridAngle = 18.1465 / r2d;
     spAngle = (90 - 69.974707831) / r2d
 
-	# Determine Data type
-    if np.floor(abs(p1))==75 and np.floor(p2)==36: # lat/lon input
-		# to FRF coords 
-		ALat=p1
-		ALon=p2  # DESIGNATING LAT/LON VARS
-		if p1<0:
-			p1=-p1
-		ALatLeng = (p2 - ALat0) * DegLat
-		ALatLeng = -(p1 - ALon0) * DegLon
-		R = np.sqrt(ALatLeng**2 + ALonLeng**2)
-		Ang1 = np.arctan2(ALongLeng, ALatLeng)
-		Ang2 = Ang1 + GridAngle;
-		X = R * np.sin(Ang2)
-		Y = R * np.cos(Ang2)
-		# to StatePlane
-		Ang2= Ang2 - spAngle
-		AspN = R * np.cos(Ang2)
-		AspE = R * np.sin(Ang2)
-		spN = AspN + Nom
-		spE = AspE + Eom
+    # Determine Data type
+    if np.floor(abs(p1)) == 75 and np.floor(p2) == 36:  # lat/lon input
+        # to FRF coords
+        ALat = p1
+        ALon = p2  # DESIGNATING LAT/LON VARS
+        if p1 < 0:
+            p1 = -p1
+        ALatLeng = (p2 - ALat0) * DegLat
+        ALatLeng = -(p1 - ALon0) * DegLon
+        R = np.sqrt(ALatLeng ** 2 + ALonLeng ** 2)
+        Ang1 = np.arctan2(ALongLeng, ALatLeng)
+        Ang2 = Ang1 + GridAngle;
+        X = R * np.sin(Ang2)
+        Y = R * np.cos(Ang2)
+        # to StatePlane
+        Ang2 = Ang2 - spAngle
+        AspN = R * np.cos(Ang2)
+        AspE = R * np.sin(Ang2)
+        spN = AspN + Nom
+        spE = AspE + Eom
 
-    elif (p1 > 800000) and p2 >200000: # state plane input
-	   spE=p1
-	   spN=p2  # designating stateplane vars
-	   # to FRF coords 
-	   spLengE = p1 - Eom
-	   spLengN = p2 - Nom
-	   R = np.sqrt(spLengE**2 + spLengN**2)
-	   Ang1 = np.arctan2(spLengE,spLengN)
-	   Ang2 = Ang1 + spAngle
-	   X = R * np.sin(Ang2)
-	   Y = R * np.sin(Ang2)
-	   # to Lat Lon            
-	   Ang2 = Ang1 - (GridAngle-spAngle)   #         % 
-	   ALatLeng = R * np.cos(Ang2)
-	   ALonLeng = R * np.sin(-Ang2)         #% neg to go west
-	   ALat = ALatLeng/DegLat + ALat0    #% was 60 * ALatLeng./DegLat + ALat0;
-	   ALon = ALonLeng/DegLon + ALon0
+    elif (p1 > 800000) and p2 > 200000:  # state plane input
+        spE = p1
+        spN = p2  # designating stateplane vars
+        # to FRF coords
+        spLengE = p1 - Eom
+        spLengN = p2 - Nom
+        R = np.sqrt(spLengE ** 2 + spLengN ** 2)
+        Ang1 = np.arctan2(spLengE, spLengN)
+        Ang2 = Ang1 + spAngle
+        X = R * np.sin(Ang2)
+        Y = R * np.sin(Ang2)
+        # to Lat Lon
+        Ang2 = Ang1 - (GridAngle - spAngle)  # %
+        ALatLeng = R * np.cos(Ang2)
+        ALonLeng = R * np.sin(-Ang2)  # % neg to go west
+        ALat = ALatLeng / DegLat + ALat0  # % was 60 * ALatLeng./DegLat + ALat0;
+        ALon = ALonLeng / DegLon + ALon0
 
     elif (p1 > -10000 and p1 < 10000) and (p2 > -10000 and p2 < 10000):  # FRF input
-	   X=p1
-	   Y=p2;
-	   R = np.sqrt(p1**2 + p2**2);
-	   Ang1 = np.arctan2(p1, p2);    #      % CW from Y
-	   Ang2 = Ang1 - GridAngle;#            % 
-	   ALatLeng = R * np.cos(Ang2);
-	   ALonLeng = R * np.sin(-Ang2); #     % neg to go west
-	   ALat = ALatLeng/DegLat + ALat0;#     % was 60 * ALatLeng./DegLat + ALat0;
-	   ALon = ALonLeng/DegLon + ALon0;
+        X = p1
+        Y = p2;
+        R = np.sqrt(p1 ** 2 + p2 ** 2);
+        Ang1 = np.arctan2(p1, p2);  # % CW from Y
+        Ang2 = Ang1 - GridAngle;  # %
+        ALatLeng = R * np.cos(Ang2);
+        ALonLeng = R * np.sin(-Ang2);  # % neg to go west
+        ALat = ALatLeng / DegLat + ALat0;  # % was 60 * ALatLeng./DegLat + ALat0;
+        ALon = ALonLeng / DegLon + ALon0;
 
-		 #  to state plane 
-	   Ang2 = Ang1 - spAngle;
-	   AspN = R * np.cos(Ang2);
-	   AspE = R * np.sin(Ang2);             
-	   spN = AspN + Nom;
-	   spE = AspE + Eom;
+        #  to state plane
+        Ang2 = Ang1 - spAngle;
+        AspN = R * np.cos(Ang2);
+        AspE = R * np.sin(Ang2);
+        spN = AspN + Nom;
+        spE = AspE + Eom;
 
 
-    else:   
-          print '<EE> Cound not determine input type, returning NaNs'
-          ALat=float('NaN'); ALon=float('NaN'); spN=float('NaN'); spE=float('NaN'); Y=float('NaN'); X=float('NaN');
-    coords={'StateplaneE':spE,
-            'StateplaneN':spN,
-            'FRF_Y':Y,
-            'FRF_X':X,
-            'Lat':ALat,
-            'Lon':ALon}
+    else:
+        print '<<ERROR>> Cound not determine input type, returning NaNs'
+        ALat = float('NaN');
+        ALon = float('NaN');
+        spN = float('NaN');
+        spE = float('NaN');
+        Y = float('NaN');
+        X = float('NaN');
+    coords = {'StateplaneE': spE,
+              'StateplaneN': spN,
+              'FRF_Y': Y,
+              'FRF_X': X,
+              'Lat': ALat,
+              'Lon': ALon}
     return coords
 
 
-def sbfindbtw(data,lwth,upth,type=0):
-	'''
+def sbfindbtw(data, lwth, upth, type=0):
+    '''
 	This function finds both values and indicies of a list values between two values
 	upth = upper level threshold
 	lwth = lower level threshold
@@ -292,48 +303,50 @@ def sbfindbtw(data,lwth,upth,type=0):
 		2 = high inclusive ie. lwth < list <= upth
 		3 = all inclusive  ie  lwth <=list <= upth
 	'''
-	indices=[]
-	vals=[]
-	shp=np.shape(data)
-	if len(shp)==2:
-		for i,  in enumerate(data):
-			for j, elem in enumerate(range):
-				if type==0:
-					if elem < upth and elem > lwth:
-						indices.append((i, j))
-						vals.append(elem)
-				elif type==1:
-					if elem < upth and elem >= lwth:
-						indices.append((i, j))
-						vals.append(elem)
-				elif type==2:
-					if elem <= upth and elem > lwth:
-						indices.append((i, j))
-						vals.append(elem)
-				elif type==3:
-					if elem <= upth and elem >= lwth:
-						indices.append((i, j))
-						vals.append(elem)
-	if len(shp)==1:
-		for j, elem in enumerate(data):
-			if type==0:
-				if elem < upth and elem > lwth:
-				   indices.append((j))
-				   vals.append(elem)
-			elif type==1:
-				if elem < upth and elem >= lwth:
-				   indices.append((j))
-				   vals.append(elem)
-			elif type==2:
-			   if elem <= upth and elem > lwth:
-				   indices.append((j))
-				   vals.append(elem)
-			elif type==3:
-			   if elem <= upth and elem >= lwth:
-				   indices.append((j))
-				   vals.append(elem)               
-					
-	return indices, vals
+    indices = []
+    vals = []
+    shp = np.shape(data)
+    if len(shp) == 2:
+        for i, in enumerate(data):
+            for j, elem in enumerate(range):
+                if type == 0:
+                    if elem < upth and elem > lwth:
+                        indices.append((i, j))
+                        vals.append(elem)
+                elif type == 1:
+                    if elem < upth and elem >= lwth:
+                        indices.append((i, j))
+                        vals.append(elem)
+                elif type == 2:
+                    if elem <= upth and elem > lwth:
+                        indices.append((i, j))
+                        vals.append(elem)
+                elif type == 3:
+                    if elem <= upth and elem >= lwth:
+                        indices.append((i, j))
+                        vals.append(elem)
+    if len(shp) == 1:
+        for j, elem in enumerate(data):
+            if type == 0:
+                if elem < upth and elem > lwth:
+                    indices.append((j))
+                    vals.append(elem)
+            elif type == 1:
+                if elem < upth and elem >= lwth:
+                    indices.append((j))
+                    vals.append(elem)
+            elif type == 2:
+                if elem <= upth and elem > lwth:
+                    indices.append((j))
+                    vals.append(elem)
+            elif type == 3:
+                if elem <= upth and elem >= lwth:
+                    indices.append((j))
+                    vals.append(elem)
+
+    return indices, vals
+
+
 def roundtime(dt=None, roundTo=60):
     """"Round a datetime object to any time laps in seconds
        dt : datetime.datetime object, default now.
@@ -345,43 +358,46 @@ def roundtime(dt=None, roundTo=60):
     """
     # making dt a list
 
-    if len(dt) > 1:
-       dtlist = dt
-    elif len(dt) == 1:
+    if np.size(dt) > 1:
+        dtlist = dt
+    elif np.size(dt) == 1:
         dtlist = [dt]
-    elif len(dt) == None:
+    elif np.size(dt) == None:
         dtlist = [DT.datetime.now()]
-    # checking to make datetime
-    #if type(dt[0] != DT.datetime):
+        # checking to make datetime
+        # if type(dt[0] != DT.datetime):
         # trying to convert epoch time to datetime object  if need be but doen'st solve problem currently working on
-
 
     # looping through list
     for ii, dt in enumerate(dtlist):
         seconds = (dt - dt.min).seconds
         # // is a floor division, not a comment on following line:
-        rounding = (seconds+roundTo/2) // roundTo * roundTo
-        dtlist[ii] = dt + DT.timedelta(0,rounding-seconds,-dt.microsecond)
+        rounding = (seconds + roundTo / 2) // roundTo * roundTo
+        dtlist[ii] = dt + DT.timedelta(0, rounding - seconds, -dt.microsecond)
     if len(dtlist) == 1:
         dtlist = dtlist[0]
     return dtlist
 
-def cart2pol(x,y):
-	''' 
+
+def cart2pol(x, y):
+    '''
 	this translates from cartesian coords to polar coordinates (radians)
 	'''
-	r = np.sqrt(x**2 + y**2)
-	theta = np.arctan2(y, x)
-	return r, theta
+    r = np.sqrt(x ** 2 + y ** 2)
+    theta = np.arctan2(y, x)
+    return r, theta
 
-def pol2cart( r, theta):
-	''' 
+
+def pol2cart(r, theta):
+    '''
 	this translates from polar coords (radians) to polar coordinates
 	'''
-	x = r *np.cos(theta)
-	y = r *np.sin(theta) 
-	return x, y
-def angle_correct(angle_in,rad=0):
+    x = r * np.cos(theta)
+    y = r * np.sin(theta)
+    return x, y
+
+
+def angle_correct(angle_in, rad=0):
     """
     this function takes angles in that are both positve and negative
     and corrects them to posivitve only
@@ -391,41 +407,41 @@ def angle_correct(angle_in,rad=0):
     """
     angle_in = np.array(angle_in)
     if rad == 0:
-        if (np.abs(angle_in) < 2*np.pi).all():
+        if (np.abs(angle_in) < 2 * np.pi).all():
             print ' WARNING angles are all < 2Pi , ensure that angles are in degrees not radians'
-        shape=np.shape(angle_in)
+        shape = np.shape(angle_in)
         if len(shape) == 0:
-            posmask = angle_in >=360
+            posmask = angle_in >= 360
             negmask = angle_in < 0
             while negmask.any() or posmask.any():
                 if negmask.any() == True:
                     angle_in += 360
                 elif posmask.any() == True:
-                    angle_in -=360
-                posmask = angle_in >=360
+                    angle_in -= 360
+                posmask = angle_in >= 360
                 negmask = angle_in < 0
-        if len(shape)==1:
+        if len(shape) == 1:
             posmask = angle_in >= 360
             negmask = angle_in < 0
-            while negmask.any() or posmask.any():        
-                if negmask.any(): # filter negs out
+            while negmask.any() or posmask.any():
+                if negmask.any():  # filter negs out
                     idxneg = np.where(negmask)
                     angle_in[idxneg] += 360
                 if posmask.any():  # filter overly positives out
                     idxpos = np.where(posmask)
                     angle_in[idxpos] -= 360
-                posmask = angle_in >=360
+                posmask = angle_in >= 360
                 negmask = angle_in < 0
         elif len(shape) == 2:
-            for ii in range(0,np.size(angle_in,axis=0)):
-                angle_in_2=np.zeros((np.size(angle_in[ii,:])))  # initializing
-                angle_in_2=angle_in[ii,:] # taking small chunk 1D array
+            for ii in range(0, np.size(angle_in, axis=0)):
+                angle_in_2 = np.zeros((np.size(angle_in[ii, :])))  # initializing
+                angle_in_2 = angle_in[ii, :]  # taking small chunk 1D array
                 posmask = angle_in_2 >= 360  # seeing what's over 360
-                negmask = angle_in_2 < 0    # seeing what's under 0 
-                while negmask.any() or posmask.any():        
-                    if negmask.any(): # filter negs out
+                negmask = angle_in_2 < 0  # seeing what's under 0
+                while negmask.any() or posmask.any():
+                    if negmask.any():  # filter negs out
                         idxneg = np.where(negmask)  # finding ids of where 
-                        if np.size(angle_in_2) == 1 and negmask == True:   # if there's only 1 instance
+                        if np.size(angle_in_2) == 1 and negmask == True:  # if there's only 1 instance
                             angle_in_2 += 360
                         else:
                             angle_in_2[idxneg] += 360
@@ -435,23 +451,23 @@ def angle_correct(angle_in,rad=0):
                             angle_in_2 -= 360
                         else:
                             angle_in_2[idxpos] -= 360
-                    posmask = angle_in_2 >=360
+                    posmask = angle_in_2 >= 360
                     negmask = angle_in_2 < 0
-                angle_in[ii,:]=angle_in_2
-               
+                angle_in[ii, :] = angle_in_2
+
         elif len(shape) == 3:
-            for yy in range(0, np.size(angle_in,axis=1)):
-                angle_in_3 = np.zeros(np.size(angle_in,axis=1))
-                angle_in_3 = angle_in[:,yy,:]
-                for ii in range(0,np.size(angle_in,axis=0)):
-                    angle_in_2=np.zeros((np.size(angle_in_3[ii,:])))  # initializing
-                    angle_in_2=angle_in_3[ii,:] # taking small chunk 1D array
+            for yy in range(0, np.size(angle_in, axis=1)):
+                angle_in_3 = np.zeros(np.size(angle_in, axis=1))
+                angle_in_3 = angle_in[:, yy, :]
+                for ii in range(0, np.size(angle_in, axis=0)):
+                    angle_in_2 = np.zeros((np.size(angle_in_3[ii, :])))  # initializing
+                    angle_in_2 = angle_in_3[ii, :]  # taking small chunk 1D array
                     posmask = angle_in_2 >= 360  # seeing what's over 360
-                    negmask = angle_in_2 < 0    # seeing what's under 0 
-                    while negmask.any() or posmask.any():        
-                        if negmask.any(): # filter negs out
+                    negmask = angle_in_2 < 0  # seeing what's under 0
+                    while negmask.any() or posmask.any():
+                        if negmask.any():  # filter negs out
                             idxneg = np.where(negmask)  # finding ids of where 
-                            if np.size(angle_in_2) == 1 and negmask == True:   # if there's only 1 instance
+                            if np.size(angle_in_2) == 1 and negmask == True:  # if there's only 1 instance
                                 angle_in_2 += 360
                             else:
                                 angle_in_2[idxneg] += 360
@@ -461,17 +477,18 @@ def angle_correct(angle_in,rad=0):
                                 angle_in_2 -= 360
                             else:
                                 angle_in_2[idxpos] -= 360
-                        posmask = angle_in_2 >=360
+                        posmask = angle_in_2 >= 360
                         negmask = angle_in_2 < 0
-                    angle_in_3[ii,:]=angle_in_2
-                angle_in[:,yy,:]=angle_in_3
+                    angle_in_3[ii, :] = angle_in_2
+                angle_in[:, yy, :] = angle_in_3
     else:
         print '<<ERROR>> this function only takes angles in as degrees right now'
         raise
-    assert (angle_in <360).all() and (angle_in >=0).all(), 'The angle correction function didn''t work properly'
+    assert (angle_in < 360).all() and (angle_in >= 0).all(), 'The angle correction function didn''t work properly'
     return angle_in
-    
-def waveStat(spec,dirbins,frqbins):
+
+
+def waveStat(spec, dirbins, frqbins):
     """     
     this function will calculate the mean direction from a full spectrum
     only calculates on one 2D spectrum at a time 
@@ -605,6 +622,8 @@ def waveStat(spec,dirbins,frqbins):
              }
     # print meta
     return Hm0, Tp, Tm, Tave, Dp, Dm, Dmp, vavgdir, sprdF, sprdD, stats
+
+
 def geo2STWangle(geo_angle_in, pierang=71.8, METin=1, fixanglesout=0):
     """
     This rotates an angle (angle_in) from geographic Meterological convention 0= True North
@@ -618,21 +637,39 @@ def geo2STWangle(geo_angle_in, pierang=71.8, METin=1, fixanglesout=0):
     :param fixanglesout: if set to 1, will correct out angles to +/-180
     :return: angle_out
     """
-    assert len(np.shape(geo_angle_in))<=1,'function geo2STWangle not tested in more than 1 dimension'
-    azimuth = 270-pierang
+    assert len(np.shape(geo_angle_in)) <= 1, 'function geo2STWangle not tested in more than 1 dimension'
+    azimuth = 270 - pierang
     geo_angle_in = np.array(geo_angle_in)
     if METin == 1:
-        ocean_angle_in = angle_correct(geo_angle_in + 180) # to 'ocean' from 'MET' convention
+        ocean_angle_in = angle_correct(geo_angle_in + 180)  # to 'ocean' from 'MET' convention
     else:
         ocean_angle_in = geo_angle_in
-    rotate = angle_correct(90-azimuth) # converting azimuth to oceean convention
-    STWangle = angle_correct(rotate-ocean_angle_in)  # rotation of angles to grid convention
+    rotate = angle_correct(90 - azimuth)  # converting azimuth to oceean convention
+    STWangle = angle_correct(rotate - ocean_angle_in)  # rotation of angles to grid convention
     assert len(np.shape(STWangle)) < 2, 'This function handles only 1D arrays currently, try loop'
     #  putting into +/- 180 degrees
-    if fixanglesout==1:
-        flip=np.argwhere(STWangle > 180)  # arguments that need to be flipped
+    if fixanglesout == 1:
+        flip = np.argwhere(STWangle > 180)  # arguments that need to be flipped
         STWangle[flip] -= 360
     return STWangle
+
+def write_grid(ofname, grid_dict):
+    """
+    This function takes the gridded product created by frf_grid_prod and writes
+    the data to a csv file, it requires a dictionary in with the grid, and a list
+    for the x coordinates (xgrid) and a list for the y coordinates (ygrid)
+
+    """
+    xcoord = grid_dict['xgrid']
+    ycoord = grid_dict['ygrid']
+    grid = grid_dict['grid'].T  # this grid produced is the
+                #transpose of the mesh grids produced below
+    xx, yy = np.meshgrid(xcoord, ycoord)
+    f= open(ofname,'w')
+    for iy in range(0, np.size(grid, axis=0)):
+        for ix in range(0, np.size(grid, axis=1)):
+            f.write("%f, %f, %f\n" % (xx[iy, ix], yy[iy, ix], grid[iy, ix]))
+    f.close()
 
 def STWangle2geo(STWangle, pierang=71.8, METout=1):
     """
@@ -646,14 +683,16 @@ def STWangle2geo(STWangle, pierang=71.8, METout=1):
     :param METout:  if left 1, this creates output into a MET conveinton with the definition in the from
     :return: angle_out
     """
-    assert len(np.shape(STWangle)) <=3, 'STWangle2geo has not been tested in greater than 3dimensions'
-    azimuth = 270-pierang # rotation of the Grid in local coordinate
-    rotate = angle_correct(90-azimuth) # putting azimuth into ocean (towards) convention
-    angle_out = rotate-STWangle
+    assert len(np.shape(STWangle)) <= 3, 'STWangle2geo has not been tested in greater than 3dimensions'
+    azimuth = 270 - pierang  # rotation of the Grid in local coordinate
+    rotate = angle_correct(90 - azimuth)  # putting azimuth into ocean (towards) convention
+    angle_out = rotate - STWangle
     if METout == 1:
-        angle_out+=180
-    angle_out = angle_correct(angle_out) # correcting to < +360
+        angle_out += 180
+    angle_out = angle_correct(angle_out)  # correcting to < +360
     return angle_out
+
+
 def whatIsYesterday(now=DT.date.today(), string=1, days=1):
     """
     this function finds what yesterday's date string is in the format
@@ -666,12 +705,13 @@ def whatIsYesterday(now=DT.date.today(), string=1, days=1):
            default = 1 
     
     """
-    
-    yesterday=now-DT.timedelta(days)
-    if string ==1:
-        yesterday = DT.date.strftime(yesterday,'%Y-%m-%d')
+
+    yesterday = now - DT.timedelta(days)
+    if string == 1:
+        yesterday = DT.date.strftime(yesterday, '%Y-%m-%d')
     return yesterday
-    
+
+
 def createDateList(start, end, delta):
     """
     creates a generator of dates 
@@ -679,4 +719,64 @@ def createDateList(start, end, delta):
     curr = start
     while curr <= end:
         yield curr
-        curr +=delta
+        curr += delta
+
+
+def importFRFgrid(fname_in):
+    '''
+    This function imports a file comma seperated and returns a dictionary with keys x, y, z
+    the file to be imported must be x y z order
+    :param file:
+    :param save: default false, will display, if true provide args
+    :return: dictionary of frf grid x, y, z values
+    '''
+    import csv
+    # import file with given path above
+    raw_x = []
+    raw_y = []
+    ptCt, raw_z = [], []
+    frf = []
+    with open(fname_in, 'rb') as f:
+        reader = csv.reader(f)
+        for row in reader:
+            if len(row) == 1:
+                ptCt = row[0]
+            else:
+                raw_x.append(row[0])  # x in string format
+                raw_y.append(row[1])  # y in string format
+                raw_z.append(row[2])  # z in string format
+    # initializing values to make strictly numbers, imported as strings
+    num_x = np.zeros(len(raw_x))
+    num_y = np.zeros(len(raw_y))
+    num_z = np.zeros(len(raw_z))
+    # making strings into floating point numbers
+    for ii in range(0, len(raw_x)):
+        num_x[ii - 1] = float(raw_x[ii])
+        num_y[ii - 1] = float(raw_y[ii])
+        num_z[ii - 1] = float(raw_z[ii])
+    # gridding
+
+
+    # format dictionary for output
+    out = {'x': num_x,
+           'y': num_y,
+           'z': num_z,
+           }
+    return out
+
+
+def pltFRFgrid(xyzDict, save=False):
+    """
+    This function plots a dictionary of values with keys x, y, z
+
+    :param save:
+    :return:
+    """
+    x = xyzDict['x']
+    y = xyzDict['y']
+    z = xyzDict['z']
+
+    levels = np.linspace(np.min(z), np.max(z), 35)  # the established levels to be plotted (maybe do this in log)
+    # levels = np.logspace(cbar_min, cbar_max**(1/cbar_max), num=35, endpoint=True, base=10)
+    norm = mc.BoundaryNorm(levels, 256)  # color palate for contourplots
+    plt.imshow(x, y, z)
