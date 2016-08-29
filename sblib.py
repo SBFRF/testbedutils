@@ -465,8 +465,8 @@ def waveStat(spec, dirbins, frqbins):
     # period stuff
     ipf = fspec.argmax(axis=1)  # indix of max frequency
     Tp = 1 / frqbins[ipf]  # peak period
-    Tm = np.sqrt(m0 / m2)  # mean period
-    Tave = m0 / m1  # average period - cmparible to TS Tm
+    Tm = np.sqrt(m2 / m0)  # mean period
+    Tave = m1 / m0  # average period - cmparible to TS Tm
     # directional stuff
     Ds = np.sum(spec * np.tile(df, (len(dirbins), 1)).T, axis=1)  # directional spectra
     Dsp = []
