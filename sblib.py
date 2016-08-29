@@ -413,11 +413,11 @@ def angle_correct(angle_in, rad=0):
     return angle_in
 
 
-def waveStat(spec, dirbins, frqbins):
+def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
     """     
     this function will calculate the mean direction from a full spectrum
     only calculates on one 2D spectrum at a time 
-     
+    defaults to 0.05 hz to 0.5 hz frequency for the statistics
     Input:
         %     spec  Frequency-direction spectra (2D)       shape(record,frqbin,dirbin)
         %  frqbins  Frequency vector (not assumed constant)
@@ -447,26 +447,29 @@ def waveStat(spec, dirbins, frqbins):
     frq = np.array(np.zeros(len(frqbins) + 1))  # initializing frqbin bucket
     frq[0] = frqbins[0]
     frq[1:] = frqbins
-    df = np.diff(frq, n=1)
+    df = np.diff(frq, n=1)  # dhange in frequancy banding
     dd = dirbins[2] - dirbins[1]  # assume constant directional bin size
     # finding delta degrees
     # frequency spec
     fspec = np.sum(spec, axis=2) * dd  # fd spectra - sum across the frequcny bins to leave 1 x n-frqbins
     # doing moments over 0.05 to 0.33 Hz (3-20s waves) (mainly for m4 sake)
-    [idx, vals] = findbtw(frqbins, 0.05, 0.5, type=3)
+    [idx, vals] = findbtw(frqbins, lowFreq, highFreq, type=3)
 
-    m0 = np.sum(fspec * df, axis=1)
-    m1 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx], axis=1)
-    m2 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx] ** 2, axis=1)
-    m3 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx] ** 3, axis=1)
-    m4 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx] ** 4, axis=1)
+    m0 = np.sum(fspec * df, axis=1)  # 0th momment
+    m1 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx], axis=1)  #  1st moment
+    m2 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx] ** 2, axis=1) # 2nd moment
+    m3 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx] ** 3, axis=1)  # 3rd moment
+    m4 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx] ** 4, axis=1) # 4th moment
+    m11 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx] ** -1, axis=1) # negitive one moment
+
     # sigwave height
     Hm0 = 4 * np.sqrt(m0)
     # period stuff
     ipf = fspec.argmax(axis=1)  # indix of max frequency
     Tp = 1 / frqbins[ipf]  # peak period
-    Tm = np.sqrt(m2 / m0)  # mean period
-    Tave = m1 / m0  # average period - cmparible to TS Tm
+    TmSecondMoment = np.sqrt(m0 / m2)  # mean period
+    TmFirstMoment = m0 / m1  # average period - cmparible to TS Tm
+    Tm10 =  m0 / m11
     # directional stuff
     Ds = np.sum(spec * np.tile(df, (len(dirbins), 1)).T, axis=1)  # directional spectra
     Dsp = []
@@ -535,8 +538,8 @@ def waveStat(spec, dirbins, frqbins):
     meta = 'Tp - peak period, Tm - mean period, Tave - average period, comparable to Time series mean period, Dp - peak direction, Dm - mean direction, Dmp - mean direction at peak frequency, vavgdir - Vector Averaged Mean Direction,sprdF - frequency spread, sprdD - directional spread'
     stats = {'Hm0': Hm0,
              'Tp': Tp,
-             'Tm': Tm,
-             'Tave': Tave,
+             'Tm': TmSecondMoment,
+             'Tave': TmFirstMoment,
              'Dp': Dp,
              'Dm': Dm,
              'Dmp': Dmp,
@@ -546,7 +549,7 @@ def waveStat(spec, dirbins, frqbins):
              'meta': meta
              }
     # print meta
-    return Hm0, Tp, Tm, Tave, Dp, Dm, Dmp, vavgdir, sprdF, sprdD, stats
+    return Hm0, Tp, TmSecondMoment, TmFirstMoment, Dp, Dm, Dmp, vavgdir, sprdF, sprdD, stats
 
 
 def geo2STWangle(geo_angle_in, pierang=71.8, METin=1, fixanglesout=0):
