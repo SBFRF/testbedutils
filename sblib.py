@@ -272,6 +272,16 @@ def unpackDictionary(pack):
     for key, val in pack.items():  # unpack the keys from the dictionary to individual variables
         exec (key + '=val')
 
+class Bunch(object):
+    """
+    allows user to access dictionary data from 'object'
+    instead of object['key']
+    do x = Bunch(object)
+    x.key
+    """
+    def __init__(self):
+        self.__dict__.update(adict)
+
 def roundtime(dt=None, roundTo=60):
     """"Round a datetime object to any time laps in seconds
        dt : datetime.datetime object, default now.
@@ -411,7 +421,56 @@ def angle_correct(angle_in, rad=0):
         raise
     assert (angle_in < 360).all() and (angle_in >= 0).all(), 'The angle correction function didn''t work properly'
     return angle_in
+def statsBryant(observations, models):
+    """
+    This function does Non-Directional Statsistics
+    These statistics are from the Bryant Wave stats CHETN - I - 91
+    :param observations: array of observational data
+    :param models:  array of model data
+    :return: stats library
+    """
+    assert len(observations) == len(models), 'these data must be the same length'
 
+    residuals = models - observations
+    bias = np.sum(residuals)/len(observations)
+
+    ## RMSE's
+    # demeaned RMSE
+    RMSEdemeaned = np.sqrt( np.sum((residuals - bias)**2) / (len(observations)-1) )
+    # regular RMSE
+    RMSE = np.sqrt( np.sum(residuals**2) /len(observations))
+    # normalized RMSE or percentage
+    RMSEnorm = np.sqrt( np.sum( residuals**2) / np.sum(observations**2))
+    # scatter index - a normalize measure of error often times presented as %
+    ScatterIndex=RMSE/np.mean(observations)
+    # symetric Slope
+    symr = np.sqrt(np.sum(models**2)/np.sum(models**2))
+    r2 = np.sum( (observations - observations.mean()) * (models-models.mean())) /( np.sqrt(np.sum((observations - observations.mean()) ** 2)) * np.sqrt(np.sum((models - models.mean()) ** 2)))
+    # wilmont 1985
+    topW = np.abs(models - observations).sum()
+    botW =  (np.abs(models - observations.mean()) + np.abs(observations - observations.mean())).sum()
+    Wilmont = 1 - topW/botW
+
+    xRMS = np.sqrt(np.sum(observations**2/len(observations)))
+    pRMS = 1 - RMSE/xRMS
+    pBias = 1 - np.abs(bias)/xRMS
+    IMEDS = (pRMS + pBias)/2
+    stats = {'bias': bias,
+             'RMSEdemeaned' : RMSEdemeaned,
+             'RMSE'         : RMSE,
+             'RMSEnorm'     : RMSEnorm,
+             'scatterIndex' : ScatterIndex,
+             'symSlope'     : symr,
+             'corr'         : r2,
+             'PscoreWilmont': Wilmont,
+             'PscoreIMEDS'  : IMEDS,
+             'meta': 'please see Bryant, et al.(2016). Evaluation Statistics computed for the WIS) ERDC/CHL CHETN-I-91'}
+    return stats
+
+def printStatDict(dict):
+    for key in dict:
+        if key not in ['residuals', 'fitline','meta']:
+            print '%s, %.3f' %(key, dict[key])
 
 def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
     """     
@@ -427,8 +486,8 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
         %   Hmo   Significant wave height
         %    Tp   Period of the peak energy in the frequency spectra, (1/Fp).  AKA Tpd, not to be
         %           confused with parabolic fit to spectral period
-        %    Tm   Mean spectral period (Tm0,2, from moments 0 & 2), sqrt(m0/m2)
-        %  Tave   Average period, frequency sprectra weighted, from first moment (Tm0,1)
+        %    Tm02   Mean spectral period (Tm0,2, from moments 0 & 2), sqrt(m0/m2)
+        %    Tm01   Average period, frequency sprectra weighted, from first moment (Tm0,1)
         %    Dp   Peak direction at the peak frequency
         %   Dmp   Mean direction at the peak frequency
         %    Dm   Mean wave direction  
@@ -439,7 +498,9 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
         %         where  Xcomp = sum(sin(Drad) .* Ds .* dwdir) ./ sum(Ds .* dwdir); 
         %                Ycomp = sum(cos(Drad) .* Ds .* dwdir) ./ sum(Ds .* dwdir);
         % sprdDhp  half-power direction width in direction spectra at peak freq (not currently incorporated)
-            return order [ Hm0, Tp, Tm, Tave,  Dp, Dm, Dmp, sprdF, sprdD, stats]
+        %  Tm10 - Mean Absolute wave Period from -1 moment
+
+            return order [ Hm0, Tp, TmSecondMoment, Tm01,  Dp, Dm, Dmp, sprdF, sprdD, stats], Tm10
         Code Translated by Spicer Bak from: fd2BulkStats.m written by Kent Hathaway
             
     """
@@ -448,7 +509,7 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
     frq[0] = frqbins[0]
     frq[1:] = frqbins
     df = np.diff(frq, n=1)  # dhange in frequancy banding
-    dd = dirbins[2] - dirbins[1]  # assume constant directional bin size
+    dd = np.median(np.diff(dirbins))  # dirbins[2] - dirbins[1]  # assume constant directional bin size
     # finding delta degrees
     # frequency spec
     fspec = np.sum(spec, axis=2) * dd  # fd spectra - sum across the frequcny bins to leave 1 x n-frqbins
@@ -467,9 +528,9 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
     # period stuff
     ipf = fspec.argmax(axis=1)  # indix of max frequency
     Tp = 1 / frqbins[ipf]  # peak period
-    TmSecondMoment = np.sqrt(m0 / m2)  # mean period
-    TmFirstMoment = m0 / m1  # average period - cmparible to TS Tm
-    Tm10 =  m0 / m11
+    Tm02 = np.sqrt(m0 / m2)  # mean period
+    Tm01 = m0 / m1  # average period - cmparible to TS Tm
+    Tm10 =  m11 / m0
     # directional stuff
     Ds = np.sum(spec * np.tile(df, (len(dirbins), 1)).T, axis=1)  # directional spectra
     Dsp = []
@@ -538,8 +599,8 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
     meta = 'Tp - peak period, Tm - mean period, Tave - average period, comparable to Time series mean period, Dp - peak direction, Dm - mean direction, Dmp - mean direction at peak frequency, vavgdir - Vector Averaged Mean Direction,sprdF - frequency spread, sprdD - directional spread'
     stats = {'Hm0': Hm0,
              'Tp': Tp,
-             'Tm': TmSecondMoment,
-             'Tave': TmFirstMoment,
+             'Tm': Tm02,
+             'Tave': Tm01,
              'Dp': Dp,
              'Dm': Dm,
              'Dmp': Dmp,
@@ -549,7 +610,7 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
              'meta': meta
              }
     # print meta
-    return Hm0, Tp, TmSecondMoment, TmFirstMoment, Dp, Dm, Dmp, vavgdir, sprdF, sprdD, stats
+    return Hm0, Tp, Tm02, Tm01, Dp, Dm, Dmp, vavgdir, sprdF, sprdD, stats, Tm10
 
 
 def geo2STWangle(geo_angle_in, pierang=71.8, METin=1, fixanglesout=0):
