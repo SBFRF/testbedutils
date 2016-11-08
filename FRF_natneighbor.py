@@ -7,19 +7,16 @@ the voroni creates a tesselation of the surface for each file
 
 assumes
 """
-
 try:
     import pytess as pt
 except ImportError:
     print 'no pytess module found, pip installing now'
-    import os
-    os.system('pip install pytess')
+    from subprocess import check_output
+    check_output('pip install pytess')
     import pytess as pt
 import numpy as np
 import csv
 from collections import Counter
-import glob
-import datetime as DT
 from matplotlib import pyplot as plt
 try:
     from PyNGL import Ngl as ngl
@@ -64,7 +61,8 @@ def frf_grid_product(fname_in, dxdy=5, header=0, **kwargs):
     # counting number of fields to ensure
     fileFields = fname_in.replace('/','_').split('_')
     field_count = Counter(fileFields)
-
+    # data check
+    assert field_count['FRF'] >= 1, 'This may not be an FRF survey csv file, please check'
     if field_count['FRF'] >= 2:
         Full = True  # its a full survey
     else:
@@ -93,11 +91,23 @@ def frf_grid_product(fname_in, dxdy=5, header=0, **kwargs):
     num_z = np.zeros(len(raw_z) - header)
     tup = []
     # making strings into floating point numbers
-    for ii in range(header, len(raw_x)):
-        num_x[ii-1] = float(raw_x[ii])
-        num_y[ii-1] = float(raw_y[ii])
-        num_z[ii-1] = float(raw_z[ii])
-        tup.append((float(raw_x[ii]), float(raw_y[ii])))  #, float(raw_z[ii])))
+    try:
+        for ii in range(header, len(raw_x)):
+            num_x[ii-1] = float(raw_x[ii])
+            num_y[ii-1] = float(raw_y[ii])
+            num_z[ii-1] = float(raw_z[ii])
+            tup.append((float(raw_x[ii]), float(raw_y[ii])))  #, float(raw_z[ii])))
+    except (ValueError):  # for the case of having header being equal to 1
+        header = 1
+        num_x = np.zeros(len(raw_x) - header)
+        num_y = np.zeros(len(raw_y) - header)
+        num_z = np.zeros(len(raw_z) - header)
+        tup = []
+        for ii in range(header, len(raw_x)):
+            num_x[ii-1] = float(raw_x[ii])
+            num_y[ii-1] = float(raw_y[ii])
+            num_z[ii-1] = float(raw_z[ii])
+            tup.append((float(raw_x[ii]), float(raw_y[ii])))  #, float(raw_z[ii])))
     # count line numbers in file
     lineCount = len(Counter(lnNum).keys())
 
@@ -110,6 +120,7 @@ def frf_grid_product(fname_in, dxdy=5, header=0, **kwargs):
             xmax = 950
         else:
             xmax = np.max(num_x)
+
     try:
         xmin = kwargs['xmin']
     except (NameError, KeyError):
@@ -135,8 +146,8 @@ def frf_grid_product(fname_in, dxdy=5, header=0, **kwargs):
         #
 ## do some data checks to ensure proper formatting being done
 
-    assert frf[0] == 'FRF', 'input file may not be in the appropriate format, check file'
-    assert frf[-1] == 'FRF', 'input file may not be in the appropriate format, check file'
+    #assert frf[0] == 'FRF', 'input file may not be in the appropriate format, check file'
+    #assert frf[-1] == 'FRF', 'input file may not be in the appropriate format, check file'
     ##
     xgrid = np.arange(xmin, xmax, dx) #np.min(num_x), np.max(num_x), dx) # array of y coords
     ygrid = np.arange(ymin, ymax, dy) #np.min(num_y), np.max(num_y), dy)  # array of x coords
@@ -233,9 +244,9 @@ def creat_vorpoly(tup,ofname):
 #            # print 'starting voroni poly plotting'
 #             #creat_vorpoly(grid_dict['vor_tup'], ofname+'vor_%s.png' %dxdy)
 #         #DT.datetime.now()
-filelist = glob.glob(files)
-for fname in filelist:
-    gridDict = nn.frf_grid_product(fname, dxdy=10)
-    ofname = fname[:-4] + '_grid.txt'
-    nn.write_grid(ofname=ofname, grid_dict=gridDict)
-    # put plotting functing that saves file here
+# filelist = glob.glob(files)
+# for fname in filelist:
+#     gridDict = nn.frf_grid_product(fname, dxdy=10)
+#     ofname = fname[:-4] + '_grid.txt'
+#     nn.write_grid(ofname=ofname, grid_dict=gridDict)
+#     # put plotting functing that saves file here
