@@ -1,0 +1,85 @@
+# WAVE TEMPLATE
+
+_variables: ['time', 'Latitude', 'Longitude', 'Northing', 'Easting', 'FRF_Xshore', 'FRF_Yshore', 'Elevation']
+_attributes: ['notes']
+_dimensions: ['time', 'xShore', 'yShore']
+
+time:
+    name: 'time'
+    units: 'seconds since 1970-01-01 00:00:00'
+    standard_name: ''
+    long_name: 'UTC Sample Time'
+    data_type: 'f8'
+    dim: ['time']
+    calendar: 'gregorian'
+    fill_value: '-999'
+
+Latitude:
+    name: 'lat'
+    units: 'degrees_north'
+    standard_name: ''
+    long_name: 'Latitude'
+    data_type: 'f8'
+    dim: [ 'yShore']
+    fill_value: '-999'
+
+Longitude:
+    name: 'lon'
+    units: 'degrees_east'
+    standard_name: ''
+    long_name: 'Longitude'
+    data_type: 'f8'
+    dim: ['xShore']
+    fill_value: '-999'
+
+Northing:
+    name: 'northing'
+    units: 'm'
+    standard_name: ''
+    long_name: 'Northing in NC Stateplane 3200'
+    data_type: 'f8'
+    dim: ['xShore']
+    fill_value: '-999'
+    short_name: 'Northing'
+
+Easting:
+    name: 'easting'
+    units: 'm'
+    standard_name: ''
+    long_name: 'Northing in NC Stateplane 3200'
+    data_type: 'f8'
+    dim: ['yShore']
+    fill_value: '-999'
+    short_name: 'Easting'
+
+FRF_Xshore:
+    name: 'FRF_Xshore'
+    units: 'm'
+    standard_name: ''
+    long_name: 'Local FRF Cross-Shore Coordinate'
+    data_type: 'f8'
+    dim: ['xShore']
+    fill_value: '-999'
+    short_name: 'x'
+
+FRF_Yshore:
+    name: 'FRF_Yshore'
+    units: 'm'
+    standard_name: ''
+    long_name: 'Local FRF Along-Shore coordinate'
+    data_type: 'f8'
+    dim: ['yShore']
+    fill_value: '-999'
+    short_name: 'y'
+
+Elevation:
+    name: 'elevation'
+    units: 'm'
+    standard_name: ''
+    long_name: 'bottom elevation'
+    data_type: 'f8'
+    dim: ['time','yShore', 'xShore']
+    fill_value: '-999'
+    short_name: 'z'
+    description: 'Elevation is in NAVD88'
+
