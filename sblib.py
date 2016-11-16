@@ -864,7 +864,7 @@ def importFRFgrid(fname_in):
            }
     return out
 
-def load_FRF_Transect(fname):
+def import_FRF_Transect(fname):
     """
     This function import a FRF transect csv file
     Comma Separated Value (CSV) ASCII data.  Column Header (not included in the file):
