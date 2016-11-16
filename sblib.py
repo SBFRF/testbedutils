@@ -11,11 +11,38 @@ this folder needs to be added to sys.path to use
 """
 import numpy as np
 import datetime as DT
+
 import csv
 from matplotlib import colors as mc
 from matplotlib import pyplot as plt
 
 
+
+def makegif(flist, ofname, size=None, dt=0.5):
+    """
+    This function uses imageio to create gifs from a list of images
+
+    kwargs for mimwrite http://imageio.readthedocs.org/en/latest/format_gif.html#gif
+
+    :param flist: a sorted list of files to be made into gifs (including path)
+    :param ofname: output gif filename (including path)
+    :param size: size of pictures (default not resized)
+    :param loop: number of loops to do, 0 is default and infinite
+    :return:
+    """
+    # images = [Image.open(fn) for fn in flist]
+    #
+    # for im in images:
+    #     im.thumbnail(size, Image.ANTIALIAS)
+    # images2gif.writeGif(ofname, images, duration=dt, nq=15)
+    import imageio
+    images = []
+    if size != None:
+        for im in images:
+            im.thumbnail(size, Image.ANTIALIAS)
+    for filename in flist:
+        images.append(imageio.imread(filename))
+    imageio.mimwrite(ofname, images, duration=dt)
 
 def find_nearest(array, value):
     '''
@@ -247,10 +274,17 @@ class Bunch(object):
     """
     allows user to access dictionary data from 'object'
     instead of object['key']
+<<<<<<< HEAD
     do x = sblib.Bunch(object)
     x.key
     """
     def __init__(self, adict):
+=======
+    do x = Bunch(object)
+    x.key
+    """
+    def __init__(self):
+>>>>>>> 2c66355a93f0ce487f64abf77fa7cb1b0f806ccd
         self.__dict__.update(adict)
 
 def roundtime(dt=None, roundTo=60):
@@ -312,6 +346,7 @@ def angle_correct(angle_in, rad=0):
     :return:
     """
     angle_in = np.array(angle_in)
+<<<<<<< HEAD
     try:
         assert (angle_in == 0).all() is not True, 'All of the Angles are 0, cannot correct'
     except AssertionError:
@@ -320,6 +355,10 @@ def angle_correct(angle_in, rad=0):
         if (angle_in == 0).all():
             print 'WARNING - Correcting angles of Zero'
         elif (np.abs(angle_in) < 2 * np.pi).all():
+=======
+    if rad == 0:
+        if (np.abs(angle_in) < 2 * np.pi).all():
+>>>>>>> 2c66355a93f0ce487f64abf77fa7cb1b0f806ccd
             print ' WARNING angles are all < 2Pi , ensure that angles are in degrees not radians'
         shape = np.shape(angle_in)
         if len(shape) == 0:
@@ -449,6 +488,7 @@ def printStatDict(dict):
         if key not in ['residuals', 'fitline','meta']:
             print '%s, %.3f' %(key, dict[key])
 
+<<<<<<< HEAD
 def timeMatch(obs_time, obs_data, model_time, model_data):
     """
     This is the time match function from the IMEDs lite version created by ASA
@@ -500,6 +540,8 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
     return time, obs_data_s, model_data_s
 
 
+=======
+>>>>>>> 2c66355a93f0ce487f64abf77fa7cb1b0f806ccd
 def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
     """     
     this function will calculate the mean direction from a full spectrum
@@ -532,6 +574,7 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
         Code Translated by Spicer Bak from: fd2BulkStats.m written by Kent Hathaway
             
     """
+<<<<<<< HEAD
     assert type(frqbins) in [np.ndarray, np.ma.MaskedArray], 'the input frqeuency bins must be a numpy array'
     assert type(dirbins) in [np.ndarray, np.ma.MaskedArray], 'the input DIRECTION bins must be a numpy array'
     assert np.array(spec).ndim == 3, 'Spectra must be a 3 dimensional array'
@@ -539,12 +582,18 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
         assert (spec != 0).all() is not True, 'Spectra must have energy to calculate statistics, all values are 0'
     except AssertionError:
         return 0
+=======
+>>>>>>> 2c66355a93f0ce487f64abf77fa7cb1b0f806ccd
     # finding delta freqeucny (may change as in CDIP spectra)
     frq = np.array(np.zeros(len(frqbins) + 1))  # initializing frqbin bucket
     frq[0] = frqbins[0]
     frq[1:] = frqbins
     df = np.diff(frq, n=1)  # dhange in frequancy banding
+<<<<<<< HEAD
     dd = np.abs(np.median(np.diff(dirbins)))  # dirbins[2] - dirbins[1]  # assume constant directional bin size
+=======
+    dd = np.median(np.diff(dirbins))  # dirbins[2] - dirbins[1]  # assume constant directional bin size
+>>>>>>> 2c66355a93f0ce487f64abf77fa7cb1b0f806ccd
     # finding delta degrees
     # frequency spec
     fspec = np.sum(spec, axis=2) * dd  # fd spectra - sum across the frequcny bins to leave 1 x n-frqbins
@@ -579,9 +628,14 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
     # mean wave direction (e.g. Kuik 1988, USACE WIS)
     Xcomp = np.sum(np.sin(Drad) * Ds * dirbins, axis=1) / np.sum(Ds * dirbins, axis=1)
     Ycomp = np.sum(np.cos(Drad) * Ds * dirbins, axis=1) / np.sum(Ds * dirbins, axis=1)
+<<<<<<< HEAD
     #Dm = np.rad2deg(np.arctan2(np.sum(np.sin(Drad) * Ds * dirbins, axis=1),
     #                           np.sum(np.cos(Drad) * Ds * dirbins, axis=1)))  # converting back to degrees
     Dm = np.rad2deg(np.arctan2(Xcomp, Ycomp))
+=======
+    Dm = np.rad2deg(np.arctan2(np.sum(np.sin(Drad) * Ds * dirbins, axis=1),
+                               np.sum(np.cos(Drad) * Ds * dirbins, axis=1)))  # converting back to degrees
+>>>>>>> 2c66355a93f0ce487f64abf77fa7cb1b0f806ccd
     for ii in range(0, np.size(Dm, axis=0)):
         if Dm[ii] >= 360:
             Dm[ii] = 360 - Dm[ii]
@@ -594,10 +648,16 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
     sint2 = np.tile(sint, [len(frqbins), 1])  # 2d diretion size of the spectra
     cost2 = np.tile(cost, [len(frqbins), 1])
     delsq = np.tile(df, [len(dirbins), 1]).T
+<<<<<<< HEAD
 
     xsum = np.zeros(np.size(spec, axis=0))
     ysum = np.zeros(np.size(spec, axis=0))
     # summing across all directions
+=======
+    # summing across all directions
+    xsum = np.zeros(np.size(spec, axis=0))
+    ysum = np.zeros(np.size(spec, axis=0))
+>>>>>>> 2c66355a93f0ce487f64abf77fa7cb1b0f806ccd
     for ii in range(0, np.size(spec, axis=0)):
         xsum[ii] = sum(np.sum(cost2 * delsq * spec[ii, :, :], axis=1))  # summing along directions, then
         ysum[ii] = sum(np.sum(sint2 * delsq * spec[ii, :, :], axis=1))
@@ -619,11 +679,20 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
 
     # fd-spec spread
     sprdD = np.rad2deg(np.sqrt(2.0 * (1.0 - np.sqrt(Xcomp ** 2 + Ycomp ** 2))))
+<<<<<<< HEAD
 
     ##### Exceprt from Kent's code for spreading - not sure how to handle
     #        % fd-spec spread, do a linear interp to get closer to half-power
     # % from the delta-deg increments
     # hp = np.max(Dsp)/2;
+=======
+    # fd-spec spread, do a linear interp to get closer to half-power from the
+    # delta-deg increments
+    ##### Exceprt from Kent's code for spreading - not sure how to handle
+    #        % fd-spec spread, do a linear interp to get closer to half-power
+    # % from the delta-deg increments
+    # hp = max(Dsp)/2;
+>>>>>>> 2c66355a93f0ce487f64abf77fa7cb1b0f806ccd
     # ihp=find(Dsp > hp);
     #
     #  % Left (d1) and right (d2) interps: Y=Dir, X=E   
