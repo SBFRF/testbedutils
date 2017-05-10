@@ -11,12 +11,7 @@ this folder needs to be added to sys.path to use
 """
 import numpy as np
 import datetime as DT
-import imageio
-from PIL import Image
-import csv
-from matplotlib import colors as mc
-from matplotlib import pyplot as plt
-
+import csv, warnings
 
 
 
@@ -37,6 +32,7 @@ def makegif(flist, ofname, size=None, dt=0.5):
     # for im in images:
     #     im.thumbnail(size, Image.ANTIALIAS)
     # images2gif.writeGif(ofname, images, duration=dt, nq=15)
+    import imageio
     images = []
     if size != None:
         for im in images:
@@ -45,7 +41,6 @@ def makegif(flist, ofname, size=None, dt=0.5):
         images.append(imageio.imread(filename))
     imageio.mimwrite(ofname, images, duration=dt)
 
-
 def find_nearest(array, value):
     '''
 	Function looks for value in array and returns the closest array value 
@@ -53,7 +48,6 @@ def find_nearest(array, value):
 	'''
     idx = (np.abs(array - value)).argmin()
     return array[idx], idx
-
 
 def SBcleanangle(directions, deg=360):
     '''
@@ -68,7 +62,6 @@ def SBcleanangle(directions, deg=360):
         elif directions[ii] < 0:
             directions[ii] = directions[ii] + 360
     return directions
-
 
 def FRFcoord(p1, p2):
     '''
@@ -208,7 +201,6 @@ def FRFcoord(p1, p2):
               'Lon': ALon}
     return coords
 
-
 def findbtw(data, lwth, upth, type=0):
     '''
 	This function finds both values and indicies of a list values between two values
@@ -263,14 +255,20 @@ def findbtw(data, lwth, upth, type=0):
                     vals.append(elem)
 
     return indices, vals
-def unpackDictionary(pack):
+
+class Bunch(object):
     """
-    This function unpacks a dictionary into variables
-    :param pack:
-    :return:
+    allows user to access dictionary data from 'object'
+    instead of object['key']
+    do x = sblib.Bunch(object)
+    x.key
+    def __init__(self, adict):
+
+    do x = Bunch(object)
+    x.key
     """
-    for key, val in pack.items():  # unpack the keys from the dictionary to individual variables
-        exec (key + '=val')
+    def __init__(self):
+        self.__dict__.update(adict)
 
 def roundtime(dt=None, roundTo=60):
     """"Round a datetime object to any time laps in seconds
@@ -303,24 +301,32 @@ def roundtime(dt=None, roundTo=60):
         dtlist = dtlist[0]
     return dtlist
 
-
 def cart2pol(x, y):
-    '''
-	this translates from cartesian coords to polar coordinates (radians)
-	'''
+    """
+        this translates from cartesian coords to polar coordinates (radians)
+
+    :param x:
+    :param y:
+    :return:
+    """"""
+    """
     r = np.sqrt(x ** 2 + y ** 2)
     theta = np.arctan2(y, x)
     return r, theta
 
-
 def pol2cart(r, theta):
-    '''
-	this translates from polar coords (radians) to polar coordinates
-	'''
+    """
+    this translates from polar coords (radians) to polar coordinates
+
+    :param r: speed, magnatude
+    :param theta:  direction (in radians)
+    :return:
+    """
+    if (np.max(theta) > 2*np.pi ).any():
+        print 'Warning polar2cart assumes radian direction in, angles found above 2pi'
     x = r * np.cos(theta)
     y = r * np.sin(theta)
     return x, y
-
 
 def angle_correct(angle_in, rad=0):
     """
@@ -331,9 +337,16 @@ def angle_correct(angle_in, rad=0):
     :return:
     """
     angle_in = np.array(angle_in)
+    try:
+        assert (angle_in == 0).all() is not True, 'All of the Angles are 0, cannot correct'
+    except AssertionError:
+        return angle_in
     if rad == 0:
-        if (np.abs(angle_in) < 2 * np.pi).all():
-            print ' WARNING angles are all < 2Pi , ensure that angles are in degrees not radians'
+        if (angle_in == 0).all():
+            print 'WARNING - Correcting angles of Zero'
+        elif (np.abs(angle_in) < 2 * np.pi).all():
+            warnings.warn(' WARNING angles are all < 2Pi , ensure that angles are in degrees not radians')
+
         shape = np.shape(angle_in)
         if len(shape) == 0:
             posmask = angle_in >= 360
@@ -411,6 +424,7 @@ def angle_correct(angle_in, rad=0):
         raise
     assert (angle_in < 360).all() and (angle_in >= 0).all(), 'The angle correction function didn''t work properly'
     return angle_in
+
 def statsBryant(observations, models):
     """
     This function does Non-Directional Statsistics
@@ -419,10 +433,28 @@ def statsBryant(observations, models):
     :param models:  array of model data
     :return: stats library
     """
+    obsNaNs = np.argwhere(np.isnan(observations))
+    modNaNs = np.argwhere(np.isnan(models))
+    if len(obsNaNs) > 0:
+        print 'warning found nans in bryant stats'
+        observations = np.delete(observations, obsNaNs)
+        models = np.delete(models, obsNaNs)  # removing corresponding model data, that cnanot be compared
+        modNaNs = np.argwhere(np.isnan(models))
+        if len(modNaNs) > 0:
+            observations = np.delete(observations, modNaNs)
+            models = np.delete(models, modNaNs)  # removing c
+    elif len(modNaNs) > 0:
+        print 'warning found nans in bryant stats'
+        models = np.delete(models, modNaNs)
+        observations = np.delete(observations, modNaNs)
+        obsNaNs = np.argwhere(np.isnan(observations))
+        if len(obsNaNs) > 0:
+            observations = np.delete(observations, obsNaNs)
+            models = np.delete(models, obsNaNs)  # removing cor
     assert len(observations) == len(models), 'these data must be the same length'
 
     residuals = models - observations
-    bias = np.sum(residuals)/len(observations)
+    bias = np.nansum(residuals)/len(observations)
 
     ## RMSE's
     # demeaned RMSE
@@ -434,22 +466,78 @@ def statsBryant(observations, models):
     # scatter index - a normalize measure of error often times presented as %
     ScatterIndex=RMSE/np.mean(observations)
     # symetric Slope
-    symr = np.sqrt(np.sum(models**2)/np.sum(models**2))
-    r2 = np.sum( (observations - observations.mean()) * (models-models.mean())) /( np.sqrt(np.sum((observations - observations.mean()) ** 2)) * np.sqrt(np.sum((models - models.mean()) ** 2)))
+    symr = np.sqrt((models**2).sum()/(models**2).sum())
+    r2 = np.sum( (observations - observations.mean() ) * (models - models.mean() ) ) \
+         /(np.sqrt( ((observations - observations.mean())**2).sum() ) * np.sqrt( ((models - (models).mean()** 2)).sum() ))
+
+    # wilmont 1985
+    topW = np.abs(models - (observations).sum() )
+    botW =  (np.abs(models - (observations).mean()) + np.abs(np.nansum(observations - (observations).mean())))
+    Wilmont = 1 - topW/botW
+
+    xRMS = np.sqrt((observations).sum()**2/len(observations))
+    pBias = 1 - np.abs(bias)/xRMS
+    IMEDS = (pRMS + pBias)/2
     stats = {'bias': bias,
-             'RMSEdemeaned': RMSEdemeaned,
-             'RMSE':RMSE,
-             'RMSEnorm': RMSEnorm,
-             'scatterIndex': ScatterIndex,
-             'symSlope': symr,
-             'corr': r2,
-             'meta': 'please see Bryant, et al.(2016). Evaluation Statistics computed for the WIS) ERDC/CHL CHETN-I-91'}
+             'RMSEdemeaned' : RMSEdemeaned,
+             'RMSE'         : RMSE,
+             'RMSEnorm'     : RMSEnorm,
+             'scatterIndex' : ScatterIndex,
+             'symSlope'     : symr,
+             'corr'         : r2,
+             'PscoreWilmont': Wilmont,
+             'PscoreIMEDS'  : IMEDS,
+             'meta': 'please see Bryant, et al.(2016). Evaluation Statistics computed for the WIS ERDC/CHL CHETN-I-91'}
+
     return stats
 
-def printStatDict(dict):
-    for key in dict:
-        if key not in ['residuals', 'fitline','meta']:
-            print '%s, %.3f' %(key, dict[key])
+def timeMatch(obs_time, obs_data, model_time, model_data):
+    """
+    This is the time match function from the IMEDs lite version created by ASA
+    This has been removed from the IMEDS package to simplify use.
+    This method returns the matching model data to the closest obs point.
+    :param obs_time: observation times, in
+    :param obs_data: matching observation data, any shape
+    :param model_time:  modeling time
+    :param model_data:  modeling data (any shape)
+    :return:
+    """
+
+    time = np.array([])
+    obs_data_s = np.array([])
+    model_data_s = np.array([])
+    # 43 seconds here makes it 43 seconds less than 1/2 of smallest increment
+    threshold = min(np.median(np.diff(obs_time)) / 2.0 - 43,
+                    np.median(np.diff(model_time)) / 2.0 - 43)
+
+    # Loop through model records
+    for data, record in zip(model_data, model_time):
+        in1 = np.where(obs_time <= record)[0]
+        in2 = np.where(obs_time >= record)[0]
+
+        if in1.size == 0 or in2.size == 0:
+            continue
+
+        if in1[-1] == in2[0]:  # Times match up
+            indx = in2[0]
+        else:
+            d1 = record - obs_time[in1[-1]]
+            d2 = obs_time[in2[0]] - record
+            if min(d1, d2) > threshold:
+                continue
+            elif (d1 <= d2):
+                indx = in1[-1]
+            elif (d2 < d1):
+                indx = in2[0]
+
+        if (np.isnan(obs_data[indx]).all() or np.isnan(data).all()):
+            continue
+
+        time = np.append(time, record)
+        obs_data_s = np.append(obs_data_s, obs_data[indx])
+        model_data_s = np.append(model_data_s, data)
+
+    return time, obs_data_s, model_data_s
 
 def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
     """     
@@ -483,14 +571,25 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
         Code Translated by Spicer Bak from: fd2BulkStats.m written by Kent Hathaway
             
     """
+    assert type(frqbins) in [np.ndarray, np.ma.MaskedArray], 'the input frqeuency bins must be a numpy array'
+    assert type(dirbins) in [np.ndarray, np.ma.MaskedArray], 'the input DIRECTION bins must be a numpy array'
+    try:
+        assert np.array(spec).ndim == 3, 'Spectra must be a 3 dimensional array'
+    except AssertionError:
+        spec = np.expand_dims(spec, axis=0)
+    try:
+        assert (spec != 0).all() is not True, 'Spectra must have energy to calculate statistics, all values are 0'
+    except AssertionError:
+        return 0
     # finding delta freqeucny (may change as in CDIP spectra)
     frq = np.array(np.zeros(len(frqbins) + 1))  # initializing frqbin bucket
     frq[0] = frqbins[0]
     frq[1:] = frqbins
-    df = np.diff(frq, n=1)  # dhange in frequancy banding
-    dd = dirbins[2] - dirbins[1]  # assume constant directional bin size
+
+    df = np.diff(frq, n=1)  # change in frequancy banding
+    dd = np.abs(np.median(np.diff(dirbins)))  # dirbins[2] - dirbins[1]  # assume constant directional bin size
     # finding delta degrees
-    # frequency spec
+  # frequency spec
     fspec = np.sum(spec, axis=2) * dd  # fd spectra - sum across the frequcny bins to leave 1 x n-frqbins
     # doing moments over 0.05 to 0.33 Hz (3-20s waves) (mainly for m4 sake)
     [idx, vals] = findbtw(frqbins, lowFreq, highFreq, type=3)
@@ -511,56 +610,54 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
     Tm01 = m0 / m1  # average period - cmparible to TS Tm
     Tm10 =  m11 / m0
     # directional stuff
-    Ds = np.sum(spec * np.tile(df, (len(dirbins), 1)).T, axis=1)  # directional spectra
+    Ds = np.sum(spec * np.tile(df, (len(dirbins), 1)).T, axis=1)  # directional spectra (directional Spred)
     Dsp = []
     for ii in range(0, len(ipf)):
-        Dsp.append(spec[ii, ipf[ii], :])  # direction spectra at peak-f
+        Dsp.append(spec[ii, ipf[ii], :])  # direction spread at peak-f (ipf)
     Dsp = np.array(Dsp)
     idp = Dsp.argmax(axis=1)  # index of direction at peak frquency
     Dp = dirbins[idp]  # peak direction
 
     Drad = np.deg2rad(dirbins)  # making a radian degree bin
-    # mean wave direction (e.g. Kuik 1988, USACE WIS)
-    Xcomp = np.sum(np.sin(Drad) * Ds * dirbins, axis=1) / np.sum(Ds * dirbins, axis=1)
-    Ycomp = np.sum(np.cos(Drad) * Ds * dirbins, axis=1) / np.sum(Ds * dirbins, axis=1)
-    Dm = np.rad2deg(np.arctan2(np.sum(np.sin(Drad) * Ds * dirbins, axis=1),
-                               np.sum(np.cos(Drad) * Ds * dirbins, axis=1)))  # converting back to degrees
-    for ii in range(0, np.size(Dm, axis=0)):
-        if Dm[ii] >= 360:
-            Dm[ii] = 360 - Dm[ii]
-        elif Dm[ii] < 0:
-            Dm[ii] = 360 + Dm[ii]
-            # Vector Dm (Hesser)
+    # mean wave direction (e.g. Kuik 1988, used by USACE WIS)
+    Xcomp = np.sum(np.cos(Drad) * Ds, axis=1) # removed denominator as it canceles out in calculation
+    Ycomp = np.sum(np.sin(Drad) * Ds, axis=1) # removed denominator as it canceles out in calculation
+    Dm = np.rad2deg(np.arctan2(Ycomp, Xcomp))
+    Dm = angle_correct(Dm, rad=False)  # fixing directions above or below 360
+    # Vector Dm (Hesser)
     sint = np.sin(Drad)  # sine of dirbins
     cost = np.cos(Drad)  # cosine of dirbins
 
     sint2 = np.tile(sint, [len(frqbins), 1])  # 2d diretion size of the spectra
     cost2 = np.tile(cost, [len(frqbins), 1])
     delsq = np.tile(df, [len(dirbins), 1]).T
-    # summing across all directions
-    xsum = np.zeros(np.size(spec, axis=0))
-    ysum = np.zeros(np.size(spec, axis=0))
-    for ii in range(0, np.size(spec, axis=0)):
-        xsum[ii] = sum(np.sum(cost2 * delsq * spec[ii, :, :], axis=1))  # summing along directions, then
-        ysum[ii] = sum(np.sum(sint2 * delsq * spec[ii, :, :], axis=1))
 
-    vavgdir = np.arctan2(ysum, xsum)
-    vavgdir = np.rad2deg(vavgdir)
+    for tt in range(0, spec.shape[0]):
+        xsum[tt] = sum(np.sum(cost2 * delsq * spec[tt, :, :], axis=1))  # summing along Xcomponant directions, then
+        ysum[tt] = sum(np.sum(sint2 * delsq * spec[tt, :, :], axis=1))  # y componant
+
+    vavgdir = np.rad2deg(np.arctan2(ysum, xsum))
     vavgdir = angle_correct(vavgdir)
-
+    #assert vavgdir == Dm, 'Dm is calculated wrong ... at least once'
     # Mean direction at the peak frequency
-    Dmp = np.rad2deg(np.arctan2(np.sum(np.sin(Drad) * Dsp * dirbins, axis=1),
-                                np.sum(np.cos(Drad) * Dsp * dirbins, axis=1)))  # converting back to degrees
-    for ii in range(0, np.size(Dmp, axis=0)):
-        if Dmp[ii] >= 360:
-            Dmp[ii] = 360 - Dmp[ii]
-        elif Dmp[ii] < 0:
-            Dmp[ii] = 360 + Dmp[ii]
+    Dmp = np.rad2deg(np.arctan2(np.sum(np.sin(Drad) * Dsp, axis=1),
+                                np.sum(np.cos(Drad) * Dsp, axis=1)))  # converting back to degrees
+    Dmp = angle_correct(Dmp)
     # f-spec spread
     sprdF = (m0 * m4 - m2 ** 2) / (m0 * m4)
 
     # fd-spec spread
     sprdD = np.rad2deg(np.sqrt(2.0 * (1.0 - np.sqrt(Xcomp ** 2 + Ycomp ** 2))))
+
+    ##### Exceprt from Kent's code for spreading - not sure how to handle
+    # fd-spec spread, do a linear interp to get closer to half-power
+    # % from the delta-deg increments
+    # hp = np.max(Dsp)/2;
+
+    ##### Exceprt from Kent's code for spreading - not sure how to handle
+    #        % fd-spec spread, do a linear interp to get closer to half-power
+    # % from the delta-deg increments
+    # hp = np.max(Dsp)/2;
     # fd-spec spread, do a linear interp to get closer to half-power from the
     # delta-deg increments
     ##### Exceprt from Kent's code for spreading - not sure how to handle
@@ -591,33 +688,32 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
     # print meta
     return Hm0, Tp, Tm02, Tm01, Dp, Dm, Dmp, vavgdir, sprdF, sprdD, stats, Tm10
 
+def geo2STWangle(geo_angle_in, zeroAngle=70., METin=1, fixanglesout=0):
 
-def geo2STWangle(geo_angle_in, pierang=71.8, METin=1, fixanglesout=0):
     """
     This rotates an angle (angle_in) from geographic Meterological convention 0= True North
     and puts it to an STWAVE angle 0 is onshore
     variable pierang is the angle from shore to 90 degrees (shore coordinates) in geographic convention
-    ie the pier at Duck NC is at an angle of 71.8 degrees TN and this is assumed to be shore perpendicular
+    ie the pier at Duck NC is at an angle of 70 degrees TN (stateplane) and this is assumed to be shore perpendicular
 
     :param geo_angle_in:  an array or list of angles to be rotated from MET convention of angle from
-    :param pierang:  the angle of the pier, from this the azimuth is calculated (MET CONVENTION)
-    :param METin:  =1 if the input angle is in MET convention (angle from)
+    :param zeroAngle:  the angle of the pier, from this the azimuth is calculated (MET CONVENTION)
+    :param METin:  = 1 if the input angle is in MET convention (angle from)
     :param fixanglesout: if set to 1, will correct out angles to +/-180
     :return: angle_out
     """
-    assert len(np.shape(geo_angle_in)) <= 1, 'function geo2STWangle not tested in more than 1 dimension'
-    azimuth = 270 - pierang
-    geo_angle_in = np.array(geo_angle_in)
-    if METin == 1:
+    # assert len(np.shape(geo_angle_in)) <= 1, 'function geo2STWangle not tested in more than 1 dimension'
+    azimuth = 270 - zeroAngle  # the control of the zero for rotation of the grid in TN coords
+    geo_angle_in = np.array(geo_angle_in, dtype=float)  # making sure floating calcs are used
+    if METin == 1:  # flip the from/to convention
         ocean_angle_in = angle_correct(geo_angle_in + 180)  # to 'ocean' from 'MET' convention
     else:
         ocean_angle_in = geo_angle_in
-    rotate = angle_correct(90 - azimuth)  # converting azimuth to oceean convention
+    rotate = angle_correct(90 - azimuth)  # moving geo
     STWangle = angle_correct(rotate - ocean_angle_in)  # rotation of angles to grid convention
-    assert len(np.shape(STWangle)) < 2, 'This function handles only 1D arrays currently, try loop'
     #  putting into +/- 180 degrees
     if fixanglesout == 1:
-        flip = np.argwhere(STWangle > 180)  # arguments that need to be flipped
+        flip = np.argwhere(STWangle > 180)  # indicies that need to be flipped
         STWangle[flip] -= 360
     return STWangle
 
@@ -639,7 +735,7 @@ def write_grid(ofname, grid_dict):
             f.write("%f, %f, %f\n" % (xx[iy, ix], yy[iy, ix], grid[iy, ix]))
     f.close()
 
-def STWangle2geo(STWangle, pierang=71.8, METout=1):
+def STWangle2geo(STWangle, pierang=70, METout=1):
     """
     This is the complementary function to geo2STWangle,  It takes STWAVE angles (local coordinate system with a towards
      definition and + CCW)
@@ -660,7 +756,6 @@ def STWangle2geo(STWangle, pierang=71.8, METout=1):
     angle_out = angle_correct(angle_out)  # correcting to < +360
     return angle_out
 
-
 def whatIsYesterday(now=DT.date.today(), string=1, days=1):
     """
     this function finds what yesterday's date string is in the format
@@ -679,7 +774,6 @@ def whatIsYesterday(now=DT.date.today(), string=1, days=1):
         yesterday = DT.date.strftime(yesterday, '%Y-%m-%d')
     return yesterday
 
-
 def createDateList(start, end, delta):
     """
     creates a generator of dates 
@@ -688,7 +782,6 @@ def createDateList(start, end, delta):
     while curr <= end:
         yield curr
         curr += delta
-
 
 def importFRFgrid(fname_in):
     '''
@@ -738,7 +831,68 @@ def importFRFgrid(fname_in):
            }
     return out
 
-def load_FRF_Transect(fname):
+
+def imedsObsModelTimeMatch(obs_time, obs_data, model_time, model_data, checkMask=True):
+    """
+    This method returns the matching model data to the closest obs point.
+
+    :param obs_time:
+    :param obs_data:
+    :param model_time:
+    :param model_data:
+    :param checkMask:   # this will not return masked data/time/ or NaN's with value marked True
+    :return:
+    """
+    assert np.array(obs_time).shape[0] == np.array(obs_data).shape[0], 'observational data must have same length as time '
+    assert np.array(model_data).shape[0] == np.array(model_data).shape[0], ' model data must have same length as time'
+    time = np.array([])
+    obs_data_s = np.array([])
+    model_data_s = np.array([])
+
+    if len(model_time) == 1:
+        threshold = (np.median(np.diff(obs_time)) / 2.0)
+    else:
+        threshold = min(np.median(np.diff(obs_time)) / 2.0,  # - 43
+                        np.median(np.diff(model_time)) / 2.0)  # - 43
+
+    # Loop through model records
+    rc, rcc = 0, 0
+    for data, record in zip(model_data, model_time):
+        rcc += 1  # record counter for start of loop
+        in1 = np.where(obs_time <= record)[0]
+        in2 = np.where(obs_time >= record)[0]
+
+        if in1.size == 0 or in2.size == 0:
+            continue
+
+        if in1[-1] == in2[0]:  # Times match up
+            indx = in2[0]
+        else:
+            d1 = record - obs_time[in1[-1]]
+            d2 = obs_time[in2[0]] - record
+            if min(d1, d2) > threshold:
+                continue
+            elif (d1 <= d2):
+                indx = in1[-1]
+            elif (d2 < d1):
+                indx = in2[0]
+        # don't append data that is masked or NaN
+        if checkMask == True:
+            if (np.isnan(obs_data[indx]) or np.isnan(data)):
+                continue
+            elif type(obs_data[indx]) == np.ma.core.MaskedConstant and obs_data[indx].mask:
+                continue
+            elif type(data) == np.ma.core.MaskedConstant and data.mask:
+                continue
+
+        rc += 1  # record counter, how many loops
+        time = np.append(time, record)
+        obs_data_s = np.append(obs_data_s, obs_data[indx])
+        model_data_s = np.append(model_data_s, data)
+
+    return time, obs_data_s, model_data_s
+
+def import_FRF_Transect(fname):
     """
     This function import a FRF transect csv file
     Comma Separated Value (CSV) ASCII data.  Column Header (not included in the file):
@@ -820,20 +974,3 @@ def load_FRF_Transect(fname):
                  'meta': 'date and Time has been converted to a UTC datetimeta object, elevation is in NAVD88',
                  }
     return bathyDict
-
-
-def pltFRFgrid(xyzDict, save=False):
-    """
-    This function plots a dictionary of values with keys x, y, z
-
-    :param save:
-    :return:
-    """
-    x = xyzDict['x']
-    y = xyzDict['y']
-    z = xyzDict['z']
-
-    levels = np.linspace(np.min(z), np.max(z), 35)  # the established levels to be plotted (maybe do this in log)
-    # levels = np.logspace(cbar_min, cbar_max**(1/cbar_max), num=35, endpoint=True, base=10)
-    norm = mc.BoundaryNorm(levels, 256)  # color palate for contourplots
-    plt.imshow(x, y, z)
