@@ -11,8 +11,9 @@ this folder needs to be added to sys.path to use
 """
 import numpy as np
 import datetime as DT
-import imageio, csv, warnings
-from matplotlib import pyplot as plt
+import csv, warnings
+
+
 
 def makegif(flist, ofname, size=None, dt=0.5):
     """
@@ -31,6 +32,7 @@ def makegif(flist, ofname, size=None, dt=0.5):
     # for im in images:
     #     im.thumbnail(size, Image.ANTIALIAS)
     # images2gif.writeGif(ofname, images, duration=dt, nq=15)
+    import imageio
     images = []
     if size != None:
         for im in images:
@@ -39,7 +41,6 @@ def makegif(flist, ofname, size=None, dt=0.5):
         images.append(imageio.imread(filename))
     imageio.mimwrite(ofname, images, duration=dt)
 
-
 def find_nearest(array, value):
     '''
 	Function looks for value in array and returns the closest array value 
@@ -47,6 +48,20 @@ def find_nearest(array, value):
 	'''
     idx = (np.abs(array - value)).argmin()
     return array[idx], idx
+
+def SBcleanangle(directions, deg=360):
+    '''
+	This function cleans an array of angles (in degrees) to all positive 
+	values ranging from 0 to 360
+	
+	Currently is designed for only degree angles
+	'''
+    for ii in range(0, len(directions)):
+        if directions[ii] >= 360:
+            directions[ii] = directions[ii] - 360
+        elif directions[ii] < 0:
+            directions[ii] = directions[ii] + 360
+    return directions
 
 def FRFcoord(p1, p2):
     '''
@@ -186,7 +201,6 @@ def FRFcoord(p1, p2):
               'Lon': ALon}
     return coords
 
-
 def findbtw(data, lwth, upth, type=0):
     '''
 	This function finds both values and indicies of a list values between two values
@@ -242,23 +256,18 @@ def findbtw(data, lwth, upth, type=0):
 
     return indices, vals
 
-def unpackDictionary(pack):
-    """
-    This function unpacks a dictionary into variables
-    :param pack:
-    :return:
-    """
-    for key, val in pack.items():  # unpack the keys from the dictionary to individual variables
-        exec (key + '=val')
-
 class Bunch(object):
     """
     allows user to access dictionary data from 'object'
     instead of object['key']
     do x = sblib.Bunch(object)
     x.key
-    """
     def __init__(self, adict):
+
+    do x = Bunch(object)
+    x.key
+    """
+    def __init__(self):
         self.__dict__.update(adict)
 
 def roundtime(dt=None, roundTo=60):
@@ -292,13 +301,15 @@ def roundtime(dt=None, roundTo=60):
         dtlist = dtlist[0]
     return dtlist
 
-
 def cart2pol(x, y):
     """
-    this translates from cartesian coords to polar coordinates (radians)
+        this translates from cartesian coords to polar coordinates (radians)
+
+    :param x:
+    :param y:
+    :return:
+    """"""
     """
-    if (np.max(theta) > 2*np.pi ).any():
-        print 'Warning polar2cart assumes radian direction in, angles found above 2pi'
     r = np.sqrt(x ** 2 + y ** 2)
     theta = np.arctan2(y, x)
     return r, theta
@@ -316,7 +327,6 @@ def pol2cart(r, theta):
     x = r * np.cos(theta)
     y = r * np.sin(theta)
     return x, y
-
 
 def angle_correct(angle_in, rad=0):
     """
@@ -336,6 +346,7 @@ def angle_correct(angle_in, rad=0):
             print 'WARNING - Correcting angles of Zero'
         elif (np.abs(angle_in) < 2 * np.pi).all():
             warnings.warn(' WARNING angles are all < 2Pi , ensure that angles are in degrees not radians')
+
         shape = np.shape(angle_in)
         if len(shape) == 0:
             posmask = angle_in >= 360
@@ -413,7 +424,7 @@ def angle_correct(angle_in, rad=0):
         raise
     assert (angle_in < 360).all() and (angle_in >= 0).all(), 'The angle correction function didn''t work properly'
     return angle_in
-    
+
 def statsBryant(observations, models):
     """
     This function does Non-Directional Statsistics
@@ -445,7 +456,6 @@ def statsBryant(observations, models):
     residuals = models - observations
     bias = np.nansum(residuals)/len(observations)
 
-
     ## RMSE's
     # demeaned RMSE
     RMSEdemeaned = np.sqrt( np.sum((residuals - bias)**2) / (len(observations)-1) )
@@ -466,7 +476,6 @@ def statsBryant(observations, models):
     Wilmont = 1 - topW/botW
 
     xRMS = np.sqrt((observations).sum()**2/len(observations))
-    pRMS = 1 - RMSE/xRMS
     pBias = 1 - np.abs(bias)/xRMS
     IMEDS = (pRMS + pBias)/2
     stats = {'bias': bias,
@@ -479,12 +488,8 @@ def statsBryant(observations, models):
              'PscoreWilmont': Wilmont,
              'PscoreIMEDS'  : IMEDS,
              'meta': 'please see Bryant, et al.(2016). Evaluation Statistics computed for the WIS ERDC/CHL CHETN-I-91'}
-    return stats
 
-def printStatDict(dict):
-    for key in dict:
-        if key not in ['residuals', 'fitline','meta']:
-            print '%s, %.3f' %(key, dict[key])
+    return stats
 
 def timeMatch(obs_time, obs_data, model_time, model_data):
     """
@@ -501,9 +506,9 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
     time = np.array([])
     obs_data_s = np.array([])
     model_data_s = np.array([])
-
-    threshold = min(np.median(np.diff(obs_time)) / 2.0 - 1,
-                    np.median(np.diff(model_time)) / 2.0 -1) # -1 to make less than half of input time record)
+    # 43 seconds here makes it 43 seconds less than 1/2 of smallest increment
+    threshold = min(np.median(np.diff(obs_time)) / 2.0 - 43,
+                    np.median(np.diff(model_time)) / 2.0 - 43)
 
     # Loop through model records
     for data, record in zip(model_data, model_time):
@@ -532,9 +537,7 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
         obs_data_s = np.append(obs_data_s, obs_data[indx])
         model_data_s = np.append(model_data_s, data)
 
-
     return time, obs_data_s, model_data_s
-
 
 def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
     """     
@@ -582,6 +585,7 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
     frq = np.array(np.zeros(len(frqbins) + 1))  # initializing frqbin bucket
     frq[0] = frqbins[0]
     frq[1:] = frqbins
+
     df = np.diff(frq, n=1)  # change in frequancy banding
     dd = np.abs(np.median(np.diff(dirbins)))  # dirbins[2] - dirbins[1]  # assume constant directional bin size
     # finding delta degrees
@@ -615,7 +619,7 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
     Dp = dirbins[idp]  # peak direction
 
     Drad = np.deg2rad(dirbins)  # making a radian degree bin
-    # mean wave direction (e.g. Kuik 1988, USACE WIS)
+    # mean wave direction (e.g. Kuik 1988, used by USACE WIS)
     Xcomp = np.sum(np.cos(Drad) * Ds, axis=1) # removed denominator as it canceles out in calculation
     Ycomp = np.sum(np.sin(Drad) * Ds, axis=1) # removed denominator as it canceles out in calculation
     Dm = np.rad2deg(np.arctan2(Ycomp, Xcomp))
@@ -628,9 +632,6 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
     cost2 = np.tile(cost, [len(frqbins), 1])
     delsq = np.tile(df, [len(dirbins), 1]).T
 
-    xsum = np.zeros(np.size(spec, axis=0))
-    ysum = np.zeros(np.size(spec, axis=0))
-    # summing across all directions
     for tt in range(0, spec.shape[0]):
         xsum[tt] = sum(np.sum(cost2 * delsq * spec[tt, :, :], axis=1))  # summing along Xcomponant directions, then
         ysum[tt] = sum(np.sum(sint2 * delsq * spec[tt, :, :], axis=1))  # y componant
@@ -642,7 +643,6 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
     Dmp = np.rad2deg(np.arctan2(np.sum(np.sin(Drad) * Dsp, axis=1),
                                 np.sum(np.cos(Drad) * Dsp, axis=1)))  # converting back to degrees
     Dmp = angle_correct(Dmp)
-
     # f-spec spread
     sprdF = (m0 * m4 - m2 ** 2) / (m0 * m4)
 
@@ -653,6 +653,17 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
     # fd-spec spread, do a linear interp to get closer to half-power
     # % from the delta-deg increments
     # hp = np.max(Dsp)/2;
+
+    ##### Exceprt from Kent's code for spreading - not sure how to handle
+    #        % fd-spec spread, do a linear interp to get closer to half-power
+    # % from the delta-deg increments
+    # hp = np.max(Dsp)/2;
+    # fd-spec spread, do a linear interp to get closer to half-power from the
+    # delta-deg increments
+    ##### Exceprt from Kent's code for spreading - not sure how to handle
+    #        % fd-spec spread, do a linear interp to get closer to half-power
+    # % from the delta-deg increments
+    # hp = max(Dsp)/2;
     # ihp=find(Dsp > hp);
     #
     #  % Left (d1) and right (d2) interps: Y=Dir, X=E   
@@ -678,6 +689,7 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
     return Hm0, Tp, Tm02, Tm01, Dp, Dm, Dmp, vavgdir, sprdF, sprdD, stats, Tm10
 
 def geo2STWangle(geo_angle_in, zeroAngle=70., METin=1, fixanglesout=0):
+
     """
     This rotates an angle (angle_in) from geographic Meterological convention 0= True North
     and puts it to an STWAVE angle 0 is onshore
@@ -744,7 +756,6 @@ def STWangle2geo(STWangle, pierang=70, METout=1):
     angle_out = angle_correct(angle_out)  # correcting to < +360
     return angle_out
 
-
 def whatIsYesterday(now=DT.date.today(), string=1, days=1):
     """
     this function finds what yesterday's date string is in the format
@@ -762,7 +773,6 @@ def whatIsYesterday(now=DT.date.today(), string=1, days=1):
     if string == 1:
         yesterday = DT.date.strftime(yesterday, '%Y-%m-%d')
     return yesterday
-
 
 def createDateList(start, end, delta):
     """
@@ -944,7 +954,11 @@ def import_FRF_Transect(fname):
     time = []
     for ii in range(0, len(c12)):
         EST = DT.datetime(int(c11[ii][0:4]), int(c11[ii][4:6]), int(c11[ii][6:]),
+<<<<<<< HEAD
                           int(c12[ii][-6:-4]), int(c12[ii][-4:-2]), int(c12[ii][-2:]),
+=======
+                          int(c12[ii][:2]), int(c12[ii][2:4]), int(c12[ii][4:]),
+>>>>>>> 75975d2101b42871daac42cdb82c563fd8b91a33
                           tzinfo=pytz.timezone('EST'))
         time.append(
             EST.astimezone(pytz.timezone('UTC')).replace(tzinfo=None))  # converting to UTC, and removing UTC metadata
@@ -964,5 +978,3 @@ def import_FRF_Transect(fname):
                  'meta': 'date and Time has been converted to a UTC datetimeta object, elevation is in NAVD88',
                  }
     return bathyDict
-
-
