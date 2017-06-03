@@ -42,36 +42,24 @@ def makegif(flist, ofname, size=None, dt=0.5):
 
 
 def find_nearest(array, value):
-<<<<<<< HEAD
     """
     Function looks for value in array and returns the closest array value
     (to 'value') and index of that value
     """
-=======
-    '''
-    Function looks for value in array and returns the closest array value
-    (to 'value') and index of that value
-    '''
->>>>>>> 78004d40e16aacb9d111c5b9738e82019a88ddd6
+
     idx = (np.abs(array - value)).argmin()
     return array[idx], idx
 
 
 def SBcleanangle(directions, deg=360):
-<<<<<<< HEAD
     """
-=======
-    '''
->>>>>>> 78004d40e16aacb9d111c5b9738e82019a88ddd6
+
     This function cleans an array of angles (in degrees) to all positive
     values ranging from 0 to 360
 
     Currently is designed for only degree angles
-<<<<<<< HEAD
     """
-=======
-    '''
->>>>>>> 78004d40e16aacb9d111c5b9738e82019a88ddd6
+
     for ii in range(0, len(directions)):
         if directions[ii] >= 360:
             directions[ii] = directions[ii] - 360
@@ -127,11 +115,8 @@ def FRFcoord(p1, p2):
     #  spN = state plane northing (m)
     #  spE = state plane easting (m)
 
-<<<<<<< HEAD
     NAD83-86	2014
-=======
-    NAD83-86    2014
->>>>>>> 78004d40e16aacb9d111c5b9738e82019a88ddd6
+
     Origin Latitude          36.1775975
     Origin Longitude         75.7496860
     m/degLat             110963.357
