@@ -14,7 +14,6 @@ import datetime as DT
 import csv, warnings
 
 
-
 def makegif(flist, ofname, size=None, dt=0.5):
     """
     This function uses imageio to create gifs from a list of images
@@ -41,21 +40,23 @@ def makegif(flist, ofname, size=None, dt=0.5):
         images.append(imageio.imread(filename))
     imageio.mimwrite(ofname, images, duration=dt)
 
+
 def find_nearest(array, value):
-    '''
-	Function looks for value in array and returns the closest array value 
-	(to 'value') and index of that value 
-	'''
+    """
+    Function looks for value in array and returns the closest array value
+    (to 'value') and index of that value
+    """
     idx = (np.abs(array - value)).argmin()
     return array[idx], idx
 
+
 def SBcleanangle(directions, deg=360):
-    '''
-	This function cleans an array of angles (in degrees) to all positive 
-	values ranging from 0 to 360
-	
-	Currently is designed for only degree angles
-	'''
+    """
+    This function cleans an array of angles (in degrees) to all positive
+    values ranging from 0 to 360
+
+    Currently is designed for only degree angles
+    """
     for ii in range(0, len(directions)):
         if directions[ii] >= 360:
             directions[ii] = directions[ii] - 360
@@ -63,8 +64,24 @@ def SBcleanangle(directions, deg=360):
             directions[ii] = directions[ii] + 360
     return directions
 
+def findUniqueFromTuple(a, axis=1):
+    """
+    This function finds the unique values of a multi dimensional tuple (quickly)
+    :param a: an array of multidimensional size
+    :param axis: this is the axis that it looks for unique values using (default is horizontal)
+    :return: warning, values are not sorted
+    """
+    if axis == 0:
+        a = a.T
+
+    b = np.ascontiguousarray(a).view(np.dtype((np.void, a.dtype.itemsize * a.shape[1])))
+    _, idx = np.unique(b, return_index=True)
+
+    unique_a = a[idx]
+    return unique_a
+
 def FRFcoord(p1, p2):
-    '''
+    """
     #  returns a dictionary of data with keys:
         'StateplaneE':spE,
         'StateplaneN':spN,
@@ -78,16 +95,16 @@ def FRFcoord(p1, p2):
     #  15 Dec 2014
     #  Kent Hathaway.
     #  Translated from Matlab to python 2015-11-30 - Spicer Bak
-    #    
+    #
     #  Uses new fit (angles and scales) Bill Birkemeier determined in Nov 2014
-    #  
+    #
     #  This version will determine the input based on values, outputs FRF, lat/lon,
     #  and state plane coordinates.  Uses NAD83-2011.
     #
     #  IO:
-    #  p1 = FRF X (m), or Longitude (deg + or -), or state plane Easting (m) 
+    #  p1 = FRF X (m), or Longitude (deg + or -), or state plane Easting (m)
     #  p2 = FRF Y (m), or Latitude (deg), or state plane Northing (m)
-    #	
+    #
     #  X = FRF cross-shore (m)
     #  Y = FRF longshore (m)
     #  ALat = latitude (decimal degrees)
@@ -95,24 +112,24 @@ def FRFcoord(p1, p2):
     #  spN = state plane northing (m)
     #  spE = state plane easting (m)
 
-    NAD83-86	2014 
+    NAD83-86	2014
     Origin Latitude          36.1775975
     Origin Longitude         75.7496860
-    m/degLat             110963.357 
-    m/degLon              89953.364 
+    m/degLat             110963.357
+    m/degLon              89953.364
     GridAngle (deg)          18.1465
     Angle FRF to Lat/Lon     71.8535
     Angle FRF to State Grid  69.9747
-    FRF Origin Northing  274093.1562 
-    Easting              901951.6805 
+    FRF Origin Northing  274093.1562
+    Easting              901951.6805
 
     #  Debugging values
     p1=566.93;  p2=515.11;  % south rail at 1860
     ALat = 36.1836000
     ALon = 75.7454804
     p2= 36.18359977;  p1=-75.74548109;
-    SP:  p1 = 902307.92; 	p2 = 274771.22; 
-    '''
+    SP:  p1 = 902307.92; 	p2 = 274771.22;
+    """
     assert np.size(p1) == 1, 'This function does not support lists or arrays '
     r2d = 180.0 / np.pi;
 
@@ -130,7 +147,7 @@ def FRFcoord(p1, p2):
     # Determine Data type
     if np.floor(abs(p1)) == 75 and np.floor(p2) == 36:  # lat/lon input
         # to FRF coords
-        ALat = p1
+        ALat = np.abs(p1)
         ALon = p2  # DESIGNATING LAT/LON VARS
         if p1 < 0:
             p1 = -p1
@@ -139,6 +156,7 @@ def FRFcoord(p1, p2):
         R = np.sqrt(ALatLeng ** 2 + ALonLeng ** 2)
         Ang1 = np.arctan2(ALonLeng, ALatLeng)
         Ang2 = Ang1 + GridAngle;
+        # to FRF
         X = R * np.sin(Ang2)
         Y = R * np.cos(Ang2)
         # to StatePlane
@@ -149,6 +167,7 @@ def FRFcoord(p1, p2):
         spE = AspE + Eom
 
     elif (p1 > 800000) and p2 > 200000:  # state plane input
+
         spE = p1
         spN = p2  # designating stateplane vars
         # to FRF coords
@@ -157,6 +176,7 @@ def FRFcoord(p1, p2):
         R = np.sqrt(spLengE ** 2 + spLengN ** 2)
         Ang1 = np.arctan2(spLengE, spLengN)
         Ang2 = Ang1 + spAngle
+        # to FRF
         X = R * np.sin(Ang2)
         Y = R * np.cos(Ang2)
         # to Lat Lon
@@ -201,18 +221,19 @@ def FRFcoord(p1, p2):
               'Lon': ALon}
     return coords
 
+
 def findbtw(data, lwth, upth, type=0):
-    '''
-	This function finds both values and indicies of a list values between two values
-	upth = upper level threshold
-	lwth = lower level threshold
-	list = list (or numpy array?)
-	type: 
-		0 = non inclusive  ie. lwth < list <  upth
-		1 = low incluisve  ie. lwth <=list <  upth 
-		2 = high inclusive ie. lwth < list <= upth
-		3 = all inclusive  ie  lwth <=list <= upth
-	'''
+    """
+    This function finds both values and indicies of a list values between two values
+    upth = upper level threshold
+    lwth = lower level threshold
+    list = list (or numpy array?)
+    type:
+        0 = non inclusive  ie. lwth < list <  upth
+        1 = low incluisve  ie. lwth <=list <  upth
+        2 = high inclusive ie. lwth < list <= upth
+        3 = all inclusive  ie  lwth <=list <= upth
+    """
     indices = []
     vals = []
     shp = np.shape(data)
@@ -256,19 +277,21 @@ def findbtw(data, lwth, upth, type=0):
 
     return indices, vals
 
+
 class Bunch(object):
     """
     allows user to access dictionary data from 'object'
     instead of object['key']
     do x = sblib.Bunch(object)
     x.key
-    def __init__(self, adict):
 
     do x = Bunch(object)
     x.key
     """
-    def __init__(self):
-        self.__dict__.update(adict)
+
+    def __init__(self, aDict):
+        self.__dict__.update(aDict)
+
 
 def roundtime(dt=None, roundTo=60):
     """"Round a datetime object to any time laps in seconds
@@ -301,6 +324,7 @@ def roundtime(dt=None, roundTo=60):
         dtlist = dtlist[0]
     return dtlist
 
+
 def cart2pol(x, y):
     """
         this translates from cartesian coords to polar coordinates (radians)
@@ -314,6 +338,7 @@ def cart2pol(x, y):
     theta = np.arctan2(y, x)
     return r, theta
 
+
 def pol2cart(r, theta):
     """
     this translates from polar coords (radians) to polar coordinates
@@ -322,11 +347,12 @@ def pol2cart(r, theta):
     :param theta:  direction (in radians)
     :return:
     """
-    if (np.max(theta) > 2*np.pi ).any():
+    if (np.max(theta) > 2 * np.pi).any():
         print 'Warning polar2cart assumes radian direction in, angles found above 2pi'
     x = r * np.cos(theta)
     y = r * np.sin(theta)
     return x, y
+
 
 def angle_correct(angle_in, rad=0):
     """
@@ -425,6 +451,7 @@ def angle_correct(angle_in, rad=0):
     assert (angle_in < 360).all() and (angle_in >= 0).all(), 'The angle correction function didn''t work properly'
     return angle_in
 
+
 def statsBryant(observations, models):
     """
     This function does Non-Directional Statsistics
@@ -454,42 +481,45 @@ def statsBryant(observations, models):
     assert len(observations) == len(models), 'these data must be the same length'
 
     residuals = models - observations
-    bias = np.nansum(residuals)/len(observations)
+    bias = np.nansum(residuals) / len(observations)
 
     ## RMSE's
     # demeaned RMSE
-    RMSEdemeaned = np.sqrt( np.sum((residuals - bias)**2) / (len(observations)-1) )
+    RMSEdemeaned = np.sqrt(np.sum((residuals - bias) ** 2) / (len(observations) - 1))
     # regular RMSE
-    RMSE = np.sqrt( np.sum(residuals**2) /len(observations))
+    RMSE = np.sqrt(np.sum(residuals ** 2) / len(observations))
     # normalized RMSE or percentage
-    RMSEnorm = np.sqrt( np.sum( residuals**2) / np.sum(observations**2))
+    RMSEnorm = np.sqrt(np.sum(residuals ** 2) / np.sum(observations ** 2))
     # scatter index - a normalize measure of error often times presented as %
-    ScatterIndex=RMSE/np.mean(observations)
+    ScatterIndex = RMSE / np.mean(observations)
     # symetric Slope
-    symr = np.sqrt((models**2).sum()/(models**2).sum())
-    r2 = np.sum( (observations - observations.mean() ) * (models - models.mean() ) ) \
-         /(np.sqrt( ((observations - observations.mean())**2).sum() ) * np.sqrt( ((models - (models).mean()** 2)).sum() ))
+    symr = np.sqrt((models ** 2).sum() / (models ** 2).sum())
+    r2 = np.sum((observations - observations.mean()) * (models - models.mean())) \
+         / (
+             np.sqrt(((observations - observations.mean()) ** 2).sum()) * np.sqrt(
+                 ((models - (models).mean() ** 2)).sum()))
 
     # wilmont 1985
-    topW = np.abs(models - (observations).sum() )
-    botW =  (np.abs(models - (observations).mean()) + np.abs(np.nansum(observations - (observations).mean())))
-    Wilmont = 1 - topW/botW
+    topW = np.abs(models - (observations).sum())
+    botW = (np.abs(models - (observations).mean()) + np.abs(np.nansum(observations - (observations).mean())))
+    Wilmont = 1 - topW / botW
 
-    xRMS = np.sqrt((observations).sum()**2/len(observations))
-    pBias = 1 - np.abs(bias)/xRMS
-    IMEDS = (pRMS + pBias)/2
+    xRMS = np.sqrt((observations).sum() ** 2 / len(observations))
+    pBias = 1 - np.abs(bias) / xRMS
+    IMEDS = (xRMS + pBias) / 2
     stats = {'bias': bias,
-             'RMSEdemeaned' : RMSEdemeaned,
-             'RMSE'         : RMSE,
-             'RMSEnorm'     : RMSEnorm,
-             'scatterIndex' : ScatterIndex,
-             'symSlope'     : symr,
-             'corr'         : r2,
+             'RMSEdemeaned': RMSEdemeaned,
+             'RMSE': RMSE,
+             'RMSEnorm': RMSEnorm,
+             'scatterIndex': ScatterIndex,
+             'symSlope': symr,
+             'corr': r2,
              'PscoreWilmont': Wilmont,
-             'PscoreIMEDS'  : IMEDS,
+             'PscoreIMEDS': IMEDS,
              'meta': 'please see Bryant, et al.(2016). Evaluation Statistics computed for the WIS ERDC/CHL CHETN-I-91'}
 
     return stats
+
 
 def timeMatch(obs_time, obs_data, model_time, model_data):
     """
@@ -538,6 +568,7 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
         model_data_s = np.append(model_data_s, data)
 
     return time, obs_data_s, model_data_s
+
 
 def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
     """     
@@ -589,17 +620,17 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
     df = np.diff(frq, n=1)  # change in frequancy banding
     dd = np.abs(np.median(np.diff(dirbins)))  # dirbins[2] - dirbins[1]  # assume constant directional bin size
     # finding delta degrees
-  # frequency spec
+    # frequency spec
     fspec = np.sum(spec, axis=2) * dd  # fd spectra - sum across the frequcny bins to leave 1 x n-frqbins
     # doing moments over 0.05 to 0.33 Hz (3-20s waves) (mainly for m4 sake)
     [idx, vals] = findbtw(frqbins, lowFreq, highFreq, type=3)
 
     m0 = np.sum(fspec * df, axis=1)  # 0th momment
-    m1 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx], axis=1)  #  1st moment
-    m2 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx] ** 2, axis=1) # 2nd moment
+    m1 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx], axis=1)  # 1st moment
+    m2 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx] ** 2, axis=1)  # 2nd moment
     m3 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx] ** 3, axis=1)  # 3rd moment
-    m4 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx] ** 4, axis=1) # 4th moment
-    m11 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx] ** -1, axis=1) # negitive one moment
+    m4 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx] ** 4, axis=1)  # 4th moment
+    m11 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx] ** -1, axis=1)  # negitive one moment
 
     # sigwave height
     Hm0 = 4 * np.sqrt(m0)
@@ -608,7 +639,7 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
     Tp = 1 / frqbins[ipf]  # peak period
     Tm02 = np.sqrt(m0 / m2)  # mean period
     Tm01 = m0 / m1  # average period - cmparible to TS Tm
-    Tm10 =  m11 / m0
+    Tm10 = m11 / m0
     # directional stuff
     Ds = np.sum(spec * np.tile(df, (len(dirbins), 1)).T, axis=1)  # directional spectra (directional Spred)
     Dsp = []
@@ -620,8 +651,8 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
 
     Drad = np.deg2rad(dirbins)  # making a radian degree bin
     # mean wave direction (e.g. Kuik 1988, used by USACE WIS)
-    Xcomp = np.sum(np.cos(Drad) * Ds, axis=1) # removed denominator as it canceles out in calculation
-    Ycomp = np.sum(np.sin(Drad) * Ds, axis=1) # removed denominator as it canceles out in calculation
+    Xcomp = np.sum(np.cos(Drad) * Ds, axis=1)  # removed denominator as it canceles out in calculation
+    Ycomp = np.sum(np.sin(Drad) * Ds, axis=1)  # removed denominator as it canceles out in calculation
     Dm = np.rad2deg(np.arctan2(Ycomp, Xcomp))
     Dm = angle_correct(Dm, rad=False)  # fixing directions above or below 360
     # Vector Dm (Hesser)
@@ -638,7 +669,7 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
 
     vavgdir = np.rad2deg(np.arctan2(ysum, xsum))
     vavgdir = angle_correct(vavgdir)
-    #assert vavgdir == Dm, 'Dm is calculated wrong ... at least once'
+    # assert vavgdir == Dm, 'Dm is calculated wrong ... at least once'
     # Mean direction at the peak frequency
     Dmp = np.rad2deg(np.arctan2(np.sum(np.sin(Drad) * Dsp, axis=1),
                                 np.sum(np.cos(Drad) * Dsp, axis=1)))  # converting back to degrees
@@ -688,8 +719,8 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
     # print meta
     return Hm0, Tp, Tm02, Tm01, Dp, Dm, Dmp, vavgdir, sprdF, sprdD, stats, Tm10
 
-def geo2STWangle(geo_angle_in, zeroAngle=70., METin=1, fixanglesout=0):
 
+def geo2STWangle(geo_angle_in, zeroAngle=70., METin=1, fixanglesout=0):
     """
     This rotates an angle (angle_in) from geographic Meterological convention 0= True North
     and puts it to an STWAVE angle 0 is onshore
@@ -717,6 +748,7 @@ def geo2STWangle(geo_angle_in, zeroAngle=70., METin=1, fixanglesout=0):
         STWangle[flip] -= 360
     return STWangle
 
+
 def write_grid(ofname, grid_dict):
     """
     This function takes the gridded product created by frf_grid_prod and writes
@@ -727,13 +759,14 @@ def write_grid(ofname, grid_dict):
     xcoord = grid_dict['xgrid']
     ycoord = grid_dict['ygrid']
     grid = grid_dict['grid'].T  # this grid produced is the
-                #transpose of the mesh grids produced below
+    # transpose of the mesh grids produced below
     xx, yy = np.meshgrid(xcoord, ycoord)
-    f= open(ofname,'w')
+    f = open(ofname, 'w')
     for iy in range(0, np.size(grid, axis=0)):
         for ix in range(0, np.size(grid, axis=1)):
             f.write("%f, %f, %f\n" % (xx[iy, ix], yy[iy, ix], grid[iy, ix]))
     f.close()
+
 
 def STWangle2geo(STWangle, pierang=70, METout=1):
     """
@@ -756,6 +789,7 @@ def STWangle2geo(STWangle, pierang=70, METout=1):
     angle_out = angle_correct(angle_out)  # correcting to < +360
     return angle_out
 
+
 def whatIsYesterday(now=DT.date.today(), string=1, days=1):
     """
     this function finds what yesterday's date string is in the format
@@ -774,6 +808,7 @@ def whatIsYesterday(now=DT.date.today(), string=1, days=1):
         yesterday = DT.date.strftime(yesterday, '%Y-%m-%d')
     return yesterday
 
+
 def createDateList(start, end, delta):
     """
     creates a generator of dates 
@@ -782,6 +817,7 @@ def createDateList(start, end, delta):
     while curr <= end:
         yield curr
         curr += delta
+
 
 def importFRFgrid(fname_in):
     '''
@@ -810,7 +846,6 @@ def importFRFgrid(fname_in):
                 raw_z.append(row[2])  # z in string format
                 raw_x.append(row[3])  # x in string format
                 raw_y.append(row[4])  # y in string format
-
 
     # initializing values to make strictly numbers, imported as strings
     num_x = np.zeros(len(raw_x))
@@ -843,7 +878,8 @@ def imedsObsModelTimeMatch(obs_time, obs_data, model_time, model_data, checkMask
     :param checkMask:   # this will not return masked data/time/ or NaN's with value marked True
     :return:
     """
-    assert np.array(obs_time).shape[0] == np.array(obs_data).shape[0], 'observational data must have same length as time '
+    assert np.array(obs_time).shape[0] == np.array(obs_data).shape[
+        0], 'observational data must have same length as time '
     assert np.array(model_data).shape[0] == np.array(model_data).shape[0], ' model data must have same length as time'
     time = np.array([])
     obs_data_s = np.array([])
@@ -891,6 +927,7 @@ def imedsObsModelTimeMatch(obs_time, obs_data, model_time, model_data, checkMask
         model_data_s = np.append(model_data_s, data)
 
     return time, obs_data_s, model_data_s
+
 
 def import_FRF_Transect(fname):
     """
