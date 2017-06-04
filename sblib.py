@@ -130,6 +130,7 @@ def FRFcoord(p1, p2):
     p2= 36.18359977;  p1=-75.74548109;
     SP:  p1 = 902307.92; 	p2 = 274771.22;
     """
+    print ' warning This code is depricated'
     assert np.size(p1) == 1, 'This function does not support lists or arrays '
     r2d = 180.0 / np.pi;
 
