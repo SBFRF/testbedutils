@@ -50,13 +50,6 @@ def FRF2ncsp(xFRF, yFRF):
 
     Eom = 901951.6805;  # % E Origin State Plane
     Nom = 274093.1562;  # % N Origin State Plane
-    # ALat0=10.65583950;            % Origin Lat minutes
-    # ALon0=44.9811435;             % Origin Lon minutes
-    ALat0 = 36.1775975;  # % Origin Lat minutes
-    ALon0 = 75.7496860;  # % Origin Lon minutes
-    DegLat = 110963.35726;  # % m/deg Lat
-    DegLon = 89953.36413;  # % m/deg long
-    GridAngle = 18.1465 / r2d;
     spAngle = (90 - 69.974707831) / r2d
     X = xFRF
     Y = yFRF
@@ -69,10 +62,7 @@ def FRF2ncsp(xFRF, yFRF):
     AspE = R * np.sin(Ang2)
     spN = AspN + Nom
     spE = AspE + Eom
-    out = {'xFRF': xFRF,
-           'yFRF': yFRF,
-           'StatePlaneE': spE,
-           'StatePlaneN': spN}
+    out = {'xFRF': xFRF,  'yFRF': yFRF, 'StatePlaneE': spE, 'StatePlaneN': spN}
     return out
 
 def ncsp2FRF(p1, p2):
@@ -126,13 +116,6 @@ def ncsp2FRF(p1, p2):
 
     Eom = 901951.6805;  # % E Origin State Plane
     Nom = 274093.1562;  # % N Origin State Plane
-    # ALat0=10.65583950;            % Origin Lat minutes
-    # ALon0=44.9811435;             % Origin Lon minutes
-    ALat0 = 36.1775975;  # % Origin Lat minutes
-    ALon0 = 75.7496860;  # % Origin Lon minutes
-    DegLat = 110963.35726;  # % m/deg Lat
-    DegLon = 89953.36413;  # % m/deg long
-    GridAngle = 18.1465 / r2d;
     spAngle = (90 - 69.974707831) / r2d
 
     spE = p1
@@ -153,7 +136,6 @@ def ncsp2FRF(p1, p2):
            'StatePlaneN': spN}
     return ans
 
-
 def ncsp2LatLon(spE, spN):
     """
     This function uses pyproj to convert
@@ -171,11 +153,114 @@ def ncsp2LatLon(spE, spN):
     spN2 = 276229.5 m
     lon2 = -75.47218285
     lat2 =  36.19666112
-    :param spE:
-    :param spN:
-    :return:
+    :param spE: easting - assumed north carolina state plane Meters
+    :param spN: northing - assumed north carolina state plane meters
+    :return: dictionary with original coords and output of latitude and longitude.
     """
     EPSG = 3358  # taken from spatialreference.org/ref/epsg/3358
     # NC stateplane NAD83
-    sp2LL = pyproj.Proj(init="epsg:%s" %EPSG)
-    lon, lat = sp2LL(spE, spN)
+    spNC = pyproj.Proj(init="epsg:%s" %EPSG)
+    LL = pyproj.Proj(init='epsg:4269')  # epsg for NAD83 projection
+    lon, lat = pyproj.transform(spNC, LL, spE, spN)
+    ans = {'lon': lon, 'lat': lat, 'StatePlaneE': spE, 'StatePlaneN': spN}
+    return ans
+
+def LatLon2ncsp(lon, lat):
+    """
+      This function uses pyproj to convert longitude and latitude to stateplane
+
+      test points taken from conversions made in USACE SMS modeling system
+
+        nc stateplane  meters NAD83
+        spE1 = 901926.2 m
+        spN1 = 273871.0 m
+        Lon1 = -75.75004989
+        Lat1 =  36.17560399
+
+        spE2 = 9025563.9 m
+        spN2 = 276229.5 m
+        lon2 = -75.47218285
+        lat2 =  36.19666112
+      :param lon: geographic longitude (NAD83)  decimal degrees
+      :param lat: geographic longitude (NAD83)  decimal degrees
+    :return:  output dictionary with original coords and output of NC stateplane FIPS 3200
+    """
+    EPSG = 3358  # taken from spatialreference.org/ref/epsg/3358
+    # NC stateplane NAD83
+    spNC = pyproj.Proj(init="epsg:%s" %EPSG)
+    LL = pyproj.Proj(init='epsg:4269')  # epsg for NAD83 projection
+    spE, spN = pyproj.transform(LL, spNC, lon, lat)
+    ans = {'lon': lon, 'lat': lat, 'StatePlaneE': spE, 'StatePlaneN': spN}
+    return ans
+
+def FRFcoordv2(p1, p2):
+    """
+    updated FRF coord in python, using kent's original code as guide but converting pyproj for all
+    conversions between state plane and Lat Lon,  Then all conversions between stateplane and
+    FRF coordinates are done using kents original geometry.
+
+    #
+    #  15 Dec 2014
+    #  Kent Hathaway.
+    #  Translated from Matlab to python 2015-11-30 - Spicer Bak
+    #
+    #  Uses new fit (angles and scales) Bill Birkemeier determined in Nov 2014
+    #
+    #  This version will determine the input based on values, outputs FRF, lat/lon,
+    #  and state plane coordinates.  Uses NAD83-2011.
+    #
+    #  IO:
+    #  p1 = FRF X (m), or Longitude (deg + or -), or state plane Easting (m)
+    #  p2 = FRF Y (m), or Latitude (deg), or state plane Northing (m)
+    #
+    #  X = FRF cross-shore (m)
+    #  Y = FRF longshore (m)
+    #  ALat = latitude (decimal degrees)
+    #  ALon = longitude (decimal degrees, positive, or W)
+    #  spN = state plane northing (m)
+    #  spE = state plane easting (m)
+
+    NAD83-86	2014
+    Origin Latitude          36.1775975
+    Origin Longitude         75.7496860
+    m/degLat             110963.357
+    m/degLon              89953.364
+    GridAngle (deg)          18.1465
+    Angle FRF to Lat/Lon     71.8535
+    Angle FRF to State Grid  69.9747
+    FRF Origin Northing  274093.1562
+    Easting              901951.6805
+
+    #  Debugging values
+    p1=566.93;  p2=515.11;  % south rail at 1860
+    ALat = 36.1836000
+    ALon = 75.7454804
+    p2= 36.18359977;  p1=-75.74548109;
+    SP:  p1 = 902307.92; 	p2 = 274771.22;
+    """
+
+    # Determine Data type
+    if np.floor(abs(p1)) == 75 and np.floor(p2) == 36:  # lat/lon input
+        sp = LatLon2ncsp(p1, p2)
+        frf = ncsp2FRF(sp['StatePlaneE'], sp['StatePlaneN'])
+        coordsOut = {'xFRF': frf['xFRF'], 'yFRF': frf['yFRF'], 'StatePlaneE':sp['StatePlaneE'],
+                     'StatePlaneN': sp['StatePlaneN'], 'Lat': p2, 'Lon':p1}
+
+    elif (p1 > 800000) and p2 > 200000:  # state plane input
+        frf = ncsp2FRF(p1, p2)     # convert state plane to FRF
+        ll = ncsp2LatLon(p1, p2)  # convert state plane to Lat Lon
+        coordsOut = {'xFRF': frf['xFRF'], 'yFRF': frf['yFRF'], 'StatePlaneE': p1,
+                     'StatePlaneN': p2, 'Lat': ll['lat'], 'Lon':ll['lon']}
+
+    elif (p1 > -10000 and p1 < 10000) and (p2 > -10000 and p2 < 10000):  # FRF input
+        # this is FRF in
+        sp = FRF2ncsp(p1, p2)
+        ll = ncsp2LatLon(sp['StatePlaneE'], sp['StatePlaneN'])
+        coordsOut = {'xFRF': p1, 'yFRF': p2, 'StatePlaneE': sp['StatePlaneE'],
+                     'StatePlaneN': sp['StatePlaneN'], 'Lat': ll['lat'], 'Lon':ll['lon']}
+
+    else:
+        print '<<ERROR>> Cound not determine input type, returning NaNs'
+        coordsOut = {'xFRF': float('NaN'), 'yFRF': float('NaN'), 'StatePlaneE': float('NaN'),
+             'StatePlaneN': float('NaN'), 'Lat': float('NaN'), 'Lon':float('NaN')}
+    return coordsOut

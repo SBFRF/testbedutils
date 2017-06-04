@@ -46,20 +46,17 @@ def find_nearest(array, value):
     Function looks for value in array and returns the closest array value
     (to 'value') and index of that value
     """
-
     idx = (np.abs(array - value)).argmin()
     return array[idx], idx
 
 
 def SBcleanangle(directions, deg=360):
     """
-
     This function cleans an array of angles (in degrees) to all positive
     values ranging from 0 to 360
 
     Currently is designed for only degree angles
     """
-
     for ii in range(0, len(directions)):
         if directions[ii] >= 360:
             directions[ii] = directions[ii] - 360
@@ -116,7 +113,6 @@ def FRFcoord(p1, p2):
     #  spE = state plane easting (m)
 
     NAD83-86	2014
-
     Origin Latitude          36.1775975
     Origin Longitude         75.7496860
     m/degLat             110963.357

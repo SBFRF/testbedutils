@@ -1,7 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
 import sblib as sb
-
 def ADV(p, u, v, t, waterDepth, gaugeDepth):
     """
     Takes below parameters and makes them into magical wave data
