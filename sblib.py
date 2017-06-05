@@ -136,8 +136,6 @@ def FRFcoord(p1, p2):
 
     Eom = 901951.6805;  # % E Origin State Plane
     Nom = 274093.1562;  # % N Origin State Plane
-    # ALat0=10.65583950;            % Origin Lat minutes
-    # ALon0=44.9811435;             % Origin Lon minutes
     ALat0 = 36.1775975;  # % Origin Lat minutes
     ALon0 = 75.7496860;  # % Origin Lon minutes
     DegLat = 110963.35726;  # % m/deg Lat
