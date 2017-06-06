@@ -193,7 +193,7 @@ def LatLon2ncsp(lon, lat):
     ans = {'lon': lon, 'lat': lat, 'StatePlaneE': spE, 'StatePlaneN': spN}
     return ans
 
-def FRFcoordv2(p1, p2):
+def FRFcoord(p1, p2):
     """
     updated FRF coord in python, using kent's original code as guide but converting pyproj for all
     conversions between state plane and Lat Lon,  Then all conversions between stateplane and
