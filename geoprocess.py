@@ -62,7 +62,7 @@ def FRF2ncsp(xFRF, yFRF):
     AspE = R * np.sin(Ang2)
     spN = AspN + Nom
     spE = AspE + Eom
-    out = {'xFRF': xFRF,  'yFRF': yFRF, 'StatePlaneE': spE, 'StatePlaneN': spN}
+    out = {'xFRF': xFRF,  'yFRF': yFRF, 'StateplaneE': spE, 'StateplaneN': spN}
     return out
 
 def ncsp2FRF(p1, p2):
@@ -132,8 +132,8 @@ def ncsp2FRF(p1, p2):
     # to Lat Lon
     ans = {'xFRF': X,
            'yFRF': Y,
-           'StatePlaneE': spE,
-           'StatePlaneN': spN}
+           'StateplaneE': spE,
+           'StateplaneN': spN}
     return ans
 
 def ncsp2LatLon(spE, spN):
@@ -162,7 +162,7 @@ def ncsp2LatLon(spE, spN):
     spNC = pyproj.Proj(init="epsg:%s" %EPSG)
     LL = pyproj.Proj(init='epsg:4269')  # epsg for NAD83 projection
     lon, lat = pyproj.transform(spNC, LL, spE, spN)
-    ans = {'lon': lon, 'lat': lat, 'StatePlaneE': spE, 'StatePlaneN': spN}
+    ans = {'lon': lon, 'lat': lat, 'StateplaneE': spE, 'StateplaneN': spN}
     return ans
 
 def LatLon2ncsp(lon, lat):
@@ -190,7 +190,7 @@ def LatLon2ncsp(lon, lat):
     spNC = pyproj.Proj(init="epsg:%s" %EPSG)
     LL = pyproj.Proj(init='epsg:4269')  # epsg for NAD83 projection
     spE, spN = pyproj.transform(LL, spNC, lon, lat)
-    ans = {'lon': lon, 'lat': lat, 'StatePlaneE': spE, 'StatePlaneN': spN}
+    ans = {'lon': lon, 'lat': lat, 'StateplaneE': spE, 'StateplaneN': spN}
     return ans
 
 def FRFcoord(p1, p2):
@@ -242,25 +242,25 @@ def FRFcoord(p1, p2):
     # Determine Data type
     if np.floor(abs(p1)) == 75 and np.floor(p2) == 36:  # lat/lon input
         sp = LatLon2ncsp(p1, p2)
-        frf = ncsp2FRF(sp['StatePlaneE'], sp['StatePlaneN'])
-        coordsOut = {'xFRF': frf['xFRF'], 'yFRF': frf['yFRF'], 'StatePlaneE':sp['StatePlaneE'],
-                     'StatePlaneN': sp['StatePlaneN'], 'Lat': p2, 'Lon':p1}
+        frf = ncsp2FRF(sp['StateplaneE'], sp['StateplaneN'])
+        coordsOut = {'xFRF': frf['xFRF'], 'yFRF': frf['yFRF'], 'StateplaneE':sp['StateplaneE'],
+                     'StateplaneN': sp['StateplaneN'], 'Lat': p2, 'Lon':p1}
 
     elif (p1 > 800000) and p2 > 200000:  # state plane input
         frf = ncsp2FRF(p1, p2)     # convert state plane to FRF
         ll = ncsp2LatLon(p1, p2)  # convert state plane to Lat Lon
-        coordsOut = {'xFRF': frf['xFRF'], 'yFRF': frf['yFRF'], 'StatePlaneE': p1,
-                     'StatePlaneN': p2, 'Lat': ll['lat'], 'Lon':ll['lon']}
+        coordsOut = {'xFRF': frf['xFRF'], 'yFRF': frf['yFRF'], 'StateplaneE': p1,
+                     'StateplaneN': p2, 'Lat': ll['lat'], 'Lon':ll['lon']}
 
     elif (p1 > -10000 and p1 < 10000) and (p2 > -10000 and p2 < 10000):  # FRF input
         # this is FRF in
         sp = FRF2ncsp(p1, p2)
-        ll = ncsp2LatLon(sp['StatePlaneE'], sp['StatePlaneN'])
-        coordsOut = {'xFRF': p1, 'yFRF': p2, 'StatePlaneE': sp['StatePlaneE'],
-                     'StatePlaneN': sp['StatePlaneN'], 'Lat': ll['lat'], 'Lon':ll['lon']}
+        ll = ncsp2LatLon(sp['StateplaneE'], sp['StateplaneN'])
+        coordsOut = {'xFRF': p1, 'yFRF': p2, 'StateplaneE': sp['StateplaneE'],
+                     'StateplaneN': sp['StateplaneN'], 'Lat': ll['lat'], 'Lon':ll['lon']}
 
     else:
         print '<<ERROR>> Cound not determine input type, returning NaNs'
-        coordsOut = {'xFRF': float('NaN'), 'yFRF': float('NaN'), 'StatePlaneE': float('NaN'),
-             'StatePlaneN': float('NaN'), 'Lat': float('NaN'), 'Lon':float('NaN')}
+        coordsOut = {'xFRF': float('NaN'), 'yFRF': float('NaN'), 'StateplaneE': float('NaN'),
+             'StateplaneN': float('NaN'), 'Lat': float('NaN'), 'Lon':float('NaN')}
     return coordsOut
