@@ -6,16 +6,11 @@ This is a general usage FRF tool package developed by spicer bak, and david youn
 
 * This repo houses a bunch of useful tools, primarly developed as part of the Coastal model Test bed, but are useful in processing data around the FRF 
 * version 0.5
-* [Learn Markdown](https://bitbucket.org/tutorials/markdowndemo)
+* there is no setup.py file at this point.
 
 
 ### Contribution guidelines ###
+Contributions are welcome from visiting scientists or others in the community.  
 
-* Writing tests
-* Code review
-* Other guidelines
-
-### Who do I talk to? ###
-
-* Repo owner or admin
-* Other community or team contact
+* everything is pretty manual right now, talk to spicer Bak about contributions
+* spicer.bak@usace.army.mil
