@@ -12,6 +12,7 @@ this folder needs to be added to sys.path to use
 import numpy as np
 import datetime as DT
 import csv, warnings
+import math
 
 
 def makegif(flist, ofname, size=None, dt=0.5):
@@ -1010,3 +1011,59 @@ def import_FRF_Transect(fname):
                  'meta': 'date and Time has been converted to a UTC datetimeta object, elevation is in NAVD88',
                  }
     return bathyDict
+
+
+def vectorRotation(vector, theta=90, axis='z'):
+    """
+    :param vector: 2d or 3d vector you want rotated... [x, y, z]
+    :param axis: axis you want it rotated about 'x' = [1, 0, 0], 'y' = [0, 1, 0], 'z' = [0, 0, 1]
+    :param theta: angle in decimal degrees
+    
+    :return: vector rotated CCW theta degrees about axis, uses Euler-Rodrigues formula  
+    """
+
+    vector = np.asarray(vector)
+    assert -360 <= theta <= 360, 'your angle must be a decimal degree value -360  and 360 degrees'
+    assert len(vector) >= 2, "You must hand this function a 2D or 3D vector!"
+    assert len(vector) <= 3, "You must hand this function a 2D or 3D vector!"
+
+    if len(vector) == 2:
+        vector = np.append(vector, 0) # this just converts it to a 2D vector
+        ret = '2d'
+    else:
+        ret = '3d'
+
+    if type(axis) == str:
+        assert axis in ['x', 'y', 'z'], 'Acceptable axis inputs are x, y, z, or a 3D vector'
+
+        if axis == 'x':
+            axis = [1, 0, 0]
+        elif axis == 'y':
+            axis = [0, 1, 0]
+        elif axis == 'z':
+            axis = [0, 0, 1]
+        else:
+            pass
+        axis = np.asarray(axis)
+    else:
+        axis = np.asarray(axis)
+        assert len(axis) == 3, 'Acceptable axis inputs are x, y, z, or a 3D vector'
+
+    theta = 2*math.pi*(theta/360.0)
+    axis = axis / math.sqrt(np.dot(axis, axis))
+    a = math.cos(theta / 2.0)
+    b, c, d = -axis * math.sin(theta / 2.0)
+    aa, bb, cc, dd = a * a, b * b, c * c, d * d
+    bc, ad, ac, ab, bd, cd = b * c, a * d, a * c, a * b, b * d, c * d
+    r_mat = np.array([[aa + bb - cc - dd, 2 * (bc + ad), 2 * (bd - ac)],
+                     [2 * (bc - ad), aa + cc - bb - dd, 2 * (cd + ab)],
+                     [2 * (bd + ac), 2 * (cd - ab), aa + dd - bb - cc]])
+
+    r_vector = np.dot(r_mat, vector)
+
+    if ret == '3d':
+        return r_vector
+    else:
+        return r_vector[0:2]
+
+
