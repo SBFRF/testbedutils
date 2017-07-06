@@ -129,6 +129,74 @@ def qkhfs(w, h):
     kh = y
     return kh
 
+def HPchop_spec(spec, dirbin, angadj=0, corrected=1):
+    """
+    NOTE: tHIS FUNCTION DOES NOT FLIP THE ANGLE CONVENTION FROM CARTESIAN TO GEOGRAPHIC
+    USE GEO2GRID SPEC ROTATE FOR THIS
+    This function chops a spectra into half plane, assuming already shore normal waves,
+    it will remove half of the spectra not incident to shore
+
+    ASSUMPTIONS:
+        waves are already shore normal
+        follows MET convention (angles measured in the from direction)
+    INPUT:
+        spec: 2D directional spectra (record count x frq x direction )
+        dirbin: associated directions with the spectra
+                    normal: 1=shore normal chopping 0=FRF pier -> true north chopping
+        angadj: rotation angle to make 0 shorenormal
+            angle in deg true north of shore perpendicular
+            MET convention (shore->sea)
+            THE PORTION OF THE SPECTRA traveling opposite this WILL BE REMOVED ()
+
+    OUTPUT:
+        newspec:   new Half plane spectra
+        newdirband: direction bands associated with Halplane spectra
+                if angadj ==0 directions are output as Shore Normal
+                if angadj !=0 directions are output as True North
+        corrected: corrected = 1 for input being between 0:360
+                   corrected = 0 for input containing negative values
+                   (will return in the same fashion)
+    """
+    dirbin = np.array(dirbin)
+    # if angadj != 0:
+    #     dirbin = angle_correct(dirbin - angadj)
+    if angadj < 0:  # if a
+        # rotating dirbin if need be
+        dirbin = sb.angle_correct(dirbin - angadj)
+    elif angadj > 0:
+        dirbin = dirbin - angadj
+
+    zeroidx = abs(np.array(dirbin)).argmin()  # index of zero degrees
+    deltadeg = np.abs(np.median(np.diff(dirbin)))
+    ## number of bins on either side of zero non inclusive of zero (only in HP)
+    nbins = int(((360 / 4) - 1) / deltadeg)
+
+    if zeroidx + nbins > len(dirbin):  # if the zero + nbins wraps
+        mmidx = zeroidx + nbins - len(dirbin)  # how many wrapped (extra)
+        mlist = np.concatenate((range(zeroidx, len(dirbin)), range(0, mmidx + 1)))
+    else:
+        mlist = range(zeroidx, zeroidx + nbins + 1)  # indicies of new zero to the max on this side of zero
+    if zeroidx == 0:
+        zzidx = abs(zeroidx - nbins)  # how many wrap
+        zlist = range(np.size(dirbin) - zzidx, np.size(dirbin))
+    elif zeroidx - nbins < 0:  # if the lower bound of the hp wraps
+        zzidx = abs(zeroidx - nbins)  # extra (wrap points)
+        zlist = np.concatenate((range(np.size(dirbin) - zzidx, np.size(dirbin)), range(0, zeroidx)))
+    else:
+        zlist = range(zeroidx - nbins, zeroidx)
+    # create newly halfed direction bands and new spectra
+    newdirband = np.concatenate([dirbin[zlist], dirbin[mlist]],
+                                axis=0)  # pulling proper angle bins together (with shore perp centered
+    # newspec = np.zeros([np.size(spec, axis=0), np.size(spec, axis=1), np.size(newdirband)])  # initializing
+    newspec = np.concatenate([spec[:, :, zlist], spec[:, :, mlist]], axis=2)  # pulling proper spec data
+
+    if angadj != 0 and corrected == 1:
+        newdirband = sb.angle_correct(newdirband + angadj)
+    elif corrected == 1:
+        newdirband = sb.angle_correct(newdirband)
+
+    return newspec, newdirband
+
 
 def makeMLMspecFromAsBs(a0, a1, b1, a2, b2, waterDepth, freqs, dirs):
     """
