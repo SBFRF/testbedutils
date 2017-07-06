@@ -1,5 +1,7 @@
 import numpy as np
 import pyproj
+import utm
+import pandas as pd
 
 def FRF2ncsp(xFRF, yFRF):
     """
@@ -264,3 +266,73 @@ def FRFcoord(p1, p2):
         coordsOut = {'xFRF': float('NaN'), 'yFRF': float('NaN'), 'StateplaneE': float('NaN'),
              'StateplaneN': float('NaN'), 'Lat': float('NaN'), 'Lon':float('NaN')}
     return coordsOut
+
+def utm2LatLon(utmE, utmN, zn, zl):
+    """
+    
+    :param utmE: utm easting
+    :param utmN: utm northing
+    :param zn: utm zone number
+    :param zl: utm zone letter
+    
+    :return: lat lon coordinates of the utm points 
+    """
+
+    # check to see if points are...
+    assert np.size(utmE) == np.size(utmE), 'utm2LatLon error: UTM point vectors must be equal lengths'
+
+    #check to see if zn, zl are either both length 1 or the same length as p1, p2
+    if np.size(zn) == 1:
+        assert np.size(zn) == np.size(zl), 'utm2LatLon error: UTM zone number and letter must both be of length 1 or length of UTM point vectors'
+    else:
+        assert np.size(zn) == np.size(zl) == np.size(utmE), 'utm2LatLon error: UTM zone number and letter must both be of length 1 or length of UTM point vectors'
+
+    columns = ['utmE', 'utmN', 'zn', 'zl']
+
+    df = pd.DataFrame(index=range(0, np.size(utmE)), columns=columns)
+
+    df['utmE'] = utmE
+    df['utmN'] = utmN
+    df['zn'] = zn
+    df['zl'] = zl
+
+    df['lat'] = df.apply(lambda x: utm.to_latlon(x.utmE, x.utmN, x.zn, x.zl)[0], axis=1)
+    df['lon'] = df.apply(lambda x: utm.to_latlon(x.utmE, x.utmN, x.zn, x.zl)[1], axis=1)
+
+    return_dict = {}
+    return_dict['lat'] = np.asarray(df['lat'])
+    return_dict['lon'] = np.asarray(df['lon'])
+
+    return return_dict
+
+def LatLon2utm(lat, lon):
+    """
+    
+    :param lat: 
+    :param lon: 
+    :return: dictionary containing UTM easting, northing, zone number, and zone letter of each point
+    """
+
+    # check to see if points are...
+    assert np.size(lat) == np.size(lon), 'LatLon2utm error: lat lon coordinate vectors must be equal lengths'
+
+    columns = ['lat', 'lon']
+
+    df = pd.DataFrame(index=range(0, np.size(lat)), columns=columns)
+
+    df['lat'] = lat
+    df['lon'] = lon
+
+    df['utmE'] = df.apply(lambda x: utm.from_latlon(x.lat, x.lon)[0], axis=1)
+    df['utmN'] = df.apply(lambda x: utm.from_latlon(x.lat, x.lon)[1], axis=1)
+    df['zn'] = df.apply(lambda x: utm.from_latlon(x.lat, x.lon)[2], axis=1)
+    df['zl'] = df.apply(lambda x: utm.from_latlon(x.lat, x.lon)[3], axis=1)
+
+    return_dict = {}
+    return_dict['utmE'] = np.asarray(df['utmE'])
+    return_dict['utmN'] = np.asarray(df['utmN'])
+    return_dict['zn'] = np.asarray(df['zn'])
+    return_dict['zl'] = np.asarray(df['zl'])
+
+    return return_dict
+
