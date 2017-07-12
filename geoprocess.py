@@ -401,7 +401,6 @@ def ncsp2utm(easting, northing):
 
     return utm_dict
 
-t = 'kitties'
 
 
 
