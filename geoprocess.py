@@ -242,7 +242,7 @@ def FRFcoord(p1, p2):
     """
 
     # Determine Data type
-    if np.floor(abs(p1)) == 75 and np.floor(p2) == 36:  # lat/lon input
+    if (np.floor(abs(p1)) == 75).all() and (np.floor(p2) == 36).all():  # lat/lon input
         sp = LatLon2ncsp(p1, p2)
         frf = ncsp2FRF(sp['StateplaneE'], sp['StateplaneN'])
         coordsOut = {'xFRF': frf['xFRF'], 'yFRF': frf['yFRF'], 'StateplaneE':sp['StateplaneE'],
