@@ -291,17 +291,22 @@ def utm2LatLon(utmE, utmN, zn, zl):
 
     df = pd.DataFrame(index=range(0, np.size(utmE)), columns=columns)
 
+    if np.size(utmE) > len(utmE):
+        utmE = utmE[0]
+        utmN = utmN[0]
+
     df['utmE'] = utmE
     df['utmN'] = utmN
     df['zn'] = zn
     df['zl'] = zl
 
-    df['lat'] = df.apply(lambda x: utm.to_latlon(x.utmE, x.utmN, x.zn, x.zl)[0], axis=1)
-    df['lon'] = df.apply(lambda x: utm.to_latlon(x.utmE, x.utmN, x.zn, x.zl)[1], axis=1)
+    df['ll'] = df.apply(lambda x: utm.to_latlon(x.utmE, x.utmN, x.zn, x.zl), axis=1)
+
+    L1, L2 = zip(*np.asarray(df['ll']))
 
     return_dict = {}
-    return_dict['lat'] = np.asarray(df['lat'])
-    return_dict['lon'] = np.asarray(df['lon'])
+    return_dict['lat'] = np.asarray(L1)
+    return_dict['lon'] = np.asarray(L2)
 
     return return_dict
 
@@ -323,16 +328,80 @@ def LatLon2utm(lat, lon):
     df['lat'] = lat
     df['lon'] = lon
 
-    df['utmE'] = df.apply(lambda x: utm.from_latlon(x.lat, x.lon)[0], axis=1)
-    df['utmN'] = df.apply(lambda x: utm.from_latlon(x.lat, x.lon)[1], axis=1)
-    df['zn'] = df.apply(lambda x: utm.from_latlon(x.lat, x.lon)[2], axis=1)
-    df['zl'] = df.apply(lambda x: utm.from_latlon(x.lat, x.lon)[3], axis=1)
+    df['utm'] = df.apply(lambda x: utm.from_latlon(x.lat, x.lon), axis=1)
+
+    utmE, utmN, zn, zl = zip(*np.asarray(df['utm']))
 
     return_dict = {}
-    return_dict['utmE'] = np.asarray(df['utmE'])
-    return_dict['utmN'] = np.asarray(df['utmN'])
-    return_dict['zn'] = np.asarray(df['zn'])
-    return_dict['zl'] = np.asarray(df['zl'])
+    return_dict['utmE'] = np.asarray(utmE)
+    return_dict['utmN'] = np.asarray(utmN)
+    return_dict['zn'] = np.asarray(zn)
+    return_dict['zl'] = np.asarray(zl)
 
     return return_dict
+
+def utm2ncsp(utmE, utmN, zn, zl):
+    """
+    :param utmE: utm easting
+    :param utmN: utm northing
+    :param zn: utm zone number
+    :param zl: utm zone letter
+    
+    :return: ncsp easting and northing
+    """
+    # so, all this does it go through Lat/Lon to get to ncsp..
+
+    # check to see if points are...
+    assert np.size(utmE) == np.size(utmE), 'utm2ncsp error: UTM point vectors must be equal lengths'
+
+    #check to see if zn, zl are either both length 1 or the same length as p1, p2
+    if np.size(zn) == 1:
+        assert np.size(zn) == np.size(zl), 'utm2ncsp error: UTM zone number and letter must both be of length 1 or length of UTM point vectors'
+    else:
+        assert np.size(zn) == np.size(zl) == np.size(utmE), 'utm2ncsp error: UTM zone number and letter must both be of length 1 or length of UTM point vectors'
+
+    columns = ['utmE', 'utmN', 'zn', 'zl']
+
+    df = pd.DataFrame(index=range(0, np.size(utmE)), columns=columns)
+
+    df['utmE'] = utmE
+    df['utmN'] = utmN
+    df['zn'] = zn
+    df['zl'] = zl
+
+    df['ll'] = df.apply(lambda x: utm.to_latlon(x.utmE, x.utmN, x.zn, x.zl), axis=1)
+
+    L1, L2 = zip(*np.asarray(df['ll']))
+
+    ncsp_dict = LatLon2ncsp(np.asarray(L2), np.asarray(L1))
+
+    return_dict = {}
+    return_dict['easting'] = np.asarray(ncsp_dict['StateplaneE'])
+    return_dict['northing'] = np.asarray(ncsp_dict['StateplaneN'])
+
+    return return_dict
+
+def ncsp2utm(easting, northing):
+    """
+    :param easting: 
+    :param northing: 
+    
+    :return: 
+        utmE - utm Easting
+        utmN - utm Northing
+        zn - zone number
+        zl - zone letter 
+    """
+    # all this does it go through lat/lon to get to utm...
+
+    assert np.shape(easting) == np.shape(northing), 'ncsp2utm Error: northing and easting vectors must be same length'
+
+    ll_dict = ncsp2LatLon(easting, northing)
+    utm_dict = LatLon2utm(ll_dict['lat'], ll_dict['lon'])
+
+    return utm_dict
+
+
+
+
 
