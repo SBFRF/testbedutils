@@ -262,7 +262,7 @@ def FRFcoord(p1, p2):
                      'StateplaneN': sp['StateplaneN'], 'Lat': ll['lat'], 'Lon':ll['lon']}
 
     else:
-        print '<<ERROR>> Cound not determine input type, returning NaNs'
+        print '<<ERROR>> sblib Geoprocess FRF coord Cound not determine input type, returning NaNs'
         coordsOut = {'xFRF': float('NaN'), 'yFRF': float('NaN'), 'StateplaneE': float('NaN'),
              'StateplaneN': float('NaN'), 'Lat': float('NaN'), 'Lon':float('NaN')}
     return coordsOut
@@ -279,7 +279,7 @@ def utm2LatLon(utmE, utmN, zn, zl):
     """
 
     # check to see if points are...
-    assert np.size(utmE) == np.size(utmE), 'utm2LatLon error: UTM point vectors must be equal lengths'
+    assert np.size(utmE) == np.size(utmN), 'utm2LatLon error: UTM point vectors must be equal lengths'
 
     #check to see if zn, zl are either both length 1 or the same length as p1, p2
     if np.size(zn) == 1:
