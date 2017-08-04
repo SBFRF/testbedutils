@@ -122,6 +122,8 @@ def ncsp2FRF(p1, p2):
 
     spE = p1
     spN = p2  # designating stateplane vars
+
+
     # to FRF coords
     spLengE = p1 - Eom
     spLengN = p2 - Nom
@@ -241,25 +243,66 @@ def FRFcoord(p1, p2):
     SP:  p1 = 902307.92; 	p2 = 274771.22;
     """
 
-    # Determine Data type
-    if (np.floor(abs(p1)) == 75).all() and (np.floor(p2) == 36).all():  # lat/lon input
-        sp = LatLon2ncsp(p1, p2)
-        frf = ncsp2FRF(sp['StateplaneE'], sp['StateplaneN'])
-        coordsOut = {'xFRF': frf['xFRF'], 'yFRF': frf['yFRF'], 'StateplaneE':sp['StateplaneE'],
-                     'StateplaneN': sp['StateplaneN'], 'Lat': p2, 'Lon':p1}
+    # convert list to array if needed
+    if isinstance(p1, list):
+        p1 = np.asarray(p1)
+    else:
+        pass
 
-    elif (p1 > 800000) and p2 > 200000:  # state plane input
+    if isinstance(p2, list):
+        p2 = np.asarray(p2)
+    else:
+        pass
+
+
+    if np.size(p1) > 1:
+        LL1 = (np.floor(np.absolute(p1)) == 75).all()
+        LL2 = (np.floor(p2) == 36).all()
+        SP1 = (p1 > 800000).all()
+        SP2 = (p2 > 200000).all()
+        UTM1 = (p1 > 300000).all()
+        UTM2 = (p2 > 1000000).all()
+        FRF1 = (p1 > -10000).all() and (p1 < 10000).all()
+        FRF2 = (p2 > -10000).all() and (p2 < 10000).all()
+    else:
+        LL1 = np.floor(np.absolute(p1)) == 75
+        LL2 = np.floor(p2) == 36
+        SP1 = p1 > 800000
+        SP2 = p2 > 200000
+        UTM1 = p1 > 300000
+        UTM2 = p2 > 1000000
+        FRF1 = (p1 > -10000) and (p1 < 10000)
+        FRF2 = (p2 > -10000) and (p2 < 10000)
+
+    # Determine Data type
+    if LL1 and LL2:  # lat/lon input
+        sp = LatLon2ncsp(p1, p2)  # convert from lon/lat to state plane
+        frf = ncsp2FRF(sp['StateplaneE'], sp['StateplaneN'])  # convert from nc state plane to FRF coords
+        utm = LatLon2utm(p2, p1)  # convert to utm from lon/lat
+        coordsOut = {'xFRF': frf['xFRF'], 'yFRF': frf['yFRF'], 'StateplaneE': sp['StateplaneE'],
+                     'StateplaneN': sp['StateplaneN'], 'Lat': p2, 'Lon': p1, 'utmE': utm['utmE'], 'utmN': utm['utmN']}
+
+    elif SP1 and SP2:  # state plane input
         frf = ncsp2FRF(p1, p2)     # convert state plane to FRF
         ll = ncsp2LatLon(p1, p2)  # convert state plane to Lat Lon
+        utm = LatLon2utm(ll['lat'], ll['lon'])
         coordsOut = {'xFRF': frf['xFRF'], 'yFRF': frf['yFRF'], 'StateplaneE': p1,
-                     'StateplaneN': p2, 'Lat': ll['lat'], 'Lon':ll['lon']}
+                     'StateplaneN': p2, 'Lat': ll['lat'], 'Lon': ll['lon'], 'utmE': utm['utmE'], 'utmN': utm['utmN']}
 
-    elif (p1 > -10000 and p1 < 10000) and (p2 > -10000 and p2 < 10000):  # FRF input
+    elif UTM1 and UTM2:  # UTM input
+        ll = utm2LatLon(p1, p2, 18, 'S')
+        sp = LatLon2ncsp(ll['lon'], ll['lat'])
+        frf = ncsp2FRF(sp['StateplaneE'], sp['StateplaneN'])
+        coordsOut = {'xFRF': frf['xFRF'], 'yFRF': frf['yFRF'], 'StateplaneE': sp['StateplaneE'],
+                     'StateplaneN': sp['StateplaneN'], 'Lat': ll['lat'], 'Lon': ll['lon'], 'utmE': p1, 'utmN': p2}
+
+    elif FRF1 and FRF2:  # FRF input
         # this is FRF in
         sp = FRF2ncsp(p1, p2)
         ll = ncsp2LatLon(sp['StateplaneE'], sp['StateplaneN'])
+        utm = LatLon2utm(ll['lat'], ll['lon'])
         coordsOut = {'xFRF': p1, 'yFRF': p2, 'StateplaneE': sp['StateplaneE'],
-                     'StateplaneN': sp['StateplaneN'], 'Lat': ll['lat'], 'Lon':ll['lon']}
+                     'StateplaneN': sp['StateplaneN'], 'Lat': ll['lat'], 'Lon': ll['lon'], 'utmE': utm['utmE'], 'utmN': utm['utmN']}
 
     else:
         print '<<ERROR>> sblib Geoprocess FRF coord Cound not determine input type, returning NaNs'
