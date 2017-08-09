@@ -298,7 +298,7 @@ def roundtime(dt=None, roundTo=60):
        dt : datetime.datetime object, default now.
        roundTo : Closest number of seconds to round to, default 1 minute.
        Author: Thierry Husson 2012 - Use it as you want but don't blame me.
-       modified by SB to include lists of datetime objects,
+       modified by SB to include lists of datetime dataList,
        returned as a list if it came in as a list, if it came in as a datetime object
        it is returned as such
     """
