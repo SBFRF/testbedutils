@@ -520,6 +520,21 @@ def statsBryant(observations, models):
 
     return stats
 
+def weightedAvg(toBeAveraged, weights, avgAxis=0):
+    """
+    This function does a weighted average on a multidimensional array
+
+    :param toBeAveraged: values to be averaged (array)
+    :param weights: values to be used as weights (does not have to be normalized)
+
+    :return: an array of weighted average
+    """
+    assert toBeAveraged.shape == weights.shape, 'data and weights need to be the same shapes to be averaged'
+    if weights.ndim > 2:
+        averagedData = np.sum(weights * toBeAveraged, axis=avgAxis) / (weights).sum(axis=avgAxis)
+    else:  # singular instance
+        averagedData = weights * toBeAveraged / weights
+    return averagedData
 
 def timeMatch(obs_time, obs_data, model_time, model_data):
     """
@@ -532,6 +547,9 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
     :param model_data:  modeling data (any shape)
     :return:
     """
+    assert type(obs_time[0]) != DT.datetime, 'time in must be numeric, try epoch!'
+    assert type(model_time[0]) != DT.datetime, 'time in must be numeric, try epoch!'
+
 
     time = np.array([])
     obs_data_s = np.array([])
