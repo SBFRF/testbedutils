@@ -197,12 +197,12 @@ def LatLon2ncsp(lon, lat):
     ans = {'lon': lon, 'lat': lat, 'StateplaneE': spE, 'StateplaneN': spN}
     return ans
 
-def FRFcoord(p1, p2):
+def FRFcoord(p1, p2, coordType=None):
     """
     updated FRF coord in python, using kent's original code as guide but converting pyproj for all
     conversions between state plane and Lat Lon,  Then all conversions between stateplane and
     FRF coordinates are done using kents original geometry.
-
+    coordType argument will force an input type eg 'FRF'
     #
     #  15 Dec 2014
     #  Kent Hathaway.
@@ -296,7 +296,7 @@ def FRFcoord(p1, p2):
         coordsOut = {'xFRF': frf['xFRF'], 'yFRF': frf['yFRF'], 'StateplaneE': sp['StateplaneE'],
                      'StateplaneN': sp['StateplaneN'], 'Lat': ll['lat'], 'Lon': ll['lon'], 'utmE': p1, 'utmN': p2}
 
-    elif FRF1 and FRF2:  # FRF input
+    elif (FRF1 and FRF2) or coordType in ['FRF']:  # FRF input
         # this is FRF in
         sp = FRF2ncsp(p1, p2)
         ll = ncsp2LatLon(sp['StateplaneE'], sp['StateplaneN'])

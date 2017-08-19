@@ -369,7 +369,7 @@ def angle_correct(angle_in, rad=0):
         return angle_in
     if rad == 0:
         if (angle_in == 0).all():
-            print 'WARNING - Correcting angles of Zero'
+            warnings.warn('WARNING - Correcting angles of Zero')
         elif (np.abs(angle_in) < 2 * np.pi).all():
             warnings.warn(' WARNING angles are all < 2Pi , ensure that angles are in degrees not radians')
 
@@ -530,10 +530,7 @@ def weightedAvg(toBeAveraged, weights, avgAxis=0):
     :return: an array of weighted average
     """
     assert toBeAveraged.shape == weights.shape, 'data and weights need to be the same shapes to be averaged'
-    if weights.ndim > 2:
-        averagedData = np.sum(weights * toBeAveraged, axis=avgAxis) / (weights).sum(axis=avgAxis)
-    else:  # singular instance
-        averagedData = weights * toBeAveraged / weights
+    averagedData = np.sum(weights * toBeAveraged, axis=avgAxis) / (weights).sum(axis=avgAxis)
     return averagedData
 
 def timeMatch(obs_time, obs_data, model_time, model_data):
