@@ -299,7 +299,7 @@ def roundtime(dt=None, roundTo=60):
        dt : datetime.datetime object, default now.
        roundTo : Closest number of seconds to round to, default 1 minute.
        Author: Thierry Husson 2012 - Use it as you want but don't blame me.
-       modified by SB to include lists of datetime objects,
+       modified by SB to include lists of datetime dataList,
        returned as a list if it came in as a list, if it came in as a datetime object
        it is returned as such
     """
@@ -370,7 +370,7 @@ def angle_correct(angle_in, rad=0):
         return angle_in
     if rad == 0:
         if (angle_in == 0).all():
-            print 'WARNING - Correcting angles of Zero'
+            warnings.warn('WARNING - Correcting angles of Zero')
         elif (np.abs(angle_in) < 2 * np.pi).all():
             warnings.warn(' WARNING angles are all < 2Pi , ensure that angles are in degrees not radians')
 
@@ -521,6 +521,18 @@ def statsBryant(observations, models):
 
     return stats
 
+def weightedAvg(toBeAveraged, weights, avgAxis=0):
+    """
+    This function does a weighted average on a multidimensional array
+
+    :param toBeAveraged: values to be averaged (array)
+    :param weights: values to be used as weights (does not have to be normalized)
+
+    :return: an array of weighted average
+    """
+    assert toBeAveraged.shape == weights.shape, 'data and weights need to be the same shapes to be averaged'
+    averagedData = np.sum(weights * toBeAveraged, axis=avgAxis) / (weights).sum(axis=avgAxis)
+    return averagedData
 
 def timeMatch(obs_time, obs_data, model_time, model_data):
     """
@@ -533,6 +545,9 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
     :param model_data:  modeling data (any shape)
     :return:
     """
+    assert type(obs_time[0]) != DT.datetime, 'time in must be numeric, try epoch!'
+    assert type(model_time[0]) != DT.datetime, 'time in must be numeric, try epoch!'
+
 
     # try to convert it from datetime to epochtime
     # this will fail if it already is in epochtime, so it wont do anything.
