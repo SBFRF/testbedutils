@@ -311,7 +311,7 @@ def roundtime(timeIn=None, roundTo=60):
     if np.size(timeIn) > 1:
         dtlist = timeIn
     elif np.size(timeIn) == 1:
-        if type(timeIn) == np.ndarray:
+        if type(timeIn) == np.ndarray and timeIn.shape == (1,):
             dtlist = timeIn.tolist()
         else:
             dtlist = [timeIn]
