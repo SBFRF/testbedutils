@@ -293,22 +293,28 @@ class Bunch(object):
         self.__dict__.update(aDict)
 
 
-def roundtime(dt=None, roundTo=60):
-    """"Round a datetime object to any time laps in seconds
-       dt : datetime.datetime object, default now.
-       roundTo : Closest number of seconds to round to, default 1 minute.
+def roundtime(timeIn=None, roundTo=60):
+    """"
+    Round a datetime object to any time lapse in seconds
+       :param dt : datetime.datetime object, default now.
+       :param roundTo : Closest number of seconds to round to, default 1 minute.
+
        Author: Thierry Husson 2012 - Use it as you want but don't blame me.
+
        modified by SB to include lists of datetime dataList,
        returned as a list if it came in as a list, if it came in as a datetime object
        it is returned as such
     """
     # making dt a list
 
-    if np.size(dt) > 1:
-        dtlist = dt
-    elif np.size(dt) == 1:
-        dtlist = [dt]
-    elif np.size(dt) == None:
+    if np.size(timeIn) > 1:
+        dtlist = timeIn
+    elif np.size(timeIn) == 1:
+        if type(timeIn) == np.ndarray:
+            dtlist = timeIn.tolist()
+        else:
+            dtlist = [timeIn]
+    elif np.size(timeIn) == None:
         dtlist = [DT.datetime.now()]
         # checking to make datetime
         # if type(dt[0] != DT.datetime):
@@ -320,8 +326,12 @@ def roundtime(dt=None, roundTo=60):
         # // is a floor division, not a comment on following line:
         rounding = (seconds + roundTo / 2) // roundTo * roundTo
         dtlist[ii] = dt + DT.timedelta(0, rounding - seconds, -dt.microsecond)
+    # return data as it came in
     if len(dtlist) == 1:
-        dtlist = dtlist[0]
+        if type(timeIn) == np.ndarray:
+            dtlist = np.array(dtlist)  # if it came in as an array, return it as an array
+        else:
+            dtlist = dtlist[0]  # if it came in as a single element, return it as such
     return dtlist
 
 
