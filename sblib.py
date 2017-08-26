@@ -13,6 +13,7 @@ import numpy as np
 import datetime as DT
 import csv, warnings
 import math
+import netCDF4 as nc
 
 
 def makegif(flist, ofname, size=None, dt=0.5):
@@ -558,6 +559,27 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
     assert type(model_time[0]) != DT.datetime, 'time in must be numeric, try epoch!'
 
 
+    # try to convert it from datetime to epochtime
+    # this will fail if it already is in epochtime, so it wont do anything.
+    dt_check = False
+    try:
+        timeunits = 'seconds since 1970-01-01 00:00:00'
+        obs_time_n = nc.date2num(obs_time, timeunits)
+        del obs_time
+        obs_time = obs_time_n
+        del obs_time_n
+    except:
+        pass
+    try:
+        timeunits = 'seconds since 1970-01-01 00:00:00'
+        model_time_n = nc.date2num(model_time, timeunits)
+        del model_time
+        model_time = model_time_n
+        del model_time_n
+        dt_check = True
+    except:
+        pass
+
     time = np.array([])
     obs_data_s = np.array([])
     model_data_s = np.array([])
@@ -591,6 +613,27 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
         time = np.append(time, record)
         obs_data_s = np.append(obs_data_s, obs_data[indx])
         model_data_s = np.append(model_data_s, data)
+
+    # check to see if these are empty, and if so, interpolate
+    if np.size(time) == 0:
+        # this means it is empty!!!  interpolate obs onto model time
+        obs_data_s = np.interp(model_time, obs_time, obs_data)
+        model_data_s = model_data
+        time = model_time
+    else:
+        pass
+
+    # if I was handed a datetime, convert back to datetime
+    if dt_check:
+        timeunits = 'seconds since 1970-01-01 00:00:00'
+        calendar = 'gregorian'
+        time_n = nc.num2date(time, timeunits, calendar)
+        del time
+        time = time_n
+        del time_n
+    else:
+        pass
+
 
     return time, obs_data_s, model_data_s
 
