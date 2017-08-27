@@ -293,6 +293,17 @@ class Bunch(object):
     def __init__(self, aDict):
         self.__dict__.update(aDict)
 
+def myround(x, base=5):
+    """
+    This function will round any value to a multiple of the base,
+
+    :param x: values to be rounded:
+    :param base: this is the value by which x is rounded to a multiple of
+        ie base = 10  x = [4, 8, 2, 12]  returns [0,10,0,10]
+    :return: np.array of floating point numbers rounded to a multiple of base
+    """
+    x = np.array(x, dtype=float)
+    return base * np.round(x/base)
 
 def roundtime(timeIn=None, roundTo=60):
     """"
