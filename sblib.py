@@ -560,11 +560,20 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
     This is the time match function from the IMEDs lite version created by ASA
     This has been removed from the IMEDS package to simplify use.
     This method returns the matching model data to the closest obs point.
+
+    Time Matching is done by creating a threshold by taking the median of the difference of each time
+     then taking the minimum of the difference between the two input times divided by 2.
+       a small, arbitrary (as far as i know) factor is then subtracted from that minimum to remove the possiblity
+       of matching a time that is exactly half of the sampling interval.
+
     :param obs_time: observation times, in
     :param obs_data: matching observation data, any shape
     :param model_time:  modeling time
     :param model_data:  modeling data (any shape)
-    :return:
+
+    :return: time, (as float)
+             obs_data_s -  data as input
+             model_data_s  - data as input
     """
     assert type(obs_time[0]) != DT.datetime, 'time in must be numeric, try epoch!'
     assert type(model_time[0]) != DT.datetime, 'time in must be numeric, try epoch!'
