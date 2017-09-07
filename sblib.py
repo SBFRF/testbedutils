@@ -575,9 +575,6 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
              obs_data_s -  data as input
              model_data_s  - data as input
     """
-    assert type(obs_time[0]) != DT.datetime, 'time in must be numeric, try epoch!'
-    assert type(model_time[0]) != DT.datetime, 'time in must be numeric, try epoch!'
-
 
     # try to convert it from datetime to epochtime
     # this will fail if it already is in epochtime, so it wont do anything.
@@ -599,6 +596,9 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
         dt_check = True
     except:
         pass
+
+    assert type(obs_time[0]) != DT.datetime, 'time in must be numeric, try epoch!'
+    assert type(model_time[0]) != DT.datetime, 'time in must be numeric, try epoch!'
 
     time = np.array([])
     obs_data_s = np.array([])
