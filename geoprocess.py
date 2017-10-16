@@ -246,15 +246,9 @@ def FRFcoord(p1, p2, coordType=None):
     # convert list to array if needed
     if isinstance(p1, list):
         p1 = np.asarray(p1)
-    else:
-        pass
-
     if isinstance(p2, list):
         p2 = np.asarray(p2)
-    else:
-        pass
-
-
+    # now run checks to see what version of input we have!
     if np.size(p1) > 1:
         LL1 = (np.floor(np.absolute(p1)) == 75).all()
         LL2 = (np.floor(p2) == 36).all()
