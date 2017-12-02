@@ -516,11 +516,13 @@ def statsBryant(observations, models):
     ScatterIndex = RMSE / np.mean(observations)
     # symetric Slope
     symr = np.sqrt((models ** 2).sum() / (models ** 2).sum())
+    # coefficient of determination
     r2 = np.sum((observations - observations.mean()) * (models - models.mean())) \
-         / (
-             np.sqrt(((observations - observations.mean()) ** 2).sum()) * np.sqrt(
-                 ((models - (models).mean() ** 2)).sum()))
-
+         / (np.sqrt(  ((observations - observations.mean()) ** 2).sum()) *
+            np.sqrt(  ((models       - models.mean()      ) ** 2).sum()))
+    # SSres = (residuals ** 2).sum()  ## from wiki
+    # SStot = ((observations - observations.mean()) ** 2).sum()
+    # r2 = 1 - SSres/SStot
     # wilmont 1985
     topW = np.abs(models - (observations).sum())
     botW = (np.abs(models - (observations).mean()) + np.abs(np.nansum(observations - (observations).mean())))
@@ -538,6 +540,7 @@ def statsBryant(observations, models):
              'corr': r2,
              'PscoreWilmont': Wilmont,
              'PscoreIMEDS': IMEDS,
+             'residuals': residuals,
              'meta': 'please see Bryant, et al.(2016). Evaluation Statistics computed for the WIS ERDC/CHL CHETN-I-91'}
 
     return stats
@@ -690,6 +693,7 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
         Code Translated by Spicer Bak from: fd2BulkStats.m written by Kent Hathaway
             
     """
+    warnings.warn('This function is depricated, The development should be moved to sb.waveLib version!!!!')
     assert type(frqbins) in [np.ndarray, np.ma.MaskedArray], 'the input frqeuency bins must be a numpy array'
     assert type(dirbins) in [np.ndarray, np.ma.MaskedArray], 'the input DIRECTION bins must be a numpy array'
     try:
