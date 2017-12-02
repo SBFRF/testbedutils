@@ -30,7 +30,8 @@ def kalman_filter(new, prior, waveHs):
     :param waveHs:
     :return:
     """
-
+    if type(prior['time']) == list and len(prior['time']) == 1:
+        prior['time'] = prior['time'][0]
 
     n = 2.0
     Cq = 0.067

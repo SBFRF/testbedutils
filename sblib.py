@@ -545,15 +545,19 @@ def statsBryant(observations, models):
 
     return stats
 
-def weightedAvg(toBeAveraged, weights, avgAxis=0):
+def weightedAvg(toBeAveraged, weights, avgAxis=0, inverseWeight=False):
     """
     This function does a weighted average on a multidimensional array
 
     :param toBeAveraged: values to be averaged (array)
     :param weights: values to be used as weights (does not have to be normalized)
-
+    :param avgAxis: axis over which to average
+    :param inverseWeight: if true will invert the weights, high values weighted higher with marked FALSE
+            to weight high values lower, inverseWeight must be True
     :return: an array of weighted average
     """
+    if inverseWeight == True:
+        weights = 1/weights
     assert toBeAveraged.shape == weights.shape, 'data and weights need to be the same shapes to be averaged'
     averagedData = np.sum(weights * toBeAveraged, axis=avgAxis) / (weights).sum(axis=avgAxis)
     return averagedData
