@@ -1,4 +1,4 @@
-'documented SB 12/2/17/
+'documented SB 12/2/17/'
 import numpy as np
 import pyproj
 import utm
