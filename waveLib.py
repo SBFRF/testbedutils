@@ -573,12 +573,11 @@ def seaAndSwell1D(specTime, spec, wavefreqbin, truncate=0.1):
     return windSea, swellSea
 
 
-def stats1D(fspec, frqbins, dspec=None, lowFreq=0.05, highFreq=0.5):
+def stats1D(fspec, frqbins, lowFreq=0.05, highFreq=0.5):
     """
 
     :param fspec: frequency spectra
     :param frqbins: frequency bins associated with the 1d spectra
-    :param dspec:  this is the mean direction as a function of frequency ie arctan2(b1,a1)
     :param lowFreq: low frequency cut off for analysis
     :param highFreq: high frequency cutoff for analysis
     :return: a dictionary with statistics
