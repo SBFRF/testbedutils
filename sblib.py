@@ -8,6 +8,7 @@ Association: USACE CHL Field Research Facility
 my own library with useful functions and tips from which i found to be helpful
 on various general functions that don't fit into specific other codes
 this folder needs to be added to sys.path to use
+documented 12/2/17
 """
 import numpy as np
 import datetime as DT
@@ -27,6 +28,7 @@ def makegif(flist, ofname, size=None, dt=0.5):
     :param size: size of pictures (default not resized)
     :param loop: number of loops to do, 0 is default and infinite
     :return:
+        will write a gif to ofname location
     """
     # images = [Image.open(fn) for fn in flist]
     #
@@ -47,31 +49,20 @@ def find_nearest(array, value):
     """
     Function looks for value in array and returns the closest array value
     (to 'value') and index of that value
+    :param array: array to to find things in
+    :param value: value to search against
+    :return returns a number from the array value, that is closest to value input
     """
     idx = (np.abs(array - value)).argmin()
     return array[idx], idx
-
-
-def SBcleanangle(directions, deg=360):
-    """
-    This function cleans an array of angles (in degrees) to all positive
-    values ranging from 0 to 360
-
-    Currently is designed for only degree angles
-    """
-    for ii in range(0, len(directions)):
-        if directions[ii] >= 360:
-            directions[ii] = directions[ii] - 360
-        elif directions[ii] < 0:
-            directions[ii] = directions[ii] + 360
-    return directions
 
 def findUniqueFromTuple(a, axis=1):
     """
     This function finds the unique values of a multi dimensional tuple (quickly)
     :param a: an array of multidimensional size
     :param axis: this is the axis that it looks for unique values using (default is horizontal)
-    :return: warning, values are not sorted
+    :return: array of unique tuples
+        warning, values are not sorted
     """
     if axis == 0:
         a = a.T
@@ -84,156 +75,27 @@ def findUniqueFromTuple(a, axis=1):
 
 def FRFcoord(p1, p2):
     """
-    #  returns a dictionary of data with keys:
-        'StateplaneE':spE,
-        'StateplaneN':spN,
-        'FRF_Y':Y,
-        'FRF_X':X,
-        'Lat'
-        'Lon'
-
-     [ ALat, ALon, spN, spE, Y, X] = frfCoord(p1, p2)
-    #
-    #  15 Dec 2014
-    #  Kent Hathaway.
-    #  Translated from Matlab to python 2015-11-30 - Spicer Bak
-    #
-    #  Uses new fit (angles and scales) Bill Birkemeier determined in Nov 2014
-    #
-    #  This version will determine the input based on values, outputs FRF, lat/lon,
-    #  and state plane coordinates.  Uses NAD83-2011.
-    #
-    #  IO:
-    #  p1 = FRF X (m), or Longitude (deg + or -), or state plane Easting (m)
-    #  p2 = FRF Y (m), or Latitude (deg), or state plane Northing (m)
-    #
-    #  X = FRF cross-shore (m)
-    #  Y = FRF longshore (m)
-    #  ALat = latitude (decimal degrees)
-    #  ALon = longitude (decimal degrees, positive, or W)
-    #  spN = state plane northing (m)
-    #  spE = state plane easting (m)
-
-    NAD83-86	2014
-    Origin Latitude          36.1775975
-    Origin Longitude         75.7496860
-    m/degLat             110963.357
-    m/degLon              89953.364
-    GridAngle (deg)          18.1465
-    Angle FRF to Lat/Lon     71.8535
-    Angle FRF to State Grid  69.9747
-    FRF Origin Northing  274093.1562
-    Easting              901951.6805
-
-    #  Debugging values
-    p1=566.93;  p2=515.11;  % south rail at 1860
-    ALat = 36.1836000
-    ALon = 75.7454804
-    p2= 36.18359977;  p1=-75.74548109;
-    SP:  p1 = 902307.92; 	p2 = 274771.22;
+    place older
     """
-    print ' warning This code is depricated'
-    assert np.size(p1) == 1, 'This function does not support lists or arrays '
-    r2d = 180.0 / np.pi;
-
-    Eom = 901951.6805;  # % E Origin State Plane
-    Nom = 274093.1562;  # % N Origin State Plane
-    ALat0 = 36.1775975;  # % Origin Lat minutes
-    ALon0 = 75.7496860;  # % Origin Lon minutes
-    DegLat = 110963.35726;  # % m/deg Lat
-    DegLon = 89953.36413;  # % m/deg long
-    GridAngle = 18.1465 / r2d;
-    spAngle = (90 - 69.974707831) / r2d
-
-    # Determine Data type
-    if np.floor(abs(p1)) == 75 and np.floor(p2) == 36:  # lat/lon input
-        # to FRF coords
-        ALat = np.abs(p1)
-        ALon = p2  # DESIGNATING LAT/LON VARS
-        if p1 < 0:
-            p1 = -p1
-        ALatLeng = (p2 - ALat0) * DegLat
-        ALonLeng = -(p1 - ALon0) * DegLon
-        R = np.sqrt(ALatLeng ** 2 + ALonLeng ** 2)
-        Ang1 = np.arctan2(ALonLeng, ALatLeng)
-        Ang2 = Ang1 + GridAngle;
-        # to FRF
-        X = R * np.sin(Ang2)
-        Y = R * np.cos(Ang2)
-        # to StatePlane
-        Ang2 = Ang2 - spAngle
-        AspN = R * np.cos(Ang2)
-        AspE = R * np.sin(Ang2)
-        spN = AspN + Nom
-        spE = AspE + Eom
-
-    elif (p1 > 800000) and p2 > 200000:  # state plane input
-
-        spE = p1
-        spN = p2  # designating stateplane vars
-        # to FRF coords
-        spLengE = p1 - Eom
-        spLengN = p2 - Nom
-        R = np.sqrt(spLengE ** 2 + spLengN ** 2)
-        Ang1 = np.arctan2(spLengE, spLengN)
-        Ang2 = Ang1 + spAngle
-        # to FRF
-        X = R * np.sin(Ang2)
-        Y = R * np.cos(Ang2)
-        # to Lat Lon
-        Ang2 = Ang1 - (GridAngle - spAngle)  # %
-        ALatLeng = R * np.cos(Ang2)
-        ALonLeng = R * np.sin(-Ang2)  # % neg to go west
-        ALat = ALatLeng / DegLat + ALat0  # % was 60 * ALatLeng./DegLat + ALat0;
-        ALon = ALonLeng / DegLon + ALon0
-
-    elif (p1 > -10000 and p1 < 10000) and (p2 > -10000 and p2 < 10000):  # FRF input
-        X = p1
-        Y = p2;
-        R = np.sqrt(p1 ** 2 + p2 ** 2);
-        Ang1 = np.arctan2(p1, p2);  # % CW from Y
-        Ang2 = Ang1 - GridAngle;  # %
-        ALatLeng = R * np.cos(Ang2);
-        ALonLeng = R * np.sin(-Ang2);  # % neg to go west
-        ALat = ALatLeng / DegLat + ALat0;  # % was 60 * ALatLeng./DegLat + ALat0;
-        ALon = ALonLeng / DegLon + ALon0;
-
-        #  to state plane
-        Ang2 = Ang1 - spAngle;
-        AspN = R * np.cos(Ang2);
-        AspE = R * np.sin(Ang2);
-        spN = AspN + Nom;
-        spE = AspE + Eom;
-
-
-    else:
-        print '<<ERROR>> Cound not determine input type, returning NaNs'
-        ALat = float('NaN');
-        ALon = float('NaN');
-        spN = float('NaN');
-        spE = float('NaN');
-        Y = float('NaN');
-        X = float('NaN');
-    coords = {'StateplaneE': spE,
-              'StateplaneN': spN,
-              'FRF_Y': Y,
-              'FRF_X': X,
-              'Lat': ALat,
-              'Lon': ALon}
-    return coords
-
+    raise ImportError('please use the function in sblib.geoprocess')
 
 def findbtw(data, lwth, upth, type=0):
     """
     This function finds both values and indicies of a list values between two values
-    upth = upper level threshold
-    lwth = lower level threshold
-    list = list (or numpy array?)
-    type:
+    :TODO: probably could be improved by using boolean compares
+
+
+    :param upth: = upper level threshold
+    :param lwth: = lower level threshold
+    :param data: = list (or numpy array?)
+    :param type:
         0 = non inclusive  ie. lwth < list <  upth
         1 = low incluisve  ie. lwth <=list <  upth
         2 = high inclusive ie. lwth < list <= upth
         3 = all inclusive  ie  lwth <=list <= upth
+    :return
+        indicies returns idices that meet established criteria
+        values   returns associated values from da
     """
     indices = []
     vals = []
@@ -288,6 +150,8 @@ class Bunch(object):
 
     do x = Bunch(object)
     x.key
+    :param object: input dictionary
+    :return class: with objects being the same as the keys from dictionary
     """
 
     def __init__(self, aDict):
@@ -308,14 +172,17 @@ def myround(x, base=5):
 def roundtime(timeIn=None, roundTo=60):
     """"
     Round a datetime object to any time lapse in seconds
-       :param dt : datetime.datetime object, default now.
-       :param roundTo : Closest number of seconds to round to, default 1 minute.
+
+    :param dt : datetime.datetime object, default now.
+    :param roundTo : Closest number of seconds to round to, default 1 minute.
 
        Author: Thierry Husson 2012 - Use it as you want but don't blame me.
 
        modified by SB to include lists of datetime dataList,
        returned as a list if it came in as a list, if it came in as a datetime object
        it is returned as such
+    :return
+        list/array of times rounded to 'round to value'
     """
     # making dt a list
 
@@ -346,15 +213,15 @@ def roundtime(timeIn=None, roundTo=60):
             dtlist = dtlist[0]  # if it came in as a single element, return it as such
     return dtlist
 
-
 def cart2pol(x, y):
     """
         this translates from cartesian coords to polar coordinates (radians)
 
-    :param x:
-    :param y:
+    :param x: x componant
+    :param y: y componant
     :return:
-    """"""
+        r radial componant
+        theta angular compoanat (returned in radian)
     """
     r = np.sqrt(x ** 2 + y ** 2)
     theta = np.arctan2(y, x)
@@ -364,10 +231,13 @@ def cart2pol(x, y):
 def pol2cart(r, theta):
     """
     this translates from polar coords (radians) to polar coordinates
+    assumed radian input for theta
 
     :param r: speed, magnatude
     :param theta:  direction (in radians)
     :return:
+        x - componant
+        y - componant
     """
     if (np.max(theta) > 2 * np.pi).any():
         print 'Warning polar2cart assumes radian direction in, angles found above 2pi'
@@ -380,9 +250,12 @@ def angle_correct(angle_in, rad=0):
     """
     this function takes angles in that are both positve and negative
     and corrects them to posivitve only
+
     :param angle_in:
-    :param rad: radian =0 input angles are in degrees radian =1 input anglesa are in radian
+    :param rad: radian =0 input angles are in degrees
+                radian =1 input anglesa are in radian
     :return:
+        array of corrected angles in
     """
     angle_in = np.array(angle_in)
     try:
@@ -480,7 +353,18 @@ def statsBryant(observations, models):
     These statistics are from the Bryant Wave stats CHETN - I - 91
     :param observations: array of observational data
     :param models:  array of model data
-    :return: stats library
+    :return: dictiornay
+        :key  'bias' average of residuals
+        :key 'RMSEdemeaned': RMSEdemeaned,
+        :key 'RMSE': R oot mean square error
+        :key  'RMSEnorm': normalized root Mean square error also Percent RMSE
+        :key  'scatterIndex': ScatterIndex
+        :key  'symSlope': symetrical slope
+        :key  'corr': R^2 --- coefficient of determination
+        :key  'PscoreWilmont': performance score developed by Wilmont
+        :key  'PscoreIMEDS':  see Hanson 2007 for description
+        :key  'residuals': model - observations
+        :
     """
     obsNaNs = np.argwhere(np.isnan(observations))
     modNaNs = np.argwhere(np.isnan(models))
@@ -568,8 +452,10 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
     This has been removed from the IMEDS package to simplify use.
     This method returns the matching model data to the closest obs point.
 
+    similar to time match imeds
+
     Time Matching is done by creating a threshold by taking the median of the difference of each time
-     then taking the minimum of the difference between the two input times divided by 2.
+       then taking the minimum of the difference between the two input times divided by 2.
        a small, arbitrary (as far as i know) factor is then subtracted from that minimum to remove the possiblity
        of matching a time that is exactly half of the sampling interval.
 
@@ -827,7 +713,9 @@ def geo2STWangle(geo_angle_in, zeroAngle=70., METin=1, fixanglesout=0):
     :param zeroAngle:  the angle of the pier, from this the azimuth is calculated (MET CONVENTION)
     :param METin:  = 1 if the input angle is in MET convention (angle from)
     :param fixanglesout: if set to 1, will correct out angles to +/-180
-    :return: angle_out
+
+    :return:
+        angle_out corrected angle back out, into math space
     """
     # assert len(np.shape(geo_angle_in)) <= 1, 'function geo2STWangle not tested in more than 1 dimension'
     azimuth = 270 - zeroAngle  # the control of the zero for rotation of the grid in TN coords
@@ -844,26 +732,6 @@ def geo2STWangle(geo_angle_in, zeroAngle=70., METin=1, fixanglesout=0):
         STWangle[flip] -= 360
     return STWangle
 
-
-def write_grid(ofname, grid_dict):
-    """
-    This function takes the gridded product created by frf_grid_prod and writes
-    the data to a csv file, it requires a dictionary in with the grid, and a list
-    for the x coordinates (xgrid) and a list for the y coordinates (ygrid)
-
-    """
-    xcoord = grid_dict['xgrid']
-    ycoord = grid_dict['ygrid']
-    grid = grid_dict['grid'].T  # this grid produced is the
-    # transpose of the mesh grids produced below
-    xx, yy = np.meshgrid(xcoord, ycoord)
-    f = open(ofname, 'w')
-    for iy in range(0, np.size(grid, axis=0)):
-        for ix in range(0, np.size(grid, axis=1)):
-            f.write("%f, %f, %f\n" % (xx[iy, ix], yy[iy, ix], grid[iy, ix]))
-    f.close()
-
-
 def STWangle2geo(STWangle, pierang=70, METout=1):
     """
     This is the complementary function to geo2STWangle,  It takes STWAVE angles (local coordinate system with a towards
@@ -874,7 +742,8 @@ def STWangle2geo(STWangle, pierang=70, METout=1):
     :param gridangle: an array or list of angles to be rotated
     :param pierang:  the (MET CONVENTION)
     :param METout:  if left 1, this creates output into a MET conveinton with the definition in the from
-    :return: angle_out
+    :return:
+        angle_out array of angles returned back to geographic convention (true north, clockwise positive)
     """
     assert len(np.shape(STWangle)) <= 3, 'STWangle2geo has not been tested in greater than 3dimensions'
     azimuth = 270 - pierang  # rotation of the Grid in local coordinate
@@ -891,12 +760,14 @@ def whatIsYesterday(now=DT.date.today(), string=1, days=1):
     this function finds what yesterday's date string is in the format
     of yyy-mm-dd
     :params:
-    now:: the date to start counting backwards from
-    string:: (1) output is in stiring format (default)
-             (2) output is in datetime format 
-    days:: how many days to count backwards from 
+        now:: the date to start counting backwards from
+
+        string:: (1) output is in stiring format (default)
+                 (2) output is in datetime format
+        days:: how many days to count backwards from
            default = 1 
-    
+    :return
+        the date of yesterday ( "days" previous to input 'now')
     """
 
     yesterday = now - DT.timedelta(days)
@@ -907,7 +778,13 @@ def whatIsYesterday(now=DT.date.today(), string=1, days=1):
 
 def createDateList(start, end, delta):
     """
-    creates a generator of dates 
+    creates a generator of dates
+    :param start: date to start (date time object ... i think)
+    :param end: date to end (datetime object .. i think)
+    :param:  the amount to change between dates in the list ( time delta object)
+    :return
+        generator for datelists with dates separated by delta
+
     """
     curr = start
     while curr <= end:
@@ -915,13 +792,14 @@ def createDateList(start, end, delta):
         curr += delta
 
 
-def importFRFgrid(fname_in):
+def importXYZ(fname_in):
     '''
     This function imports a file comma seperated and returns a dictionary with keys x, y, z
     the file to be imported must be x y z order
-    :param file:
-    :param save: default false, will display, if true provide args
-    :return: dictionary of frf grid x, y, z values
+
+    :param fname_in: file name (incl path for xyz file)
+    :return: dictionary of x, y, z values
+
     '''
     import csv
     # import file with given path above
@@ -966,13 +844,19 @@ def importFRFgrid(fname_in):
 def imedsObsModelTimeMatch(obs_time, obs_data, model_time, model_data, checkMask=True):
     """
     This method returns the matching model data to the closest obs point.
+        it does this by using the smallest dt (in obs_time or model_time) and matching the other within that threshold
+        then returns associated data
 
-    :param obs_time:
-    :param obs_data:
-    :param model_time:
-    :param model_data:
-    :param checkMask:   # this will not return masked data/time/ or NaN's with value marked True
+
+    :param obs_time: epoch (numeric) time
+    :param obs_data: data associated with model_time
+    :param model_time: epoch (numeric) time
+    :param model_data: data associated with model_time
+    :param checkMask:   this will not return masked data/time/ or NaN's with value marked True
     :return:
+        time, time matched time
+        obs_data_s, data associated with newly matched time
+        model_data_s, data associated with newly matched time
     """
     assert np.array(obs_time).shape[0] == np.array(obs_data).shape[
         0], 'observational data must have same length as time '
@@ -1060,8 +944,7 @@ def import_FRF_Transect(fname):
         7) Survey Instrument (GPS)
 
     :param fname: name/location of a FRF measured bathymetry transect file
-    :return: dictionary of all fields
-    )
+    :return: dictionary of all fields listed above
     """
     import pytz
     c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13 = [], [], [], [], [], [], [], [], [], [], [], [], [], []
@@ -1111,6 +994,9 @@ def import_FRF_Transect(fname):
 
 def vectorRotation(vector, theta=90, axis='z'):
     """
+    This function does a vector rotation of the vector input in vector, rotated by theta
+    ASSUMES CCW
+
     :param vector: 2d or 3d vector you want rotated... [x, y, z]
     :param axis: axis you want it rotated about 'x' = [1, 0, 0], 'y' = [0, 1, 0], 'z' = [0, 0, 1]
     :param theta: angle in decimal degrees

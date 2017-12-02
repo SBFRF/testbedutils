@@ -1,9 +1,13 @@
+"""
+This is a home brew hack, to explore the thredds server for errors that might cause the ncml to break
+"""
+
 import netCDF4 as nc
 import numpy as np
 
 
 baseURL = 'http://134.164.129.55/thredds/dodsC/FRF/'
-baseURL = 'http://134.164.129.62:8080/thredds/dodsC/'
+baseURL = 'http://134.164.129.628080/thredds/dodsC/'
 
 scienceList = ['CMTB']#['oceanography/']
 disciplineList = ['CB_STWAVE_data/', 'CBHP_STWAVE_data/']
