@@ -625,32 +625,41 @@ def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
     this function will calculate the mean direction from a full spectrum
     only calculates on one 2D spectrum at a time
     defaults to 0.05 hz to 0.5 hz frequency for the statistics
-    Input:
-        %     spec  Frequency-direction spectra (2D)       shape(record,frqbin,dirbin)
-        %  frqbins  Frequency vector (not assumed constant)
-        %  dirbins  Direction vector (assumed constant)
-        %
-    Outputs (MKS, Hz, degrees, degrees CW from true north):
-        %   Hmo   Significant wave height
-        %    Tp   Period of the peak energy in the frequency spectra, (1/Fp).  AKA Tpd, not to be
-        %           confused with parabolic fit to spectral period
-        %    Tm02   Mean spectral period (Tm0,2, from moments 0 & 2), sqrt(m0/m2)
-        %    Tm01   Average period, frequency sprectra weighted, from first moment (Tm0,1)
-        %    Dp   Peak direction at the peak frequency
-        %   Dmp   Mean direction at the peak frequency
-        %    Dm   Mean wave direction
-        %  sprdF  Freq-spec spread (m0*m4 - m2^2)/(m0*m4)  (one definition)
-        %  sprdD  Directional spread (m0*m4 - m2^2)/(m0*m4)  (one definition, Kuik 1988, buoys),
-        %         total sea-swell
-        %         sprdD = r2d * sqrt(2.0 * (1.0 - sqrt(Xcomp.^2 + Ycomp^2)));
-        %         where  Xcomp = sum(sin(Drad) .* Ds .* dwdir) ./ sum(Ds .* dwdir);
-        %                Ycomp = sum(cos(Drad) .* Ds .* dwdir) ./ sum(Ds .* dwdir);
-        % sprdDhp  half-power direction width in direction spectra at peak freq (not currently incorporated)
-        %  Tm10 - Mean Absolute wave Period from -1 moment
 
-            return order [ Hm0, Tp, TmSecondMoment, Tm01,  Dp, Dm, Dmp, sprdF, sprdD, stats], Tm10
-        Code Translated by Spicer Bak from: fd2BulkStats.m written by Kent Hathaway
+    Code Translated by Spicer Bak from: fd2BulkStats.m written by Kent Hathaway, and adapted
 
+
+    :param spec: array
+            this is a 2d spectral inputshaped by (time, freq, dir)
+
+    :param frqbins: Frequency vector (not assumed constant)
+
+    :param dirbins:
+
+    :param lowFreq:
+
+    :param highFreq:
+
+    :return: dictionary
+        :key Hmo   Significant wave height
+        :key Tp   Period of the peak energy in the frequency spectra, (1/Fp).  AKA Tpd, not to be
+                   confused with parabolic fit to spectral period
+        :key Tm02   Mean spectral period (Tm0,2, from moments 0 & 2), sqrt(m0/m2)
+        :key Tm01   Average period, frequency sprectra weighted, from first moment (Tm0,1)
+        :key Dmp   Mean direction at the peak frequency
+        :key Dp   Peak direction at the peak frequency
+        :key Dm   Mean wave direction
+        :key sprdF  Freq-spec spread (m0*m4 - m2^2)/(m0*m4)  (one definition)
+        :key sprdD  Directional spread (m0*m4 - m2^2)/(m0*m4)  (one definition, Kuik 1988, buoys),
+                 total sea-swell
+                 sprdD = r2d * sqrt(2.0 * (1.0 - sqrt(Xcomp.^2 + Ycomp^2)));
+                 where  Xcomp = sum(sin(Drad) .* Ds .* dwdir) ./ sum(Ds .* dwdir);
+                        Ycomp = sum(cos(Drad) .* Ds .* dwdir) ./ sum(Ds .* dwdir);
+        :key  sprdDhp  half-power direction width in direction spectra at peak freq (not currently incorporated)Input:
+        :key Tm10 Mean Absolute wave Period from -1 moment
+        :key vecAvgMeanDir - vector averaged mean direction (should be the same as Dm - could be checked and removed)
+                taken from wis website
+        :key meta expanded variable name/descriptions 
     """
     assert type(frqbins) in [np.ndarray, np.ma.MaskedArray], 'the input frqeuency bins must be a numpy array'
     assert type(dirbins) in [np.ndarray, np.ma.MaskedArray], 'the input DIRECTION bins must be a numpy array'
