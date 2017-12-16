@@ -44,7 +44,6 @@ def makegif(flist, ofname, size=None, dt=0.5):
         images.append(imageio.imread(filename))
     imageio.mimwrite(ofname, images, duration=dt)
 
-
 def find_nearest(array, value):
     """
     Function looks for value in array and returns the closest array value
@@ -140,7 +139,6 @@ def findbtw(data, lwth, upth, type=0):
 
     return indices, vals
 
-
 class Bunch(object):
     """
     allows user to access dictionary data from 'object'
@@ -227,7 +225,6 @@ def cart2pol(x, y):
     theta = np.arctan2(y, x)
     return r, theta
 
-
 def pol2cart(r, theta):
     """
     this translates from polar coords (radians) to polar coordinates
@@ -244,7 +241,6 @@ def pol2cart(r, theta):
     x = r * np.cos(theta)
     y = r * np.sin(theta)
     return x, y
-
 
 def angle_correct(angle_in, rad=0):
     """
@@ -345,7 +341,6 @@ def angle_correct(angle_in, rad=0):
         raise
     assert (angle_in < 360).all() and (angle_in >= 0).all(), 'The angle correction function didn''t work properly'
     return angle_in
-
 
 def statsBryant(observations, models):
     """
@@ -550,7 +545,6 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
 
     return time, obs_data_s, model_data_s
 
-
 def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
     """     
     this function will calculate the mean direction from a full spectrum
@@ -701,7 +695,6 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
     # print meta
     return Hm0, Tp, Tm02, Tm01, Dp, Dm, Dmp, vavgdir, sprdF, sprdD, stats, Tm10
 
-
 def geo2STWangle(geo_angle_in, zeroAngle=70., METin=1, fixanglesout=0):
     """
     This rotates an angle (angle_in) from geographic Meterological convention 0= True North
@@ -754,7 +747,6 @@ def STWangle2geo(STWangle, pierang=70, METout=1):
     angle_out = angle_correct(angle_out)  # correcting to < +360
     return angle_out
 
-
 def whatIsYesterday(now=DT.date.today(), string=1, days=1):
     """
     this function finds what yesterday's date string is in the format
@@ -775,7 +767,6 @@ def whatIsYesterday(now=DT.date.today(), string=1, days=1):
         yesterday = DT.date.strftime(yesterday, '%Y-%m-%d')
     return yesterday
 
-
 def createDateList(start, end, delta):
     """
     creates a generator of dates
@@ -790,7 +781,6 @@ def createDateList(start, end, delta):
     while curr <= end:
         yield curr
         curr += delta
-
 
 def importXYZ(fname_in):
     '''
@@ -840,6 +830,61 @@ def importXYZ(fname_in):
            }
     return out
 
+def write_frfGridFileText(FRFgrid, ofname, LatLon=False):
+    """This function will write the cBathy grid (output from get data get_cBathyFromNc) to
+    a text file grid of the same standard and format to that of the standard grid
+
+    :param FRFgrid: this is the output from getdata.get_cBathyFromNc
+        :key 'xm'; x coordinates in meters
+        :key 'ym': y coordinates in meters
+        :key 'depth': depths
+    :param ofname: file output name
+    :param LatLon: want to write the lat/lon too? boolean T/F (Default value = False)
+
+    """
+    import geoprocess as gp
+    datestring = ofname[ofname.rfind('/') + 1:-4]
+    version_prefix = ofname.split('/')[2]
+    ym = FRFgrid['xFRF']
+    xm = FRFgrid['yFRF']
+    depth = FRFgrid['depth']
+
+    if LatLon == True:
+        LatGrid, LonGrid = np.meshgrid(xm, ym)
+        grid = depth[0, :, :]  # depths here are negitive values
+
+        f = open(ofname, 'w')
+        for iy in range(0, np.size(grid, axis=0)):
+            for ix in range(0, np.size(grid, axis=1)):
+                pack = gp.FRFcoord(xm[ix], ym[iy])
+                # print 'x coord:%d  Y coord: %d ' %(cBathy_grid['xm'][ix], cBathy_grid['ym'][iy])
+                # print 'Lon: %f  Lat: %f' %(pack['Lon'], pack['Lat'])
+                LatGrid[iy, ix] = pack['Lat']
+                LonGrid[iy, ix] = -pack['Lon']
+
+                # for ix in range(0, np.size(grid, axis=0)):
+                #     for iy in range(0, np.size(grid, axis=1)):
+                # these indicies were flipped for fitting purposes - the last one had backwards shape
+                f.write("%f, %f, %f\n" % (
+                -pack['Lon'], pack['Lat'], grid[iy, ix].T))  # (yy[ix, iy], xx[ix, iy], grid[ix, iy]))
+        f.close()
+
+    else:
+        xcoord = xm
+        ycoord = ym
+
+        grid = depth.T  # made neg to fit into work flow
+        # transpose of the mesh grids produced below
+        yy, xx = np.meshgrid(xcoord, ycoord)  # putting x and y coords into grid
+        f = open(ofname, 'w')
+        for iy in range(0, np.size(grid, axis=0)):
+            for ix in range(0, np.size(grid, axis=1)):
+                # these indicies were flipped for fitting purposes - the last one had backwards shape
+                f.write("%f, %f, %f\n" % (xx[ix, iy], yy[ix, iy], grid[iy, ix]))
+        f.close()
+    # chopping off the prefix of the grid name to conform with parent code
+    outname = datestring + '.txt'
+    return outname
 
 def imedsObsModelTimeMatch(obs_time, obs_data, model_time, model_data, checkMask=True):
     """
@@ -868,8 +913,8 @@ def imedsObsModelTimeMatch(obs_time, obs_data, model_time, model_data, checkMask
     if len(model_time) == 1:
         threshold = (np.median(np.diff(obs_time)) / 2.0)
     else:
-        threshold = min(np.median(np.diff(obs_time)) / 2.0,  # - 43
-                        np.median(np.diff(model_time)) / 2.0)  # - 43
+        threshold = min(np.median(np.diff(obs_time)) / 2.0 - 43,  # subtract 43 seconds to offset
+                        np.median(np.diff(model_time)) / 2.0 - 43)
 
     # Loop through model records
     rc, rcc = 0, 0
@@ -907,7 +952,6 @@ def imedsObsModelTimeMatch(obs_time, obs_data, model_time, model_data, checkMask
         model_data_s = np.append(model_data_s, data)
 
     return time, obs_data_s, model_data_s
-
 
 def import_FRF_Transect(fname):
     """
@@ -990,7 +1034,6 @@ def import_FRF_Transect(fname):
                  'meta': 'date and Time has been converted to a UTC datetimeta object, elevation is in NAVD88',
                  }
     return bathyDict
-
 
 def vectorRotation(vector, theta=90, axis='z'):
     """
