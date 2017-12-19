@@ -25,8 +25,11 @@ def kalman_filter(new, prior, waveHs):
 
 
     :param new: a dictionary with keys associated with get data
-    :param prior:  a saved dictionary with bathys derived from times when wave heights were below the threshold of choice
+        :key
+        :key
+        :key
 
+    :param prior:  a saved dictionary with bathys derived from times when wave heights were below the threshold of choice
     :param waveHs:
     :return:
     """
