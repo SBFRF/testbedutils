@@ -472,5 +472,53 @@ def ncsp2utm(easting, northing):
 
 
 
+def frf2ij(xfrf, yfrf, x0, y0, dx, dy, ni, nj):
+    """
+    Convert FRF coordinates to ij grid locations.
+
+    Parameters
+    ----------
+    xfrf : float
+        FRF x-coordinate to convert
+    yfrf : float
+        FRF y-coordinate to convert
+    x0 : float
+        Grid origin x-coordinate (FRF)
+    y0 : float
+        Grid origin y-coordinate (FRF)
+    dx : float
+        Grid resolution in x-direction.
+    dy : float
+        Grid resolution in y-direction.
+    ni : int
+        Number of grid cells in the i direction.
+    nj : int
+        Number of grid cells in the j direction.
+
+    Returns
+    -------
+    i : int
+        Grid location in the i direction
+    j : int
+        Grid location in the j direction
+    """
+    xFRFgrid = x0 - np.arange(ni)*dx
+    yFRFgrid = y0 - np.arange(nj)*dy
+    i = np.abs(xfrf - xFRFgrid).argmin()
+    j = np.abs(yfrf - yFRFgrid).argmin()
+
+    # Convert from python base 0 indexing to STWAVE base 1.
+    i += 1
+    j += 1
+
+    # Assign -99999 to i_sensor and j_sensor if the locations are
+    # outside the grid.
+    x_is_outside = xfrf < xFRFgrid.min() or xfrf > xFRFgrid.max()
+    y_is_outside = yfrf < yFRFgrid.min() or yfrf > yFRFgrid.max()
+    if x_is_outside or y_is_outside:
+        i = -99999
+        j = -99999
+
+    return i, j
 
 
