@@ -209,7 +209,6 @@ def HPchop_spec(spec, dirbin, angadj=0, corrected=1):
 
     return newspec, newdirband
 
-
 def makeMLMspecFromAsBs(a0, a1, b1, a2, b2, waterDepth, freqs, dirs):
     """
     from a's and b's make the 2D frequency direction spectra
@@ -240,7 +239,6 @@ def makeMLMspecFromAsBs(a0, a1, b1, a2, b2, waterDepth, freqs, dirs):
     spec = mlm(waveFreqBins, waveDirBins, c11, c22, c33, c23, q12, q13)
 
     return spec
-
 
 def mlm(freqs, dirs, c11, c22, c33, c23, q12, q13):
     """
@@ -313,7 +311,6 @@ def mlm(freqs, dirs, c11, c22, c33, c23, q12, q13):
 
     return eftMLM
 
-
 def prFunc( L, d, z):
     """
     Surface correction for pressure data.  if working with an energy
@@ -344,7 +341,6 @@ def prFunc( L, d, z):
         prf[np.argwhere(prf <= 1 / maxCorrectionFactor)] = 1
 
     return prf
-
 
 def dispersion( h, T):
     """
@@ -378,7 +374,6 @@ def dispersion( h, T):
 
     return L, c, n
 
-
 def findPeakDirs( spec, dirBin):
     """
 
@@ -397,7 +392,6 @@ def findPeakDirs( spec, dirBin):
     # for every frequency a direction returned
     return peakDirs
 
-
 def findPeakFreq2Dspec(spec, dirBin):
     """
     in single (or multiple) 2d spectra, this will find the peak frequency for every direction
@@ -414,7 +408,6 @@ def findPeakFreq2Dspec(spec, dirBin):
             peakFreqs[t, idx] = dirBin[np.argmax(spec[t, :, idx])]  # picking max frequency for each direction
     # for every frequency a direction returned
     return peakFreqs
-
 
 def findTp( spec, wavefreqbin):
     """
@@ -437,7 +430,6 @@ def findTp( spec, wavefreqbin):
 
     return fOut
 
-
 def findDpAtTp( spec, wavedirbin):
     """
     finds the peak direction at peak frequency
@@ -459,7 +451,6 @@ def findDpAtTp( spec, wavedirbin):
         DpOut[tt] = wavedirbin[np.argmax(spec[tt, TpIdx[tt], :])]  # finding the max idx for each time
 
     return DpOut
-
 
 def seaAndSwell2D( specTime, spec, wavefreqbin, wavedirbin, windSpeed, windDirTn, plot=False, depth=26):
     """
@@ -579,7 +570,6 @@ def seaAndSwell2D( specTime, spec, wavefreqbin, wavedirbin, windSpeed, windDirTn
 
     return windSea, swellSea
 
-
 def seaAndSwell1D(spec, wavefreqbin, truncate=0.1):
     """
     this function will take a 1 d spectra
@@ -607,7 +597,6 @@ def seaAndSwell1D(spec, wavefreqbin, truncate=0.1):
         swellSea[:, :idx] = fspec[:, :idx]
 
     return windSea, swellSea
-
 
 def stats1D(fspec, frqbins, lowFreq=0.05, highFreq=0.5):
     """

@@ -738,6 +738,7 @@ def STWangle2geo(STWangle, pierang=70, METout=1):
     :return:
         angle_out array of angles returned back to geographic convention (true north, clockwise positive)
     """
+    # TODO this needs to be renamed
     assert len(np.shape(STWangle)) <= 3, 'STWangle2geo has not been tested in greater than 3dimensions'
     azimuth = 270 - pierang  # rotation of the Grid in local coordinate
     rotate = angle_correct(90 - azimuth)  # putting azimuth into ocean (towards) convention
