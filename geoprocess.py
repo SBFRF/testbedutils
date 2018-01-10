@@ -478,8 +478,8 @@ def frf2ij(xfrf, yfrf, x0, y0, dx, dy, ni, nj):
     if not dx_is_single_value or not dy_is_single_value:
         raise NotImplementedError
 
-    xFRFgrid = x0 - np.arange(ni)*dx
-    yFRFgrid = y0 - np.arange(nj)*dy
+    xFRFgrid = x0 - np.arange(ni - 1)*dx - 0.5*dx
+    yFRFgrid = y0 - np.arange(nj - 1)*dy - 0.5*dy
     i = np.abs(xfrf - xFRFgrid).argmin()
     j = np.abs(yfrf - yFRFgrid).argmin()
 
