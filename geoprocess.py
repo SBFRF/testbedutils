@@ -471,10 +471,12 @@ def ncsp2utm(easting, northing):
     return utm_dict
 
 
-
 def frf2ij(xfrf, yfrf, x0, y0, dx, dy, ni, nj):
     """
     Convert FRF coordinates to ij grid locations.
+
+    Matthew P. Geheran
+    01 December 2017
 
     Parameters
     ----------
@@ -485,6 +487,7 @@ def frf2ij(xfrf, yfrf, x0, y0, dx, dy, ni, nj):
     x0 : float
         Grid origin x-coordinate (FRF)
     y0 : float
+
         Grid origin y-coordinate (FRF)
     dx : float
         Grid resolution in x-direction.
@@ -499,11 +502,19 @@ def frf2ij(xfrf, yfrf, x0, y0, dx, dy, ni, nj):
     -------
     i : int
         Grid location in the i direction
-    j : int
+    j: int
         Grid location in the j direction
     """
-    xFRFgrid = x0 - np.arange(ni)*dx
-    yFRFgrid = y0 - np.arange(nj)*dy
+    dx_is_single_value = isinstance(dx, (float, int, long))
+    dy_is_single_value = isinstance(dy, (float, int, long))
+    
+    # This routine does not handle variable grid spacing.
+    if not dx_is_single_value or not dy_is_single_value:
+        raise NotImplementedError('This routine does not handle variable grid spacing')
+
+    xFRFgrid = x0 - np.arange(ni - 1)*dx - 0.5*dx
+    yFRFgrid = y0 - np.arange(nj - 1)*dy - 0.5*dy
+
     i = np.abs(xfrf - xFRFgrid).argmin()
     j = np.abs(yfrf - yFRFgrid).argmin()
 
