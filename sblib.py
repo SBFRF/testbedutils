@@ -381,7 +381,7 @@ def statsBryant(observations, models):
             models = np.delete(models, obsNaNs)  # removing cor
     assert len(observations) == len(models), 'these data must be the same length'
 
-    residuals = models - observations
+    residuals =  observations - models
     bias = np.nansum(residuals) / len(observations)
 
     ## RMSE's
