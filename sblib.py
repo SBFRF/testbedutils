@@ -17,6 +17,16 @@ import math
 import netCDF4 as nc
 
 
+def running_mean(data, window):
+     """
+     found running mean function on the internet, untested
+     :param data: data to run mean
+     :param window: window over which to take mean
+     :return: meaned data
+     """
+     cumsum = np.cumsum(np.insert(data, 0, 0))
+     return (cumsum[window:] - cumsum[:-window]) / window
+
 def makegif(flist, ofname, size=None, dt=0.5):
     """
     This function uses imageio to create gifs from a list of images
@@ -155,7 +165,7 @@ class Bunch(object):
     def __init__(self, aDict):
         self.__dict__.update(aDict)
 
-def myround(x, base=5):
+def baseRound(x, base=5):
     """
     This function will round any value to a multiple of the base,
 
@@ -361,27 +371,29 @@ def statsBryant(observations, models):
         :key  'residuals': model - observations
         :
     """
-    obsNaNs = np.argwhere(np.isnan(observations))
-    modNaNs = np.argwhere(np.isnan(models))
+    obsNaNs = np.argwhere(np.isnan(observations)).squeeze()
+    modNaNs = np.argwhere(np.isnan(models)).squeeze()
+    assert type(observations) != np.ma.array, 'this handles masked arrays poortly, fix or remove before'
+    assert type(models) != np.ma.array, 'this handles masked arrays poortly, fix or remove before'
     if len(obsNaNs) > 0:
-        print 'warning found nans in bryant stats'
+        warnings.warn('warning found nans in bryant stats')
         observations = np.delete(observations, obsNaNs)
-        models = np.delete(models, obsNaNs)  # removing corresponding model data, that cnanot be compared
+        models = np.delete(models, obsNaNs)  # removing corresponding model data, that cannot be compared
         modNaNs = np.argwhere(np.isnan(models))
         if len(modNaNs) > 0:
             observations = np.delete(observations, modNaNs)
             models = np.delete(models, modNaNs)  # removing c
     elif len(modNaNs) > 0:
-        print 'warning found nans in bryant stats'
+        warnings.warn('warning found nans in bryant stats')
         models = np.delete(models, modNaNs)
-        observations = np.delete(observations, modNaNs)
+        observations = np.delete(observations, modNaNs,0)
         obsNaNs = np.argwhere(np.isnan(observations))
         if len(obsNaNs) > 0:
             observations = np.delete(observations, obsNaNs)
             models = np.delete(models, obsNaNs)  # removing cor
     assert len(observations) == len(models), 'these data must be the same length'
 
-    residuals =  observations - models
+    residuals =  models - observations
     bias = np.nansum(residuals) / len(observations)
 
     ## RMSE's
@@ -544,6 +556,39 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
 
 
     return time, obs_data_s, model_data_s
+
+def timeMatch_altimeter(altTime, altData, modTime, modData, window=30 * 60):
+    """
+    this function will loop though variable modTim and find the closest value
+    then look to see if it's within a window (default, 30 minutes),
+     return altimeter data, and matched time
+
+     Note: this might be slower than imeds time match or time match,
+           which is based on the imeds time match
+
+    :param altTime: altimeter time - tested as epoch (might work in datetime)
+    :param altData: altimeter data, some/any floating (int?) value
+    :param modTime: base time to match
+    :param modData: data to be paired (could be indicies)
+    :param window: time in seconds (or time delta, if input as datetimes)
+    :return:
+        timeout: matched time in same format put in
+        dataoutt: time matched altimeter data from variable altData
+        modout: time matched model data
+    """
+    dataout, timeout, modout = [], [], []
+    if type(altData) == np.ma.MaskedArray:
+        altTime = altTime[~altData.mask]
+        altData = altData[~altData.mask]
+    for tt, time in enumerate(modTime):
+        idx = np.argmin(np.abs(altTime - time))
+        if altTime[idx] - time < window:
+            # now append data
+            dataout.append(altData[idx])
+            timeout.append(altTime[idx])
+            modout.append(modData[tt])
+
+    return np.array(timeout), np.array(dataout), np.array(modout)
 
 def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
     """     
