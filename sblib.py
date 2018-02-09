@@ -406,7 +406,7 @@ def statsBryant(observations, models):
     # scatter index - a normalize measure of error often times presented as %
     ScatterIndex = RMSE / np.mean(observations)
     # symetric Slope
-    symr = np.sqrt((models ** 2).sum() / (models ** 2).sum())
+    symr = np.sqrt((models ** 2).sum() / (observations ** 2).sum())
     # coefficient of determination
     r2 = np.sum((observations - observations.mean()) * (models - models.mean())) \
          / (np.sqrt(  ((observations - observations.mean()) ** 2).sum()) *
@@ -580,12 +580,13 @@ def timeMatch_altimeter(altTime, altData, modTime, modData, window=30 * 60):
     if type(altData) == np.ma.MaskedArray:
         altTime = altTime[~altData.mask]
         altData = altData[~altData.mask]
+    assert len(altData) == len(altTime), 'Altimeter time and data length must be the same'
     for tt, time in enumerate(modTime):
         idx = np.argmin(np.abs(altTime - time))
         if altTime[idx] - time < window:
             # now append data
-            dataout.append(altData[idx])
             timeout.append(altTime[idx])
+            dataout.append(altData[idx])
             modout.append(modData[tt])
 
     return np.array(timeout), np.array(dataout), np.array(modout)
