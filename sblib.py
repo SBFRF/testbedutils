@@ -221,6 +221,18 @@ def roundtime(timeIn=None, roundTo=60):
             dtlist = dtlist[0]  # if it came in as a single element, return it as such
     return dtlist
 
+def myround(x, base=5):
+    """
+    This function will round any value to a multiple of the base,
+
+    :param x: values to be rounded:
+    :param base: this is the value by which x is rounded to a multiple of
+        ie base = 10  x = [4, 8, 2, 12]  returns [0,10,0,10]
+    :return: np.array of floating point numbers rounded to a multiple of base
+    """
+    x = np.array(x, dtype=float)
+    return base * np.round(x/base)
+
 def cart2pol(x, y):
     """
         this translates from cartesian coords to polar coordinates (radians)
@@ -576,6 +588,31 @@ def timeMatch_altimeter(altTime, altData, modTime, modData, window=30 * 60):
         dataoutt: time matched altimeter data from variable altData
         modout: time matched model data
     """
+
+    # try to convert it from datetime to epochtime
+    # this will fail if it already is in epochtime, so it wont do anything.
+    dt_check = False
+    try:
+        timeunits = 'seconds since 1970-01-01 00:00:00'
+        altTime_n = nc.date2num(altTime, timeunits)
+        del altTime
+        altTime = altTime_n
+        del altTime_n
+    except:
+        pass
+    try:
+        timeunits = 'seconds since 1970-01-01 00:00:00'
+        modTime_n = nc.date2num(modTime, timeunits)
+        del modTime
+        modTime = modTime_n
+        del modTime_n
+        dt_check = True
+    except:
+        pass
+
+    assert type(altTime[0]) != DT.datetime, 'time in must be numeric, try epoch!'
+    assert type(modTime[0]) != DT.datetime, 'time in must be numeric, try epoch!'
+
     dataout, timeout, modout = [], [], []
     if type(altData) == np.ma.MaskedArray:
         altTime = altTime[~altData.mask]
@@ -585,10 +622,18 @@ def timeMatch_altimeter(altTime, altData, modTime, modData, window=30 * 60):
         if altTime[idx] - time < window:
             # now append data
             dataout.append(altData[idx])
-            timeout.append(altTime[idx])
+            timeout.append(modTime[tt])
             modout.append(modData[tt])
 
-    return np.array(timeout), np.array(dataout), np.array(modout)
+    if dt_check:
+        timeunits = 'seconds since 1970-01-01 00:00:00'
+        tOut = np.array(timeout)
+        tOutN = nc.num2date(tOut, timeunits)
+        del tOut
+        tOut = tOutN
+        del tOutN
+
+    return tOut, np.array(dataout), np.array(modout)
 
 def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
     """     
@@ -796,7 +841,7 @@ def STWangle2geo(STWangle, pierang=70, METout=1):
 def whatIsYesterday(now=DT.date.today(), string=1, days=1):
     """
     this function finds what yesterday's date string is in the format
-    of yyy-mm-dd
+    of yyyy-mm-dd
     :params:
         now:: the date to start counting backwards from
 
@@ -1084,7 +1129,7 @@ def import_FRF_Transect(fname):
 def vectorRotation(vector, theta=90, axis='z'):
     """
     This function does a vector rotation of the vector input in vector, rotated by theta
-    ASSUMES CCW
+    NO NO NO NO -> +theta results in clockwise rotation!!!!!
 
     :param vector: 2d or 3d vector you want rotated... [x, y, z]
     :param axis: axis you want it rotated about 'x' = [1, 0, 0], 'y' = [0, 1, 0], 'z' = [0, 0, 1]
@@ -1099,7 +1144,7 @@ def vectorRotation(vector, theta=90, axis='z'):
     assert len(vector) <= 3, "You must hand this function a 2D or 3D vector!"
 
     if len(vector) == 2:
-        vector = np.append(vector, 0) # this just converts it to a 2D vector
+        vector = np.append(vector, 0)  # this just converts it to a 3D vector
         ret = '2d'
     else:
         ret = '3d'

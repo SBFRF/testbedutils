@@ -454,7 +454,7 @@ def findDpAtTp( spec, wavedirbin):
 
 def seaAndSwell2D( specTime, spec, wavefreqbin, wavedirbin, windSpeed, windDirTn, plot=False, depth=26):
     """
-    This function will make sea and swell spectra given the below varibles.  The wind Directions must be in the same
+    This function will make sea and swell spectra given the below variables.  The wind Directions must be in the same
     coordinate system as the wave spectra (including wave direction bins)
     ... still under development
 
