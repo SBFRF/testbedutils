@@ -600,7 +600,7 @@ def seaAndSwell1D(spec, wavefreqbin, truncate=0.1):
 
 def stats1D(fspec, frqbins, lowFreq=0.05, highFreq=0.5):
     """
-
+    Calculates bulk statistics from a 1 dimenti
     :param fspec: frequency spectra
     :param frqbins: frequency bins associated with the 1d spectra
     :param lowFreq: low frequency cut off for analysis
@@ -616,7 +616,7 @@ def stats1D(fspec, frqbins, lowFreq=0.05, highFreq=0.5):
         :key meta expanded variable name/descriptions
     """
     assert fspec.shape[-1] == len(frqbins), '1D stats need a 1 d spectra'
-    fspec = fspec
+
     frqbins = np.array(frqbins)
 
     df = np.diff(np.append(frqbins[0], frqbins), n=1)

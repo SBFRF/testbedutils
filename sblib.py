@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-Author: spicer bak, phd
+Author: spicer bak
 Contact: spicer.bak@usace.army.mil
 Association: USACE CHL Field Research Facility
 
+A base level utility function library that don't fit into specific other places
 
-my own library with useful functions and tips from which i found to be helpful
-on various general functions that don't fit into specific other codes
-this folder needs to be added to sys.path to use
 documented 12/2/17
 """
 import numpy as np
@@ -16,6 +14,43 @@ import csv, warnings
 import math
 import netCDF4 as nc
 
+
+def reduceDict(dictIn, idxToKeep, exemptList=None):
+    """
+    This function will take a dictionary and  reduce it by given indicies, making a COPY of the array
+    it assumes that all things of multidimensions have time in the first dimension
+
+    WARNING: This could potentially be dangerous as it works by checking each key to see if its the lenth of the
+        variable dictIn['time'].  If it is then it will reduce the variable to keep the idxToKeep.  If not it will
+        skip the key
+
+    This function is useful if trying to reduce a dictionary to specific indicies of interest eg with a time matched index
+    Improvement to be safer is welcome, or use with caution.
+    :param dictIn: dictionary with no limit to how many keys assumes one key is 'time'
+    :param idxToKeep: indices to reduce to, must be shorter than key 'time'
+    :param exemptList: this is a list of variables to exclude
+            default values are 'time', 'name', 'xFRF', 'yFRF'
+    :return:
+        a dictionary with the same keys that were input
+            all keys that came in with the same length as 'time' have been reduced to use the indices of idxToKeep
+    """
+    assert 'time' in dictIn, 'This function must have a variable "time"'
+    if exemptList == None:
+        exemptList = ['time', 'name', 'xFRF', 'yFRF']
+    idxToKeep = np.array(idxToKeep, dtype=int) # force data to integer type
+    dictOut = dictIn.copy()
+    for key in dictIn:
+        # if things are longer than the indicies of interest and not 'time'
+        # print 'key %s size %d' %(key, np.size(dictIn[key], axis=0))
+        try:
+            if key not in exemptList and dictIn[key].dtype.kind not in ['U','S'] and np.size(dictIn[key], axis=0) == len(dictIn['time']):
+                # then reduce
+                dictOut[key] = dictIn[key][idxToKeep]  # reduce variable
+                # print 'key %s Made it past test and new size %d' %(key, len(dictIn[key]))
+        except IndexError:
+            pass  # this passes for single number (not arrays)
+    dictOut['time'] = dictIn['time'][idxToKeep]  # # once the rest are done finally reduce 'time'
+    return dictOut
 
 def running_mean(data, window):
      """
@@ -372,8 +407,8 @@ def statsBryant(observations, models):
     :param models:  array of model data
     :return: dictiornay
         :key  'bias' average of residuals
-        :key 'RMSEdemeaned': RMSEdemeaned,
-        :key 'RMSE': R oot mean square error
+        :key  'RMSEdemeaned': RMSEdemeaned,
+        :key  'RMSE': R oot mean square error
         :key  'RMSEnorm': normalized root Mean square error also Percent RMSE
         :key  'scatterIndex': ScatterIndex
         :key  'symSlope': symetrical slope
@@ -385,8 +420,8 @@ def statsBryant(observations, models):
     """
     obsNaNs = np.argwhere(np.isnan(observations)).squeeze()
     modNaNs = np.argwhere(np.isnan(models)).squeeze()
-    assert type(observations) != np.ma.array, 'this handles masked arrays poortly, fix or remove before'
-    assert type(models) != np.ma.array, 'this handles masked arrays poortly, fix or remove before'
+    if type(observations) == np.ma.masked_array or type(models) == np.ma.masked_array:
+        raise NotImplementedError('this handles masked arrays poorly, fix or remove before use')
     if len(obsNaNs) > 0:
         warnings.warn('warning found nans in bryant stats')
         observations = np.delete(observations, obsNaNs)
@@ -405,8 +440,8 @@ def statsBryant(observations, models):
             models = np.delete(models, obsNaNs)  # removing cor
     assert len(observations) == len(models), 'these data must be the same length'
 
-    residuals =  models - observations
-    bias = np.nansum(residuals) / len(observations)
+    residuals = models - observations
+    bias = np.nansum(residuals) / len(residuals)
 
     ## RMSE's
     # demeaned RMSE
@@ -418,7 +453,7 @@ def statsBryant(observations, models):
     # scatter index - a normalize measure of error often times presented as %
     ScatterIndex = RMSE / np.mean(observations)
     # symetric Slope
-    symr = np.sqrt((models ** 2).sum() / (models ** 2).sum())
+    symr = np.sqrt((models ** 2).sum() / (observations ** 2).sum())
     # coefficient of determination
     r2 = np.sum((observations - observations.mean()) * (models - models.mean())) \
          / (np.sqrt(  ((observations - observations.mean()) ** 2).sum()) *
@@ -475,7 +510,7 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
 
     Time Matching is done by creating a threshold by taking the median of the difference of each time
        then taking the minimum of the difference between the two input times divided by 2.
-       a small, arbitrary (as far as i know) factor is then subtracted from that minimum to remove the possiblity
+       a small, arbitrary (as far as I know) factor is then subtracted from that minimum to remove the possiblity
        of matching a time that is exactly half of the sampling interval.
 
     :param obs_time: observation times, in
@@ -617,6 +652,7 @@ def timeMatch_altimeter(altTime, altData, modTime, modData, window=30 * 60):
     if type(altData) == np.ma.MaskedArray:
         altTime = altTime[~altData.mask]
         altData = altData[~altData.mask]
+    assert len(altData) == len(altTime), 'Altimeter time and data length must be the same'
     for tt, time in enumerate(modTime):
         idx = np.argmin(np.abs(altTime - time))
         if altTime[idx] - time < window:
@@ -667,7 +703,7 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
         Code Translated by Spicer Bak from: fd2BulkStats.m written by Kent Hathaway
             
     """
-    warnings.warn('This function is depricated, The development should be moved to sb.waveLib version!!!!')
+    raise NotImplementedError('This function is depricated, The development should be moved to sb.waveLib version!!!!')
     assert type(frqbins) in [np.ndarray, np.ma.MaskedArray], 'the input frqeuency bins must be a numpy array'
     assert type(dirbins) in [np.ndarray, np.ma.MaskedArray], 'the input DIRECTION bins must be a numpy array'
     try:
@@ -861,8 +897,8 @@ def whatIsYesterday(now=DT.date.today(), string=1, days=1):
 def createDateList(start, end, delta):
     """
     creates a generator of dates
-    :param start: date to start (date time object ... i think)
-    :param end: date to end (datetime object .. i think)
+    :param start: date to start (date time object ... I think)
+    :param end: date to end (datetime object .. I think)
     :param:  the amount to change between dates in the list ( time delta object)
     :return
         generator for datelists with dates separated by delta
