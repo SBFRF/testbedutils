@@ -395,7 +395,7 @@ def angle_correct(angle_in, rad=0):
                 angle_in[:, yy, :] = angle_in_3
     else:
         print '<<ERROR>> this function only takes angles in as degrees right now'
-        raise
+
     assert (angle_in < 360).all() and (angle_in >= 0).all(), 'The angle correction function didn''t work properly'
     return angle_in
 
