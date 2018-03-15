@@ -5,30 +5,28 @@ import numpy as np
 
 
 def cart2pol(x, y):
-    """
-        this translates from cartesian coords to polar coordinates (radians)
+    """this translates from cartesian coords to polar coordinates (radians)
 
     :param x: x componant
     :param y: y componant
-    :return:
+    :returns: return:
         r radial componant
         theta angular compoanat (returned in radian)
+
     """
     r = np.sqrt(x ** 2 + y ** 2)
     theta = np.arctan2(y, x)
     return r, theta
 
-
 def pol2cart(r, theta):
-    """
-    this translates from polar coords (radians) to polar coordinates
+    """this translates from polar coords (radians) to polar coordinates
     assumed radian input for theta
 
     :param r: speed, magnatude
-    :param theta:  direction (in radians)
-    :return:
-        x - componant
+    :param theta: direction (in radians)
+    :returns: x - componant
         y - componant
+
     """
     if (np.max(theta) > 2 * np.pi).any():
         print 'Warning polar2cart assumes radian direction in, angles found above 2pi'
@@ -36,21 +34,18 @@ def pol2cart(r, theta):
     y = r * np.sin(theta)
     return x, y
 
-
 def geo2STWangle(geo_angle_in, zeroAngle=70., METin=1, fixanglesout=0):
-    """
-    This rotates an angle (angle_in) from geographic Meterological convention 0= True North
+    """This rotates an angle (angle_in) from geographic Meterological convention 0= True North
     and puts it to an STWAVE angle 0 is onshore
     variable pierang is the angle from shore to 90 degrees (shore coordinates) in geographic convention
     ie the pier at Duck NC is at an angle of 70 degrees TN (stateplane) and this is assumed to be shore perpendicular
 
-    :param geo_angle_in:  an array or list of angles to be rotated from MET convention of angle from
-    :param zeroAngle:  the angle of the pier, from this the azimuth is calculated (MET CONVENTION)
-    :param METin:  = 1 if the input angle is in MET convention (angle from)
-    :param fixanglesout: if set to 1, will correct out angles to +/-180
+    :param geo_angle_in: an array or list of angles to be rotated from MET convention of angle from
+    :param zeroAngle: the angle of the pier, from this the azimuth is calculated (MET CONVENTION) (Default value = 70.)
+    :param METin: 1 if the input angle is in MET convention (angle from) (Default value = 1)
+    :param fixanglesout: if set to 1, will correct out angles to +/-180 (Default value = 0)
+    :returns: angle_out corrected angle back out, into math space
 
-    :return:
-        angle_out corrected angle back out, into math space
     """
     # assert len(np.shape(geo_angle_in)) <= 1, 'function geo2STWangle not tested in more than 1 dimension'
     azimuth = 270 - zeroAngle  # the control of the zero for rotation of the grid in TN coords
@@ -67,19 +62,17 @@ def geo2STWangle(geo_angle_in, zeroAngle=70., METin=1, fixanglesout=0):
         STWangle[flip] -= 360
     return STWangle
 
-
 def STWangle2geo(STWangle, pierang=70, METout=1):
-    """
-    This is the complementary function to geo2STWangle,  It takes STWAVE angles (local coordinate system with a towards
+    """This is the complementary function to geo2STWangle,  It takes STWAVE angles (local coordinate system with a towards
      definition and + CCW)
     and translates them into geospatial grid angles (with a MET -from- convention and a CW+ convention)
 
-    :rtype: 1D array of angles in geographic convention both met or ocean convention
     :param gridangle: an array or list of angles to be rotated
-    :param pierang:  the (MET CONVENTION)
-    :param METout:  if left 1, this creates output into a MET conveinton with the definition in the from
-    :return:
-        angle_out array of angles returned back to geographic convention (true north, clockwise positive)
+    :param pierang: the (MET CONVENTION) (Default value = 70)
+    :param METout: if left 1, this creates output into a MET conveinton with the definition in the from (Default value = 1)
+    :param STWangle: 
+    :returns: angle_out array of angles returned back to geographic convention (true north, clockwise positive)
+
     """
     # TODO this needs to be renamed
     assert len(np.shape(STWangle)) <= 3, 'STWangle2geo has not been tested in greater than 3dimensions'
@@ -91,17 +84,15 @@ def STWangle2geo(STWangle, pierang=70, METout=1):
     angle_out = angle_correct(angle_out)  # correcting to < +360
     return angle_out
 
-
 def vectorRotation(vector, theta=90, axis='z'):
-    """
-    This function does a vector rotation of the vector input in vector, rotated by theta
+    """This function does a vector rotation of the vector input in vector, rotated by theta
     NO NO NO NO -> +theta results in clockwise rotation!!!!!
 
     :param vector: 2d or 3d vector you want rotated... [x, y, z]
-    :param axis: axis you want it rotated about 'x' = [1, 0, 0], 'y' = [0, 1, 0], 'z' = [0, 0, 1]
-    :param theta: angle in decimal degrees
+    :param axis: axis you want it rotated about 'x' = [1, 0, 0], 'y' = [0, 1, 0], 'z' = [0, 0, 1] (Default value = 'z')
+    :param theta: angle in decimal degrees (Default value = 90)
+    :returns: vector rotated CCW theta degrees about axis, uses Euler-Rodrigues formula
 
-    :return: vector rotated CCW theta degrees about axis, uses Euler-Rodrigues formula
     """
 
     vector = np.asarray(vector)
@@ -148,17 +139,15 @@ def vectorRotation(vector, theta=90, axis='z'):
     else:
         return r_vector[0:2]
 
-
 def angle_correct(angle_in, rad=0):
-    """
-    this function takes angles in that are both positve and negative
+    """this function takes angles in that are both positve and negative
     and corrects them to posivitve only
 
-    :param angle_in:
-    :param rad: radian =0 input angles are in degrees
+    :param angle_in: param rad: radian =0 input angles are in degrees
                 radian =1 input anglesa are in radian
-    :return:
-        array of corrected angles in
+    :param rad:  (Default value = 0)
+    :returns: array of corrected angles in
+
     """
     angle_in = np.array(angle_in)
     try:

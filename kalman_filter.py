@@ -2,12 +2,12 @@ import numpy as np
 import datetime as dt
 
 def extract_time(data,index):
-    """
-    This function takes a dictionary [data] and pulles out all of the keys at specific index [index]
+    """This function takes a dictionary [data] and pulles out all of the keys at specific index [index]
 
     :param data: dictionary
     :param index: index to be removed
-    :return: new dictionary with only the indexs selected returned
+    :returns: new dictionary with only the indexs selected returned
+
     """
     vars = data.keys()
     new = {}
@@ -19,19 +19,17 @@ def extract_time(data,index):
     return new
 
 def kalman_filter(new, prior, waveHs):
-    """
-    This function does a kalman filter designed for implmeneting wave height thresholds into the cbathy
+    """This function does a kalman filter designed for implmeneting wave height thresholds into the cbathy
     algorithm, this operates on a single time step only!!!
 
-
+    HELLO SPICER! ADD DICTIONARY KEYS HERE!
     :param new: a dictionary with keys associated with get data
         :key
         :key
         :key
+    :param prior: a saved dictionary with bathys derived from times when wave heights were below the threshold of choice
+    :param waveHs: return:
 
-    :param prior:  a saved dictionary with bathys derived from times when wave heights were below the threshold of choice
-    :param waveHs:
-    :return:
     """
     if type(prior['time']) == list and len(prior['time']) == 1:
         prior['time'] = prior['time'][0]

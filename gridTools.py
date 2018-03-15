@@ -9,40 +9,30 @@ from getdatatestbed.getDataFRF import getObs
 from sblib import geoprocess as gp, sblib as sb
 from sblib.anglesLib import geo2STWangle
 
-
 def frf2ij(xfrf, yfrf, x0, y0, dx, dy, ni, nj):
-    """
-    Convert FRF coordinates to ij grid locations.
-
+    """Convert FRF coordinates to ij grid locations.
+    
     Matthew P. Geheran
     01 December 2017
 
-    Parameters
-    ----------
-    xfrf : float
-        FRF x-coordinate to convert
-    yfrf : float
-        FRF y-coordinate to convert
-    x0 : float
-        Grid origin x-coordinate (FRF)
-    y0 : float
+    :param xfrf: FRF x-coordinate to convert
+    :type xfrf: float
+    :param yfrf: FRF y-coordinate to convert
+    :type yfrf: float
+    :param x0: Grid origin x-coordinate (FRF)
+    :type x0: float
+    :param y0: Grid origin y-coordinate (FRF)
+    :type y0: float
+    :param dx: Grid resolution in x-direction.
+    :type dx: float
+    :param dy: Grid resolution in y-direction.
+    :type dy: float
+    :param ni: Number of grid cells in the i direction.
+    :type ni: int
+    :param nj: Number of grid cells in the j direction.
+    :type nj: int
 
-        Grid origin y-coordinate (FRF)
-    dx : float
-        Grid resolution in x-direction.
-    dy : float
-        Grid resolution in y-direction.
-    ni : int
-        Number of grid cells in the i direction.
-    nj : int
-        Number of grid cells in the j direction.
-
-    Returns
-    -------
-    i : int
-        Grid location in the i direction
-    j: int
-        Grid location in the j direction
+    
     """
     dx_is_single_value = isinstance(dx, (float, int, long))
     dy_is_single_value = isinstance(dy, (float, int, long))
@@ -72,13 +62,12 @@ def frf2ij(xfrf, yfrf, x0, y0, dx, dy, ni, nj):
     return i, j
 
 def convertGridNodesFromStatePlane(icoords, jcoords):
-    """
-    this function converts nodes of a grid coordinate in state plane to FRF coordinates using FRFcoord function
+    """this function converts nodes of a grid coordinate in state plane to FRF coordinates using FRFcoord function
 
     :param icoords: an array of the i coordinates of a grid (easting, northing)
     :param jcoords: an array of the j coordinates of a grid (easting, northing)
+    :returns: array of frf coordinates for I and J of the grid
 
-    :return: array of frf coordinates for I and J of the grid
     """
 
     out = gp.FRFcoord(icoords[0], icoords[1])
@@ -90,9 +79,7 @@ def convertGridNodesFromStatePlane(icoords, jcoords):
     return outIfrf, outJfrf
 
 def makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=None, dSTR_e=None, scalecDict=None, splineDict=None, plot=None):
-    """
-
-    This function will create a time-averaged background surface.
+    """This function will create a time-averaged background surface.
     It takes in a background netcdf file and adds in every survey between the start and end dates.
     Each survey is converted to a grid using scaleCinterpolation.
     These grids are all stacked on top of each other and averaged.
@@ -102,16 +89,16 @@ def makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=None, dSTR_e=None, scalecDict=No
 
     :param dSTR_s: string that determines the start date of the times of the surveys you want to use to update the DEM
                     format is  dSTR_s = '2013-01-04T00:00:00Z'
-                    no matter what you put here, it will always round it down to the beginning of the month
+                    no matter what you put here, it will always round it down to the beginning of the month (Default value = None)
     :param dSTR_e: string that determines the end date of the times of the surveys you want to use to update the DEM
                     format is dSTR_e = '2014-12-22T23:59:59Z'
-                    no matter what you put here, it will always round it up to the end of the month
+                    no matter what you put here, it will always round it up to the end of the month (Default value = None)
     :param dir_loc: place where you want to save the .nc files that get written
                     the function will make the year directories inside of this location on its own.
     :param scalecDict: keys are:
                         x_smooth - x direction smoothing length for scalecInterp
                         y_smooth - y direction smoothing length for scalecInterp
-
+    
                         if not specified it will default to:
                         x_smooth = 100
                         y_smooth = 200
@@ -130,7 +117,7 @@ def makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=None, dSTR_e=None, scalecDict=No
                         targetvar - this is the target variance used in the spline function.
                         wbysmooth - y-edge smoothing length scale
                         wbxsmooth - x-edge smoothing length scale
-
+    
                         if not specified it will default to:
                         splinebctype = 10
                         lc = 4
@@ -139,8 +126,9 @@ def makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=None, dSTR_e=None, scalecDict=No
                         targetvar = 0.45
                         wbysmooth = 300
                         wbxsmooth = 100
-    :param plot: do I want to plot this or not? 1 for yes, 0 for no
-    :return:  netCDF file of the time mean bathymetry
+    :param plot: do I want to plot this or not? 1 for yes, 0 for no (Default value = None)
+    :returns: netCDF file of the time mean bathymetry
+
     """
     # TODO add directions as to where to import these or how to get them, where they should be located ....
     from bsplineFunctions import bspline_pertgrid
@@ -506,16 +494,17 @@ def makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=None, dSTR_e=None, scalecDict=No
         plt.close()
 
 def createGridNodesinFRF(x0, y0, dx, dy, ni, nj):
-    """
-    This function assumes azimuth of the grid is the same as that of the FRF coordinate system
+    """This function assumes azimuth of the grid is the same as that of the FRF coordinate system
     code developed for CMS wave and
+
     :param x0: origin of x in FRF coords
     :param y0: origin of grid in FRF coords
     :param dx: Array of dx values
     :param dy: Array of dy values
     :param ni: number of cells in i
     :param nj: number of cells in j
-    :return:  array of i coords, array of j coordinates
+    :returns: array of i coords, array of j coordinates
+
     """
     assert dx.shape[0] == ni-1, 'This function assumes that there are n-1 dx values'
 
@@ -535,8 +524,7 @@ def createGridNodesinFRF(x0, y0, dx, dy, ni, nj):
 
 def makeBackgroundBathyAzimuth(origin, geo_ang, dx, dy, ni, nj, coord_system='FRF'):
 
-    """
-    This function makes the grid nodes using the origin and the azimuth
+    """This function makes the grid nodes using the origin and the azimuth
 
     :param origin: this is the origin of your new grid in the form (xFRF, yFRF), (Lat, Lon), (easting, northing)
     :param geo_ang: angle of the x-axis of your grid clockwise relative to true north
@@ -544,11 +532,11 @@ def makeBackgroundBathyAzimuth(origin, geo_ang, dx, dy, ni, nj, coord_system='FR
     :param dy: y-direction spacing between your grid nodes in m
     :param ni: number of nodes in the x-direction
     :param nj: number of nodes in the y-direction
-    :param coord_system: 'FRF', 'utm', 'stateplane', 'LAT/LON'
-
-    :return: dictionary with keys containing
+    :param coord_system: FRF', 'utm', 'stateplane', 'LAT/LON' (Default value = 'FRF')
+    :returns: dictionary with keys containing
             2D arrays of x & y grid nodes in the coordinate system you specify (easting/northing, lat/lon)
             2D array of bottom elevation at those node locations from the background dem
+
     """
 
     assert len(origin) == 2, 'makeBackgroundBathy Error: invalid origin input.  origin input must be of form (xFRF, yFRF), (easting, northing), or (LAT, LON)'
@@ -706,18 +694,18 @@ def makeBackgroundBathyAzimuth(origin, geo_ang, dx, dy, ni, nj, coord_system='FR
 
 def makeBackgroundBathyCorners(LLHC, URHC, dx, dy, coord_system='FRF'):
 
-    """
-    This function makes grid nodes using the corners of the grid using different coordinate systems
+    """This function makes grid nodes using the corners of the grid using different coordinate systems
 
     :param LLHC: tuple: lower left hand corner of the desired domain (xFRF, yFRF) (easting, northing) or (Lat, Lon)
     :param URHC: tuple: upper right hand corner of the desired domain (xFRF, yFRF) (easting, northing) or (Lat, Lon)
     :param dx: x-direction grid spacing in m - lat/lon corners get converted to utm!!!
     :param dy: y-direction grid spacing in m - lat/lon corners get converted to utm!!!
-    :param coord_system: string containing the coordinate system for your corners ('FRF' 'utm', 'stateplane', or 'LAT/LON')
-    :return: dictionary containing 2D arrays of:
+    :param coord_system: string containing the coordinate system for your corners ('FRF' 'utm', 'stateplane', or 'LAT/LON') (Default value = 'FRF')
+    :returns: dictionary containing 2D arrays of:
             xFRF (or easting or longitude)
             yFRF (or northing or Latitude)
             bottomElevation at those points interpolated from background DEM onto desired grid
+
     """
 
     # first check the coord_system string to see if it matches!
@@ -878,8 +866,7 @@ def makeBackgroundBathyCorners(LLHC, URHC, dx, dy, coord_system='FRF'):
     return out
 
 def CreateGridNodesInStatePlane(x0, y0, azi, dx, dy, ni, nj):
-    """
-    this function takes in a sim file and creates tuples of grid locations
+    """this function takes in a sim file and creates tuples of grid locations
     in state plane, can further be converted to lat/lon
     stateplane sp3200
 
@@ -890,8 +877,8 @@ def CreateGridNodesInStatePlane(x0, y0, azi, dx, dy, ni, nj):
     :param dy: can be integer/float or numpy array/list describing cell with in y direction (j)
     :param ni: integer/float describing number of cells in i
     :param nj: integer/float describing  number of cells in j
+    :returns: tuples of i/j coords, jStatePlane in stateplane sp3200
 
-    :return: tuples of i/j coords, jStatePlane in stateplane sp3200
     """
     # calculating change in alongshore coordinate for northing and easting
     # given the associated dx dy

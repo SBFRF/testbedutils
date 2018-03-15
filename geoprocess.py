@@ -5,8 +5,7 @@ import utm
 import pandas as pd
 
 def FRF2ncsp(xFRF, yFRF):
-    """
-    this function makes NC stateplane out of X and Y FRF coordinates,
+    """this function makes NC stateplane out of X and Y FRF coordinates,
     based on kent Hathaway's code, bill birkmeir's calculations .
          #  15 Dec 2014
          #  Kent Hathaway.
@@ -27,7 +26,7 @@ def FRF2ncsp(xFRF, yFRF):
     #  ALon = longitude (decimal degrees, positive, or W)
     #  spN = state plane northing (m)
     #  spE = state plane easting (m)
-
+    
     NAD83-86	2014
     Origin Latitude          36.1775975
     Origin Longitude         75.7496860
@@ -38,20 +37,21 @@ def FRF2ncsp(xFRF, yFRF):
     Angle FRF to State Grid  69.9747
     FRF Origin Northing  274093.1562
     Easting              901951.6805
-
+    
     #  Debugging values
     xFRF=566.93;  yFRF=515.11;  % south rail at 1860
     ALat = 36.1836000
     ALon = 75.7454804
     p2= 36.18359977;  p1=-75.74548109;
     SP:  p1 = 902307.92; 	p2 = 274771.22;
+
     :param xFRF: frf coordinate system cross-shore locatioin
     :param yFRF: frf coordinat system alongshore location
-    :return:
-        :key xFRF: cross shore location in FRF coordinate system
+    :returns: key xFRF: cross shore location in FRF coordinate system
         :key yFRF: alongshore location in FRF coodrinate system
         :key spE: North Carolina state plane coordinate system Easting
         :key spN: North Carolina State Plane coordinate system Northing
+
     """
     r2d = 180.0 / np.pi;
 
@@ -73,8 +73,7 @@ def FRF2ncsp(xFRF, yFRF):
     return out
 
 def ncsp2FRF(p1, p2):
-    """
-    this function converts nc StatePlane (3200 fips) to FRF coordinates
+    """this function converts nc StatePlane (3200 fips) to FRF coordinates
     based on kent Hathaways Code
         #
     #  15 Dec 2014
@@ -96,7 +95,7 @@ def ncsp2FRF(p1, p2):
     #  ALon = longitude (decimal degrees, positive, or W)
     #  spN = state plane northing (m)
     #  spE = state plane easting (m)
-
+    
     NAD83-86	2014
     Origin Latitude          36.1775975
     Origin Longitude         75.7496860
@@ -107,7 +106,7 @@ def ncsp2FRF(p1, p2):
     Angle FRF to State Grid  69.9747
     FRF Origin Northing  274093.1562
     Easting              901951.6805
-
+    
     #  Debugging values
     p1=566.93;  p2=515.11;  % south rail at 1860
     ALat = 36.1836000
@@ -115,14 +114,16 @@ def ncsp2FRF(p1, p2):
     p2= 36.18359977;  p1=-75.74548109;
     SP:  p1 = 902307.92; 	p2 = 274771.22;
 
-    :param spE:  North carolina state plane coordinate system - Easting
-    :param spN:  North carolina state plane coordinate system - Northing
-
-    :return: dictionary
+    :param spE: North carolina state plane coordinate system - Easting
+    :param spN: North carolina state plane coordinate system - Northing
+    :param p1: 
+    :param p2: 
+    :returns: dictionary
      :key 'xFRF': cross shore location in FRF coordinates
      :key 'yFRF': alongshore location in FRF coodrindate system
      :key 'StateplaneE': north carolina state plane coordinate system - easting
      :key 'StateplaneN': north carolina state plane coordinate system - northing
+
     """
     r2d = 180.0 / np.pi;
 
@@ -151,24 +152,25 @@ def ncsp2FRF(p1, p2):
     return ans
 
 def ncsp2LatLon(spE, spN):
-    """
-    This function uses pyproj to convert state plane to lat/lon
-
+    """This function uses pyproj to convert state plane to lat/lon
+    
     test points taken from conversions made in USACE SMS modeling system
-
+    
     nc stateplane  meters NAD83
     spE1 = 901926.2 m
     spN1 = 273871.0 m
     Lon1 = -75.75004989
     Lat1 =  36.17560399
-
+    
     spE2 = 9025563.9 m
     spN2 = 276229.5 m
     lon2 = -75.47218285
     lat2 =  36.19666112
+
     :param spE: easting - assumed north carolina state plane Meters
     :param spN: northing - assumed north carolina state plane meters
-    :return: dictionary with original coords and output of latitude and longitude.
+    :returns: dictionary with original coords and output of latitude and longitude.
+
     """
     EPSG = 3358  # taken from spatialreference.org/ref/epsg/3358
     # NC stateplane NAD83
@@ -179,24 +181,25 @@ def ncsp2LatLon(spE, spN):
     return ans
 
 def LatLon2ncsp(lon, lat):
-    """
-      This function uses pyproj to convert longitude and latitude to stateplane
-
+    """This function uses pyproj to convert longitude and latitude to stateplane
+    
       test points taken from conversions made in USACE SMS modeling system
-
+    
         nc stateplane  meters NAD83
         spE1 = 901926.2 m
         spN1 = 273871.0 m
         Lon1 = -75.75004989
         Lat1 =  36.17560399
-
+    
         spE2 = 9025563.9 m
         spN2 = 276229.5 m
         lon2 = -75.47218285
         lat2 =  36.19666112
-      :param lon: geographic longitude (NAD83)  decimal degrees
-      :param lat: geographic longitude (NAD83)  decimal degrees
-    :return:  output dictionary with original coords and output of NC stateplane FIPS 3200
+
+    :param lon: geographic longitude (NAD83)  decimal degrees
+    :param lat: geographic longitude (NAD83)  decimal degrees
+    :returns: output dictionary with original coords and output of NC stateplane FIPS 3200
+
     """
     EPSG = 3358  # taken from spatialreference.org/ref/epsg/3358
     # NC stateplane NAD83
@@ -207,8 +210,7 @@ def LatLon2ncsp(lon, lat):
     return ans
 
 def FRFcoord(p1, p2, coordType=None):
-    """
-    updated FRF coord in python, using kent's original code as guide but converting pyproj for all
+    """updated FRF coord in python, using kent's original code as guide but converting pyproj for all
     conversions between state plane and Lat Lon,  Then all conversions between stateplane and
     FRF coordinates are done using kents original geometry.
     coordType argument will force an input type eg 'FRF'
@@ -232,7 +234,7 @@ def FRFcoord(p1, p2, coordType=None):
     #  ALon = longitude (decimal degrees, positive, or W)
     #  spN = state plane northing (m)
     #  spE = state plane easting (m)
-
+    
     NAD83-86	2014
     Origin Latitude          36.1775975
     Origin Longitude         75.7496860
@@ -243,13 +245,14 @@ def FRFcoord(p1, p2, coordType=None):
     Angle FRF to State Grid  69.9747
     FRF Origin Northing  274093.1562
     Easting              901951.6805
-
+    
     #  Debugging values
     p1=566.93;  p2=515.11;  % south rail at 1860
     ALat = 36.1836000
     ALon = 75.7454804
     p2= 36.18359977;  p1=-75.74548109;
     SP:  p1 = 902307.92; 	p2 = 274771.22;
+
     :param p1: input any of the following to convert [lon, easting, xFRF]
     :param p2: input any of the following to convert [lat, northing, yfrf]
     :return
@@ -261,6 +264,7 @@ def FRFcoord(p1, p2, coordType=None):
         :key 'Lon': Longitude,
         :key 'utmE': UTM easting
         :key 'utmN': UTM northing
+    :param coordType:  (Default value = None)
 
     """
 
@@ -326,17 +330,16 @@ def FRFcoord(p1, p2, coordType=None):
     return coordsOut
 
 def utm2LatLon(utmE, utmN, zn, zl):
-    """
-    uses utm library to convert utm points to lat/lon
+    """uses utm library to convert utm points to lat/lon
 
     :param utmE: utm easting
     :param utmN: utm northing
     :param zn: utm zone number
     :param zl: utm zone letter
-    
-    :return: dict
+    :returns: dict
         :key lat coordinates of the UTM points
         :key lon coordinates of the utm points
+
     """
 
     # check to see if points are...
@@ -372,15 +375,16 @@ def utm2LatLon(utmE, utmN, zn, zl):
     return return_dict
 
 def LatLon2utm(lat, lon):
-    """
-    uses utm library to convert lat lon to UTM
+    """uses utm library to convert lat lon to UTM
+
     :param lat: input value
-    :param lon:  input value
-    :return: dictionary
+    :param lon: input value
+    :returns: dictionary
         :key utmE - UTM easting,
         :key utmN - northing,
         :key zn - zone number,
         :key zl - zone letter of each point
+
     """
 
     # check to see if points are...
@@ -406,16 +410,16 @@ def LatLon2utm(lat, lon):
     return return_dict
 
 def utm2ncsp(utmE, utmN, zn, zl):
-    """
-    uses utm library converts from utm to north carolina state plane
+    """uses utm library converts from utm to north carolina state plane
+
     :param utmE: utm easting
     :param utmN: utm northing
     :param zn: utm zone number
     :param zl: utm zone letter
-    
-    :return: dictionary
+    :returns: dictionary
      :key easting  - ncsp easting
      :key northing - ncsp northing
+
     """
     # so, all this does it go through Lat/Lon to get to ncsp..
 
@@ -450,16 +454,16 @@ def utm2ncsp(utmE, utmN, zn, zl):
     return return_dict
 
 def ncsp2utm(easting, northing):
-    """
-    conversion from NC stateplnae to UTM
+    """conversion from NC stateplnae to UTM
+
     :param easting: ncstateplane easting
     :param northing: nc stateplane northing
-    
-    :return: dictionary
+    :returns: dictionary
        :key utmE - utm Easting
        :key utmN - utm Northing
        :key zn - zone number
        :key zl - zone letter
+
     """
     # all this does it go through lat/lon to get to utm...
 

@@ -15,34 +15,36 @@ import netCDF4 as nc
 from sblib.anglesLib import angle_correct
 
 class Bunch(object):
-    """
-    allows user to access dictionary data from 'object'
+    """allows user to access dictionary data from 'object'
     instead of object['key']
     do x = sblib.Bunch(object)
     x.key
-
+    
     do x = Bunch(object)
     x.key
+
     :param object: input dictionary
     :return class: with objects being the same as the keys from dictionary
+
     """
 
     def __init__(self, aDict):
         self.__dict__.update(aDict)
 
 def whatIsYesterday(now=DT.date.today(), string=1, days=1):
-    """
-    this function finds what yesterday's date string is in the format
+    """this function finds what yesterday's date string is in the format
     of yyyy-mm-dd
-    :params:
-        now:: the date to start counting backwards from
 
+    :param s: now:: the date to start counting backwards from
+    
         string:: (1) output is in stiring format (default)
                  (2) output is in datetime format
         days:: how many days to count backwards from
            default = 1
     :return
         the date of yesterday ( "days" previous to input 'now')
+    :param now:  (Default value = DT.date.today()
+
     """
 
     yesterday = now - DT.timedelta(days)
@@ -51,13 +53,13 @@ def whatIsYesterday(now=DT.date.today(), string=1, days=1):
     return yesterday
 
 def baseRound(x, base=5):
-    """
-    This function will round any value to a multiple of the base,
+    """This function will round any value to a multiple of the base,
 
     :param x: values to be rounded:
     :param base: this is the value by which x is rounded to a multiple of
-        ie base = 10  x = [4, 8, 2, 12]  returns [0,10,0,10]
-    :return: np.array of floating point numbers rounded to a multiple of base
+        ie base = 10  x = [4, 8, 2, 12]  returns [0,10,0,10] (Default value = 5)
+    :returns: np.array of floating point numbers rounded to a multiple of base
+
     """
     x = np.array(x, dtype=float)
     return base * np.round(x/base)
@@ -66,16 +68,18 @@ def roundtime(timeIn=None, roundTo=60):
     """"
     Round a datetime object to any time lapse in seconds
 
-    :param dt : datetime.datetime object, default now.
-    :param roundTo : Closest number of seconds to round to, default 1 minute.
-
+    :param dt: datetime.datetime object, default now.
+    :param roundTo: Closest number of seconds to round to, default 1 minute.
+    
        Author: Thierry Husson 2012 - Use it as you want but don't blame me.
-
+    
        modified by SB to include lists of datetime dataList,
        returned as a list if it came in as a list, if it came in as a datetime object
        it is returned as such
     :return
         list/array of times rounded to 'round to value'
+    :param timeIn:  (Default value = None)
+
     """
     # making dt a list
 
@@ -107,13 +111,11 @@ def roundtime(timeIn=None, roundTo=60):
     return dtlist
 
 def createDateList(start, end, delta):
-    """
-    creates a generator of dates
+    """creates a generator of dates
+
     :param start: date to start (date time object ... I think)
     :param end: date to end (datetime object .. I think)
-    :param:  the amount to change between dates in the list ( time delta object)
-    :return
-        generator for datelists with dates separated by delta
+    :param delta: 
 
     """
     curr = start
@@ -122,12 +124,12 @@ def createDateList(start, end, delta):
         curr += delta
 
 def statsBryant(observations, models):
-    """
-    This function does Non-Directional Statsistics
+    """This function does Non-Directional Statsistics
     These statistics are from the Bryant Wave stats CHETN - I - 91
+
     :param observations: array of observational data
-    :param models:  array of model data
-    :return: dictiornay
+    :param models: array of model data
+    :returns: dictiornay
         :key  'bias' average of residuals
         :key  'RMSEdemeaned': RMSEdemeaned,
         :key  'RMSE': R oot mean square error
@@ -139,6 +141,7 @@ def statsBryant(observations, models):
         :key  'PscoreIMEDS':  see Hanson 2007 for description
         :key  'residuals': model - observations
         :
+
     """
     obsNaNs = np.argwhere(np.isnan(observations)).squeeze()
     modNaNs = np.argwhere(np.isnan(models)).squeeze()
@@ -206,17 +209,17 @@ def statsBryant(observations, models):
     return stats
 
 def makegif(flist, ofname, size=None, dt=0.5):
-    """
-    This function uses imageio to create gifs from a list of images
-
+    """This function uses imageio to create gifs from a list of images
+    
     kwargs for mimwrite http://imageio.readthedocs.org/en/latest/format_gif.html#gif
 
     :param flist: a sorted list of files to be made into gifs (including path)
     :param ofname: output gif filename (including path)
     :param size: size of pictures (default not resized)
     :param loop: number of loops to do, 0 is default and infinite
-    :return:
-        will write a gif to ofname location
+    :param dt:  (Default value = 0.5)
+    :returns: will write a gif to ofname location
+
     """
     # images = [Image.open(fn) for fn in flist]
     #
@@ -233,33 +236,36 @@ def makegif(flist, ofname, size=None, dt=0.5):
     imageio.mimwrite(ofname, images, duration=dt)
 
 def running_mean(data, window):
-    """
-    found running mean function on the internet, untested
+    """found running mean function on the internet, untested
+
     :param data: data to run mean
     :param window: window over which to take mean
-    :return: meaned data
+    :returns: meaned data
+
     """
     cumsum = np.cumsum(np.insert(data, 0, 0))
     return (cumsum[window:] - cumsum[:-window]) / window
 
 def find_nearest(array, value):
-    """
-    Function looks for value in array and returns the closest array value
+    """Function looks for value in array and returns the closest array value
     (to 'value') and index of that value
+
     :param array: array to to find things in
     :param value: value to search against
     :return returns a number from the array value, that is closest to value input
+
     """
     idx = (np.abs(array - value)).argmin()
     return array[idx], idx
 
 def findUniqueFromTuple(a, axis=1):
-    """
-    This function finds the unique values of a multi dimensional tuple (quickly)
+    """This function finds the unique values of a multi dimensional tuple (quickly)
+
     :param a: an array of multidimensional size
     :param axis: this is the axis that it looks for unique values using (default is horizontal)
-    :return: array of unique tuples
+    :returns: array of unique tuples
         warning, values are not sorted
+
     """
     if axis == 0:
         a = a.T
@@ -271,15 +277,15 @@ def findUniqueFromTuple(a, axis=1):
     return unique_a
 
 def weightedAvg(toBeAveraged, weights, avgAxis=0, inverseWeight=False):
-    """
-    This function does a weighted average on a multidimensional array
+    """This function does a weighted average on a multidimensional array
 
     :param toBeAveraged: values to be averaged (array)
     :param weights: values to be used as weights (does not have to be normalized)
-    :param avgAxis: axis over which to average
+    :param avgAxis: axis over which to average (Default value = 0)
     :param inverseWeight: if true will invert the weights, high values weighted higher with marked FALSE
-            to weight high values lower, inverseWeight must be True
-    :return: an array of weighted average
+            to weight high values lower, inverseWeight must be True (Default value = False)
+    :returns: an array of weighted average
+
     """
     if inverseWeight == True:
         weights = 1/weights
@@ -288,22 +294,20 @@ def weightedAvg(toBeAveraged, weights, avgAxis=0, inverseWeight=False):
     return averagedData
 
 def findbtw(data, lwth, upth, type=0):
-    """
-    This function finds both values and indicies of a list values between two values
+    """This function finds both values and indicies of a list values between two values
     :TODO: probably could be improved by using boolean compares
 
-
-    :param upth: = upper level threshold
-    :param lwth: = lower level threshold
-    :param data: = list (or numpy array?)
-    :param type:
-        0 = non inclusive  ie. lwth < list <  upth
+    :param upth: upper level threshold
+    :param lwth: lower level threshold
+    :param data: list (or numpy array?)
+    :param type: 0 = non inclusive  ie. lwth < list <  upth
         1 = low incluisve  ie. lwth <=list <  upth
         2 = high inclusive ie. lwth < list <= upth
         3 = all inclusive  ie  lwth <=list <= upth
     :return
         indicies returns idices that meet established criteria
-        values   returns associated values from da
+        values   returns associated values from da (Default value = 0)
+
     """
     indices = []
     vals = []
@@ -349,13 +353,12 @@ def findbtw(data, lwth, upth, type=0):
     return indices, vals
 
 def timeMatch(obs_time, obs_data, model_time, model_data):
-    """
-    This is the time match function from the IMEDs lite version created by ASA
+    """This is the time match function from the IMEDs lite version created by ASA
     This has been removed from the IMEDS package to simplify use.
     This method returns the matching model data to the closest obs point.
-
+    
     similar to time match imeds
-
+    
     Time Matching is done by creating a threshold by taking the median of the difference of each time
        then taking the minimum of the difference between the two input times divided by 2.
        a small, arbitrary (as far as I know) factor is then subtracted from that minimum to remove the possiblity
@@ -363,12 +366,12 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
 
     :param obs_time: observation times, in
     :param obs_data: matching observation data, any shape
-    :param model_time:  modeling time
-    :param model_data:  modeling data (any shape)
-
-    :return: time, (as float)
+    :param model_time: modeling time
+    :param model_data: modeling data (any shape)
+    :returns: time, (as float)
              obs_data_s -  data as input
              model_data_s  - data as input
+
     """
 
     # try to convert it from datetime to epochtime
@@ -453,11 +456,10 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
     return time, obs_data_s, model_data_s
 
 def timeMatch_altimeter(altTime, altData, modTime, modData, window=30 * 60):
-    """
-    this function will loop though variable modTim and find the closest value
+    """this function will loop though variable modTim and find the closest value
     then look to see if it's within a window (default, 30 minutes),
      return altimeter data, and matched time
-
+    
      Note: this might be slower than imeds time match or time match,
            which is based on the imeds time match
 
@@ -465,11 +467,11 @@ def timeMatch_altimeter(altTime, altData, modTime, modData, window=30 * 60):
     :param altData: altimeter data, some/any floating (int?) value
     :param modTime: base time to match
     :param modData: data to be paired (could be indicies)
-    :param window: time in seconds (or time delta, if input as datetimes)
-    :return:
-        timeout: matched time in same format put in
+    :param window: time in seconds (or time delta, if input as datetimes) (Default value = 30 * 60)
+    :returns: timeout: matched time in same format put in
         dataoutt: time matched altimeter data from variable altData
         modout: time matched model data
+
     """
 
     # try to convert it from datetime to epochtime
@@ -520,23 +522,23 @@ def timeMatch_altimeter(altTime, altData, modTime, modData, window=30 * 60):
     return tOut, np.array(dataout), np.array(modout)
 
 def reduceDict(dictIn, idxToKeep, exemptList=None):
-    """
-    This function will take a dictionary and  reduce it by given indicies, making a COPY of the array
+    """This function will take a dictionary and  reduce it by given indicies, making a COPY of the array
     it assumes that all things of multidimensions have time in the first dimension
-
+    
     WARNING: This could potentially be dangerous as it works by checking each key to see if its the lenth of the
         variable dictIn['time'].  If it is then it will reduce the variable to keep the idxToKeep.  If not it will
         skip the key
-
+    
     This function is useful if trying to reduce a dictionary to specific indicies of interest eg with a time matched index
     Improvement to be safer is welcome, or use with caution.
+
     :param dictIn: dictionary with no limit to how many keys assumes one key is 'time'
     :param idxToKeep: indices to reduce to, must be shorter than key 'time'
     :param exemptList: this is a list of variables to exclude
             default values are 'time', 'name', 'xFRF', 'yFRF'
-    :return:
-        a dictionary with the same keys that were input
+    :returns: a dictionary with the same keys that were input
             all keys that came in with the same length as 'time' have been reduced to use the indices of idxToKeep
+
     """
     assert 'time' in dictIn, 'This function must have a variable "time"'
     if exemptList == None:
@@ -558,8 +560,7 @@ def reduceDict(dictIn, idxToKeep, exemptList=None):
 
 
 def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
-    """
-    this function will calculate the mean direction from a full spectrum
+    """this function will calculate the mean direction from a full spectrum
     only calculates on one 2D spectrum at a time
     defaults to 0.05 hz to 0.5 hz frequency for the statistics
     Input:
@@ -585,8 +586,12 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
         % sprdDhp  half-power direction width in direction spectra at peak freq (not currently incorporated)
         %  Tm10 - Mean Absolute wave Period from -1 moment
 
-            return order [ Hm0, Tp, TmSecondMoment, Tm01,  Dp, Dm, Dmp, sprdF, sprdD, stats], Tm10
-        Code Translated by Spicer Bak from: fd2BulkStats.m written by Kent Hathaway
+    :param spec: 
+    :param dirbins: 
+    :param frqbins: 
+    :param lowFreq:  (Default value = 0.05)
+    :param highFreq:  (Default value = 0.5)
+    :returns: Code Translated by Spicer Bak from: fd2BulkStats.m written by Kent Hathaway
 
     """
     raise NotImplementedError('This function is depricated, The development should be moved to sb.waveLib version!!!!')
@@ -708,7 +713,10 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
     return Hm0, Tp, Tm02, Tm01, Dp, Dm, Dmp, vavgdir, sprdF, sprdD, stats, Tm10
 
 def FRFcoord(p1, p2):
-    """
-    place older
+    """place older
+
+    :param p1: 
+    :param p2: 
+
     """
     raise ImportError('please use the function in sblib.geoprocess')
