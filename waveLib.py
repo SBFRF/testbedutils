@@ -3,8 +3,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 import sblib as sb
 import warnings
-
-import sblib.anglesLib
+import anglesLib
 
 
 def timeseriesPUV(p, u, v, t, waterDepth, gaugeDepth):
@@ -183,7 +182,7 @@ def HPchop_spec(spec, dirbin, angadj=0, corrected=1):
     #     dirbin = angle_correct(dirbin - angadj)
     if angadj < 0:  # if a
         # rotating dirbin if need be
-        dirbin = sblib.anglesLib.angle_correct(dirbin - angadj)
+        dirbin = anglesLib.angle_correct(dirbin - angadj)
     elif angadj > 0:
         dirbin = dirbin - angadj
 
@@ -212,9 +211,9 @@ def HPchop_spec(spec, dirbin, angadj=0, corrected=1):
     newspec = np.concatenate([spec[:, :, zlist], spec[:, :, mlist]], axis=2)  # pulling proper spec data
 
     if angadj != 0 and corrected == 1:
-        newdirband = sblib.anglesLib.angle_correct(newdirband + angadj)
+        newdirband = anglesLib.angle_correct(newdirband + angadj)
     elif corrected == 1:
-        newdirband = sblib.anglesLib.angle_correct(newdirband)
+        newdirband = anglesLib.angle_correct(newdirband)
 
     return newspec, newdirband
 
@@ -556,7 +555,7 @@ def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
 
     vavgdir = np.arctan2(ysum, xsum)
     vavgdir = np.rad2deg(vavgdir)
-    vavgdir = sblib.anglesLib.angle_correct(vavgdir)
+    vavgdir = anglesLib.angle_correct(vavgdir)
 
     # Mean direction at the peak frequency
     Dmp = np.rad2deg(np.arctan2(np.sum(np.sin(Drad) * Dsp * dirbins, axis=1),
@@ -786,8 +785,8 @@ def isThisWindSea(waveDirectionAtPeak, waveSpeedAtPeak, windDir, windSpeed):
 
     """
     windowAngle = 45
-    windAngleMax = sblib.anglesLib.angle_correct(windDir + windowAngle)
-    windAngleMin = sblib.anglesLib.angle_correct(windDir - windowAngle)
+    windAngleMax = anglesLib.angle_correct(windDir + windowAngle)
+    windAngleMin = anglesLib.angle_correct(windDir - windowAngle)
     # if there is no wrap
     windSea = False  # setting
     if waveSpeedAtPeak <= windSpeed:  # if speeds match up
@@ -947,7 +946,7 @@ def seaAndSwell2D(specTime, spec, wavefreqbin, wavedirbin, windSpeed, windDirTn,
             if (windDirTn[tt] + angleWindow >= 360):  # if the upper bound of wind direction wraps to upper directions
                 # upper bound: wave angle has to be between the 360 and the lower bound angle direction limit
                 # lower bound: wave angle has to be above the wind upper bound direction limit
-                if (0 <= peakDirsTN[tt, ff] <= sblib.anglesLib.angle_correct(windDirTn[tt] + angleWindow)) | (
+                if (0 <= peakDirsTN[tt, ff] <= anglesLib.angle_correct(windDirTn[tt] + angleWindow)) | (
                                 360 > peakDirsTN[tt, ff] >= windDirTn[tt] - angleWindow):
                     if windSpeed[tt] > wavespeeds[ff]:
                         # the wind is positively reinforcing wave generation --> Sea
@@ -960,8 +959,8 @@ def seaAndSwell2D(specTime, spec, wavefreqbin, wavedirbin, windSpeed, windDirTn,
                 # upper bound: the wave angle is smaller than the upper bound wind angle
                 # lower bound (with wrap around 360): wave direction is either greater than zero and upper bound wind direction limit
                 #   or wave direction is between the lower bound wind direction and 360
-                if (0 <= peakDirsTN[tt, ff] <= sblib.anglesLib.angle_correct(windDirTn[tt] + angleWindow)) | (
-                        sblib.anglesLib.angle_correct(windDirTn[tt] - angleWindow) <= peakDirsTN[tt, ff] < 360):
+                if (0 <= peakDirsTN[tt, ff] <= anglesLib.angle_correct(windDirTn[tt] + angleWindow)) | (
+                        anglesLib.angle_correct(windDirTn[tt] - angleWindow) <= peakDirsTN[tt, ff] < 360):
                     if windSpeed[tt] > wavespeeds[ff]:
                         # the wind is positively reinforcing wave generation --> Sea
                         windSea[tt, ff, :] = spec[tt, ff, :]
@@ -997,8 +996,8 @@ def seaAndSwell2D(specTime, spec, wavefreqbin, wavedirbin, windSpeed, windDirTn,
             plt.xlabel('wave Frequency')
             plt.pcolor(wavefreqbin, wavedirbin, spec[tt].T)
             plt.plot(wavefreqbin, peakDirsTN[tt], 'w.-', label='peak wave Direction')
-            plt.plot(wavefreqbin, np.tile(sblib.anglesLib.angle_correct(windDirTn[tt] + angleWindow), len(wavefreqbin)), 'w--')
-            plt.plot(wavefreqbin, np.tile(sblib.anglesLib.angle_correct(windDirTn[tt] - angleWindow), len(wavefreqbin)), 'w--')
+            plt.plot(wavefreqbin, np.tile(anglesLib.angle_correct(windDirTn[tt] + angleWindow), len(wavefreqbin)), 'w--')
+            plt.plot(wavefreqbin, np.tile(anglesLib.angle_correct(windDirTn[tt] - angleWindow), len(wavefreqbin)), 'w--')
             plt.plot([0, 0.5], [windDirTn[tt], windDirTn[tt]], 'w-', label='Wind direction')
             # plt.legend(loc='upper right')
 

@@ -6,8 +6,9 @@ from matplotlib import pyplot as plt
 from scipy.interpolate import griddata
 import makenc
 from getdatatestbed.getDataFRF import getObs
-from sblib import geoprocess as gp, sblib as sb
-from sblib.anglesLib import geo2STWangle
+import geoprocess as gp
+import sblib as sb
+from anglesLib import geo2STWangle
 
 def frf2ij(xfrf, yfrf, x0, y0, dx, dy, ni, nj):
     """Convert FRF coordinates to ij grid locations.

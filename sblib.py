@@ -12,7 +12,7 @@ import numpy as np
 import datetime as DT
 import warnings
 import netCDF4 as nc
-from sblib.anglesLib import angle_correct
+import anglesLib
 
 class Bunch(object):
     """allows user to access dictionary data from 'object'
@@ -647,7 +647,7 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
     Xcomp = np.sum(np.cos(Drad) * Ds, axis=1)  # removed denominator as it canceles out in calculation
     Ycomp = np.sum(np.sin(Drad) * Ds, axis=1)  # removed denominator as it canceles out in calculation
     Dm = np.rad2deg(np.arctan2(Ycomp, Xcomp))
-    Dm = angle_correct(Dm, rad=False)  # fixing directions above or below 360
+    Dm = anglesLib.angle_correct(Dm, rad=False)  # fixing directions above or below 360
     # Vector Dm (Hesser)
     sint = np.sin(Drad)  # sine of dirbins
     cost = np.cos(Drad)  # cosine of dirbins
@@ -661,12 +661,12 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
         ysum[tt] = sum(np.sum(sint2 * delsq * spec[tt, :, :], axis=1))  # y componant
 
     vavgdir = np.rad2deg(np.arctan2(ysum, xsum))
-    vavgdir = angle_correct(vavgdir)
+    vavgdir = anglesLib.angle_correct(vavgdir)
     # assert vavgdir == Dm, 'Dm is calculated wrong ... at least once'
     # Mean direction at the peak frequency
     Dmp = np.rad2deg(np.arctan2(np.sum(np.sin(Drad) * Dsp, axis=1),
                                 np.sum(np.cos(Drad) * Dsp, axis=1)))  # converting back to degrees
-    Dmp = angle_correct(Dmp)
+    Dmp = anglesLib.angle_correct(Dmp)
     # f-spec spread
     sprdF = (m0 * m4 - m2 ** 2) / (m0 * m4)
 
