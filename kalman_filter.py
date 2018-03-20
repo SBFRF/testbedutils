@@ -18,7 +18,7 @@ def extract_time(data,index):
             new[vv] = data[vv][index]
     return new
 
-def kalman_filter(new, prior, waveHs):
+def cbathy_kalman_filter(new, prior, waveHs):
     """This function does a kalman filter designed for implmeneting wave height thresholds into the cbathy
     algorithm, this operates on a single time step only!!!
 
