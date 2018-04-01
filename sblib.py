@@ -82,7 +82,7 @@ def roundtime(timeIn=None, roundTo=60):
 
     """
     # making dt a list
-
+    warnings.warn('This Function is SLOW!')
     if np.size(timeIn) > 1:
         dtlist = timeIn
     elif np.size(timeIn) == 1:
@@ -542,7 +542,7 @@ def reduceDict(dictIn, idxToKeep, exemptList=None):
     """
     assert 'time' in dictIn, 'This function must have a variable "time"'
     if exemptList == None:
-        exemptList = ['time', 'name', 'xFRF', 'yFRF']
+        exemptList = ['time', 'name', 'xFRF', 'yFRF', 'xm', 'ym']
     idxToKeep = np.array(idxToKeep, dtype=int) # force data to integer type
     dictOut = dictIn.copy()
     for key in dictIn:
@@ -553,39 +553,15 @@ def reduceDict(dictIn, idxToKeep, exemptList=None):
                 # then reduce
                 dictOut[key] = dictIn[key][idxToKeep]  # reduce variable
                 # print 'key %s Made it past test and new size %d' %(key, len(dictIn[key]))
-        except IndexError:
-            pass  # this passes for single number (not arrays)
+        except (IndexError, AttributeError):
+            pass  # this passes for single number (not arrays), and attribute error passes for single datetime objects
     dictOut['time'] = dictIn['time'][idxToKeep]  # # once the rest are done finally reduce 'time'
     return dictOut
 
 
 def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
     """this function will calculate the mean direction from a full spectrum
-    only calculates on one 2D spectrum at a time
-    defaults to 0.05 hz to 0.5 hz frequency for the statistics
-    Input:
-        %     spec  Frequency-direction spectra (2D)       shape(record,frqbin,dirbin)
-        %  frqbins  Frequency vector (not assumed constant)
-        %  dirbins  Direction vector (assumed constant)
-        %
-    Outputs (MKS, Hz, degrees, degrees CW from true north):
-        %   Hmo   Significant wave height
-        %    Tp   Period of the peak energy in the frequency spectra, (1/Fp).  AKA Tpd, not to be
-        %           confused with parabolic fit to spectral period
-        %    Tm02   Mean spectral period (Tm0,2, from moments 0 & 2), sqrt(m0/m2)
-        %    Tm01   Average period, frequency sprectra weighted, from first moment (Tm0,1)
-        %    Dp   Peak direction at the peak frequency
-        %   Dmp   Mean direction at the peak frequency
-        %    Dm   Mean wave direction
-        %  sprdF  Freq-spec spread (m0*m4 - m2^2)/(m0*m4)  (one definition)
-        %  sprdD  Directional spread (m0*m4 - m2^2)/(m0*m4)  (one definition, Kuik 1988, buoys),
-        %         total sea-swell
-        %         sprdD = r2d * sqrt(2.0 * (1.0 - sqrt(Xcomp.^2 + Ycomp^2)));
-        %         where  Xcomp = sum(sin(Drad) .* Ds .* dwdir) ./ sum(Ds .* dwdir);
-        %                Ycomp = sum(cos(Drad) .* Ds .* dwdir) ./ sum(Ds .* dwdir);
-        % sprdDhp  half-power direction width in direction spectra at peak freq (not currently incorporated)
-        %  Tm10 - Mean Absolute wave Period from -1 moment
-
+        Function is depricated
     :param spec: 
     :param dirbins: 
     :param frqbins: 
@@ -595,122 +571,6 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
 
     """
     raise NotImplementedError('This function is depricated, The development should be moved to sb.waveLib version!!!!')
-    assert type(frqbins) in [np.ndarray, np.ma.MaskedArray], 'the input frqeuency bins must be a numpy array'
-    assert type(dirbins) in [np.ndarray, np.ma.MaskedArray], 'the input DIRECTION bins must be a numpy array'
-    try:
-        assert np.array(spec).ndim == 3, 'Spectra must be a 3 dimensional array'
-    except AssertionError:
-        spec = np.expand_dims(spec, axis=0)
-    try:
-        assert (spec != 0).all() is not True, 'Spectra must have energy to calculate statistics, all values are 0'
-    except AssertionError:
-        return 0
-    # finding delta freqeucny (may change as in CDIP spectra)
-    frq = np.array(np.zeros(len(frqbins) + 1))  # initializing frqbin bucket
-    frq[0] = frqbins[0]
-    frq[1:] = frqbins
-
-    df = np.diff(frq, n=1)  # change in frequancy banding
-    dd = np.abs(np.median(np.diff(dirbins)))  # dirbins[2] - dirbins[1]  # assume constant directional bin size
-    # finding delta degrees
-    # frequency spec
-    fspec = np.sum(spec, axis=2) * dd  # fd spectra - sum across the frequcny bins to leave 1 x n-frqbins
-    # doing moments over 0.05 to 0.33 Hz (3-20s waves) (mainly for m4 sake)
-    [idx, vals] = findbtw(frqbins, lowFreq, highFreq, type=3)
-
-    m0 = np.sum(fspec * df, axis=1)  # 0th momment
-    m1 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx], axis=1)  # 1st moment
-    m2 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx] ** 2, axis=1)  # 2nd moment
-    m3 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx] ** 3, axis=1)  # 3rd moment
-    m4 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx] ** 4, axis=1)  # 4th moment
-    m11 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx] ** -1, axis=1)  # negitive one moment
-
-    # sigwave height
-    Hm0 = 4 * np.sqrt(m0)
-    # period stuff
-    ipf = fspec.argmax(axis=1)  # indix of max frequency
-    Tp = 1 / frqbins[ipf]  # peak period
-    Tm02 = np.sqrt(m0 / m2)  # mean period
-    Tm01 = m0 / m1  # average period - cmparible to TS Tm
-    Tm10 = m11 / m0
-    # directional stuff
-    Ds = np.sum(spec * np.tile(df, (len(dirbins), 1)).T, axis=1)  # directional spectra (directional Spred)
-    Dsp = []
-    for ii in range(0, len(ipf)):
-        Dsp.append(spec[ii, ipf[ii], :])  # direction spread at peak-f (ipf)
-    Dsp = np.array(Dsp)
-    idp = Dsp.argmax(axis=1)  # index of direction at peak frquency
-    Dp = dirbins[idp]  # peak direction
-
-    Drad = np.deg2rad(dirbins)  # making a radian degree bin
-    # mean wave direction (e.g. Kuik 1988, used by USACE WIS)
-    Xcomp = np.sum(np.cos(Drad) * Ds, axis=1)  # removed denominator as it canceles out in calculation
-    Ycomp = np.sum(np.sin(Drad) * Ds, axis=1)  # removed denominator as it canceles out in calculation
-    Dm = np.rad2deg(np.arctan2(Ycomp, Xcomp))
-    Dm = anglesLib.angle_correct(Dm, rad=False)  # fixing directions above or below 360
-    # Vector Dm (Hesser)
-    sint = np.sin(Drad)  # sine of dirbins
-    cost = np.cos(Drad)  # cosine of dirbins
-
-    sint2 = np.tile(sint, [len(frqbins), 1])  # 2d diretion size of the spectra
-    cost2 = np.tile(cost, [len(frqbins), 1])
-    delsq = np.tile(df, [len(dirbins), 1]).T
-
-    for tt in range(0, spec.shape[0]):
-        xsum[tt] = sum(np.sum(cost2 * delsq * spec[tt, :, :], axis=1))  # summing along Xcomponant directions, then
-        ysum[tt] = sum(np.sum(sint2 * delsq * spec[tt, :, :], axis=1))  # y componant
-
-    vavgdir = np.rad2deg(np.arctan2(ysum, xsum))
-    vavgdir = anglesLib.angle_correct(vavgdir)
-    # assert vavgdir == Dm, 'Dm is calculated wrong ... at least once'
-    # Mean direction at the peak frequency
-    Dmp = np.rad2deg(np.arctan2(np.sum(np.sin(Drad) * Dsp, axis=1),
-                                np.sum(np.cos(Drad) * Dsp, axis=1)))  # converting back to degrees
-    Dmp = anglesLib.angle_correct(Dmp)
-    # f-spec spread
-    sprdF = (m0 * m4 - m2 ** 2) / (m0 * m4)
-
-    # fd-spec spread
-    sprdD = np.rad2deg(np.sqrt(2.0 * (1.0 - np.sqrt(Xcomp ** 2 + Ycomp ** 2))))
-
-    ##### Exceprt from Kent's code for spreading - not sure how to handle
-    # fd-spec spread, do a linear interp to get closer to half-power
-    # % from the delta-deg increments
-    # hp = np.max(Dsp)/2;
-
-    ##### Exceprt from Kent's code for spreading - not sure how to handle
-    #        % fd-spec spread, do a linear interp to get closer to half-power
-    # % from the delta-deg increments
-    # hp = np.max(Dsp)/2;
-    # fd-spec spread, do a linear interp to get closer to half-power from the
-    # delta-deg increments
-    ##### Exceprt from Kent's code for spreading - not sure how to handle
-    #        % fd-spec spread, do a linear interp to get closer to half-power
-    # % from the delta-deg increments
-    # hp = max(Dsp)/2;
-    # ihp=find(Dsp > hp);
-    #
-    #  % Left (d1) and right (d2) interps: Y=Dir, X=E
-    # d1=interp1([Dsp(ihp(1)-1) Dsp(ihp(1)+1)], [dwdir(ihp(1)-1) dwdir(ihp(1)+1)], hp);
-    # d2=interp1([Dsp(ihp(end)-1) Dsp(ihp(end)+1)], [dwdir(ihp(end)-1) dwdir(ihp(end)+1)], hp);
-    # sprdDhp = d2 - d1;
-
-    # wrapping up data into dictionary
-    meta = 'Tp - peak period, Tm - mean period, Tave - average period, comparable to Time series mean period, Dp - peak direction, Dm - mean direction, Dmp - mean direction at peak frequency, vavgdir - Vector Averaged Mean Direction,sprdF - frequency spread, sprdD - directional spread'
-    stats = {'Hm0': Hm0,
-             'Tp': Tp,
-             'Tm': Tm02,
-             'Tave': Tm01,
-             'Dp': Dp,
-             'Dm': Dm,
-             'Dmp': Dmp,
-             'VecAvgMeanDir': vavgdir,
-             'sprdF': sprdF,
-             'sprdD': sprdD,
-             'meta': meta
-             }
-    # print meta
-    return Hm0, Tp, Tm02, Tm01, Dp, Dm, Dmp, vavgdir, sprdF, sprdD, stats, Tm10
 
 def FRFcoord(p1, p2):
     """place older
