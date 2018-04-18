@@ -918,7 +918,7 @@ def CreateGridNodesInStatePlane(x0, y0, azi, dx, dy, ni, nj):
 
     return icoords, jcoords
 
-def interpIntegratedBathy4UnstructGrid(ugridDict, THREDDS='FRF', forcedSurveyDate=None):
+def interpIntegratedBathy4UnstructGrid(ugridDict, THREDDS='FRF', forcedSurveyDate=None, bathy=None):
 
     """
     This function basically takes scattered x & y points and returns elevations at those points interpolated from the
@@ -1005,21 +1005,26 @@ def interpIntegratedBathy4UnstructGrid(ugridDict, THREDDS='FRF', forcedSurveyDat
             y = ugridDict['y']
         else:
             pass
-
     # okay, so I should have everything converted to FRF coordinates and meters.  Yay!
-    # now I pull the integrated bathymetry and interpolate
-    if forcedSurveyDate is None:
-        forcedSurveyDate = DT.datetime.strftime(DT.datetime.now(), '%Y-%m-%dT%H:%M:%SZ')
-    elif isinstance(forcedSurveyDate, DT.datetime):
-        forcedSurveyDate = DT.datetime.strftime(forcedSurveyDate, '%Y-%m-%dT%H:%M:%SZ')
+    if bathy is None:
+        # i don't already have an integrated bathy, so now I pull the integrated bathymetry
+        if forcedSurveyDate is None:
+            forcedSurveyDate = DT.datetime.strftime(DT.datetime.now(), '%Y-%m-%dT%H:%M:%SZ')
+        elif isinstance(forcedSurveyDate, DT.datetime):
+            forcedSurveyDate = DT.datetime.strftime(forcedSurveyDate, '%Y-%m-%dT%H:%M:%SZ')
+        else:
+            pass
+
+        start_time = DT.datetime.strptime(forcedSurveyDate, '%Y-%m-%dT%H:%M:%SZ')
+
+        # pull that bathymetry down.
+        cmtb_data = getDataTestBed(start_time, start_time + DT.timedelta(days=0, hours=0, minutes=1), THREDDS)
+        bathy_data = cmtb_data.getBathyIntegratedTransect()
     else:
-        pass
+        # i already have pulled it so there is no reason to get it again
+        bathy_data = bathy
 
-    start_time = DT.datetime.strptime(forcedSurveyDate, '%Y-%m-%dT%H:%M:%SZ')
-
-    # pull that bathymetry down.
-    cmtb_data = getDataTestBed(start_time, start_time + DT.timedelta(days=0, hours=0, minutes=1), THREDDS)
-    bathy_data = cmtb_data.getBathyIntegratedTransect()
+    # now i interpolate
     gridX = bathy_data['xFRF']
     gridY = bathy_data['yFRF']
     elevation = bathy_data['elevation']
