@@ -938,6 +938,7 @@ def interpIntegratedBathy4UnstructGrid(ugridDict, THREDDS='FRF', forcedSurveyDat
 
     :param THREDDS: 'FRF' or 'CHL', will default to 'FRF'
     :param forcedSurveyDate: datestring in the format of '2017-10-10T00:00:00Z' or datetime. will use most recent survey if not specified.
+    :param bathy: this is blank unless you want to directly hand it a bathy dictionary.  the dictionary needs to be in the same format as the output of cmtb_data.getBathyIntegratedTransect()
     :returns: out:
         :key z: - elevation at each of those points interpolated from the integrated bathymetry product - units will be same as input.  will return nans where extrapolated.
         :key surveyDate:  - datestring or datetime of the survey that these values came from.
