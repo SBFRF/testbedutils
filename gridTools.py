@@ -62,6 +62,83 @@ def frf2ij(xfrf, yfrf, x0, y0, dx, dy, ni, nj):
 
     return i, j
 
+def makeCMSgridNodes(x0, y0, azi, dx, dy, z):
+    """
+    This interpolates from a node centric coordinate system defined by x0, y0
+    to a cell centered values
+    :param x0:  Grid origin in stateplane
+    :param y0:  grid origin in stateplane
+    :param azi: azimuth of the grid
+    :param dx: array of x cell spacings (from ReadCMS_dep)
+    :param dy: array of cell spacings (from ReadCMS_dep)
+    :param z: elevation for dx, dx
+
+    :return:   Dictionary with keys:
+                   'i': cell number for x direction
+                   'j': cell number for y direction
+                   'latitude': 2 d array  each cell location in latitude
+                   'longitude': 2 d array each cell location in longitude
+                   'easting': 2 d array each cell location in NC stateplane easting
+                   'northing': 2d array each cell location in NC stateplane northing
+                   'xFRF': FRF x coordinate values
+                   'yFRF': FRF y coordinate values
+                   'azimuth': grid azimuth
+                   'x0': grid origin x
+                   'y0': grid origin y
+                   'elevation': 2 d array of elevations ( positive down )
+                   'time': time of the grid in epoch time ( 0 is fill value) - currently set
+    """
+    # convert from node calculation to centric calculation
+    # first move origin from vertex of grid to center of first grid cell
+
+    # first convert to FRF coordinates
+    FRF = gp.FRFcoord(x0, y0)
+    # shift origin to cell center instead of cell vertex
+    x0N = FRF['xFRF'] - dx[0]/2
+    y0N = FRF['yFRF'] - dy[0]/2
+    # create new dx/dy array
+    dxN = dx[:-1] + np.diff(dx)/2
+    dyN = dy[:-1] + np.diff(dy)/2 # new nodes at the grid center - needed to fit into
+    # create new nodes in FRF x and FRF Y using cell centric locations for accurate interpolation
+    outXfrf, outYfrf = createGridNodesinFRF(x0N, y0N, dxN, dyN, dx.shape[0], dy.shape[0])
+    xFRF, yFRF = np.meshgrid(outXfrf, sorted(outYfrf))
+
+    # new work no need to loop as above
+    convert2 = gp.FRFcoord(xFRF.flatten(), yFRF.flatten(), coordType='FRF')
+    lat = convert2['Lat'].reshape(xFRF.shape)
+    lon = convert2['Lon'].reshape(xFRF.shape)
+    easting = convert2['StateplaneE'].reshape(xFRF.shape)
+    northing = convert2['StateplaneN'].reshape(yFRF.shape)
+    # making i's and j's for cell numbers
+    ii = np.linspace(1, xFRF.shape[1], xFRF.shape[1])
+    jj = np.linspace(1, yFRF.shape[0], yFRF.shape[0])
+
+    # flipping z so it matches x and y (increasing in x & y)
+    # it was read starting at i =0 and j=nj which is backwards from FRF coordinates
+    # this is taken care of in the bathy Load file
+
+    BathyPacket = {'i': ii,
+                   'j': jj,
+                   'latitude': lat,
+                   'longitude': lon,
+                   'easting': easting,
+                   'northing': northing,
+                   'xFRF': sorted(xFRF[0, :]),
+                   'yFRF': yFRF[:, 0],
+                   'azimuth': azi,
+                   'x0': x0,
+                   'y0': y0,
+                   'DX': dxN,
+                   'DY': dyN,
+                   'ni': len(ii),
+                   'nj': len(jj),
+                   'elevation': z,  # exported as [t, x,y] dimensions
+                   # 'bathy': -np.expand_dims(z, axis=0),
+                   'gridFname': 'CMS GRid',
+                   'time': 0}
+
+    return BathyPacket
+
 def convertGridNodesFromStatePlane(icoords, jcoords):
     """this function converts nodes of a grid coordinate in state plane to FRF coordinates using FRFcoord function
 
