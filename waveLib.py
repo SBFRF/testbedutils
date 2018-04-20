@@ -2,27 +2,31 @@
 import numpy as np
 from matplotlib import pyplot as plt
 import sblib as sb
+import warnings
+import anglesLib
+
+
 def timeseriesPUV(p, u, v, t, waterDepth, gaugeDepth):
-    """
-    The goal with this function is to create time series anaylysis work flow
+    """The goal with this function is to create time series anaylysis work flow
          runs welch method fft with 512 record segments, with 1/4 overlab and 5 freq bin band averaging
-
+    
     corrects pressure spectra to surface spectra using pressure response function
-
+    
      below parameters and makes them into magical wave data
 
-    :param p:  pressure in cm
+    :param p: pressure in cm
     :param u: u velocities
     :param v: v velocities
     :param t: time stamp
-    :param waterDepth:  positive in meters
-    :param gaugeDepth:  negative in meters
-    :return:
-        :param frequency spectra
-        :param a1 interped to np.arange(0.04, 0.5, 0.0075)
-        :param b1 interped to np.arange(0.04, 0.5, 0.0075)
-        :param a2 interped to np.arange(0.04, 0.5, 0.0075)
-        :param b2 interped to np.arange(0.04, 0.5, 0.0075)
+    :param waterDepth: positive in meters
+    :param gaugeDepth: negative in meters
+    :param frequency: spectra
+    :param a1: interped to np.arange(0.04, 0.5, 0.0075)
+    :param b1: interped to np.arange(0.04, 0.5, 0.0075)
+    :param a2: interped to np.arange(0.04, 0.5, 0.0075)
+    :param b2: interped to np.arange(0.04, 0.5, 0.0075)
+    :returns: param frequency spectra
+
     """
     from scipy.signal import welch, csd
 
@@ -112,18 +116,17 @@ def timeseriesPUV(p, u, v, t, waterDepth, gaugeDepth):
     return fspec, a1interp, b1interp, a2interp, b2interp
 
 def qkhfs(w, h):
-    """
-    Quick iterative calculation of kh in gravity-wave dispersion relationship
+    """Quick iterative calculation of kh in gravity-wave dispersion relationship
     kh = qkhfs(w, h )
-
+    
     Orbital velocities from kh are accurate to 3e-12 !
         RL Soulsby (2006) \"Simplified calculation of wave orbital velocities\"
         HR Wallingford Report TR 155, February 2006
         Eqns. 12a - 14
 
-    :param w - angular wave frequency = 2*pi/T where T = wave period [1/s]
-    :param h - water depth [m]
-
+    :param w: angular wave frequency = 2*pi/T where T = wave period [1/s]
+    :param h: water depth [m]
+    
     :return
         kh - wavenumber * depth [ ]
 
@@ -139,18 +142,21 @@ def qkhfs(w, h):
     t = np.tanh(y)
     y = y - ((y * t - x) / (t + y * (1.0 - t ** 2.0)))
     kh = y
+
+    warnings.warn("Function gkhfs() may perform similarly to function dispersion().", UserWarning)
+
     return kh
 
 def HPchop_spec(spec, dirbin, angadj=0, corrected=1):
-    """
-    NOTE: tHIS FUNCTION DOES NOT FLIP THE ANGLE CONVENTION FROM CARTESIAN TO GEOGRAPHIC
+    """NOTE: tHIS FUNCTION DOES NOT FLIP THE ANGLE CONVENTION FROM CARTESIAN TO GEOGRAPHIC
     USE GEO2GRID SPEC ROTATE FOR THIS
     This function chops a spectra into half plane, assuming already shore normal waves,
     it will remove half of the spectra not incident to shore
-
+    
     ASSUMPTIONS:
         waves are already shore normal
         follows MET convention (angles measured in the from direction)
+
     :param spec: 2D directional spectra (record count x frq x direction )
     :param dirbin: associated directions with the spectra
                     normal: 1=shore normal chopping 0=FRF pier -> true north chopping
@@ -158,23 +164,25 @@ def HPchop_spec(spec, dirbin, angadj=0, corrected=1):
             angle in deg true north of shore perpendicular
             MET convention (shore->sea)
             THE PORTION OF THE SPECTRA traveling opposite this WILL BE REMOVED ()
-
+    
     :return
         newspec:   new Half plane spectra
-
+    
         newdirband: direction bands associated with Halplane spectra
                 if angadj ==0 directions are output as Shore Normal
                 if angadj !=0 directions are output as True North
             corrected: corrected = 1 for input being between 0:360
                        corrected = 0 for input containing negative values
-                       (will return in the same fashion)
+                       (will return in the same fashion) (Default value = 0)
+    :param corrected:  (Default value = 1)
+
     """
     dirbin = np.array(dirbin)
     # if angadj != 0:
     #     dirbin = angle_correct(dirbin - angadj)
     if angadj < 0:  # if a
         # rotating dirbin if need be
-        dirbin = sb.angle_correct(dirbin - angadj)
+        dirbin = anglesLib.angle_correct(dirbin - angadj)
     elif angadj > 0:
         dirbin = dirbin - angadj
 
@@ -203,15 +211,14 @@ def HPchop_spec(spec, dirbin, angadj=0, corrected=1):
     newspec = np.concatenate([spec[:, :, zlist], spec[:, :, mlist]], axis=2)  # pulling proper spec data
 
     if angadj != 0 and corrected == 1:
-        newdirband = sb.angle_correct(newdirband + angadj)
+        newdirband = anglesLib.angle_correct(newdirband + angadj)
     elif corrected == 1:
-        newdirband = sb.angle_correct(newdirband)
+        newdirband = anglesLib.angle_correct(newdirband)
 
     return newspec, newdirband
 
 def makeMLMspecFromAsBs(a0, a1, b1, a2, b2, waterDepth, freqs, dirs):
-    """
-    from a's and b's make the 2D frequency direction spectra
+    """from a's and b's make the 2D frequency direction spectra
     translated from matlab from kent hathaway, by spicer bak
     (could be improved, verified)
 
@@ -220,9 +227,12 @@ def makeMLMspecFromAsBs(a0, a1, b1, a2, b2, waterDepth, freqs, dirs):
     :param b1: 1st fouier coefficient componant
     :param a2: 2nd fouier coefficient componant
     :param b2: 2nd fouier coefficient componant
-
-    :return: array [t, freq, dir]
+    :param waterDepth: 
+    :param freqs: 
+    :param dirs: 
+    :returns: array [t, freq, dir]
         an array of 2dimensional frequency direction spectra
+
     """
     waveFreqBins = freqs
     waveDirBins = dirs
@@ -241,8 +251,7 @@ def makeMLMspecFromAsBs(a0, a1, b1, a2, b2, waterDepth, freqs, dirs):
     return spec
 
 def mlm(freqs, dirs, c11, c22, c33, c23, q12, q13):
-    """
-        From kent hathaway's code translated from fortran, chuck long -> hanson
+    """From kent hathaway's code translated from fortran, chuck long -> hanson
         mlm.m
     % c  --------------------------------------------------------------------
     % c     Maxumum Likelihood Method (MLM) directional wave analysis
@@ -254,16 +263,18 @@ def mlm(freqs, dirs, c11, c22, c33, c23, q12, q13):
     % c  --------------------------------------------------------------------
     ccould be improved (verified)
 
-    :param freq:  frequencies
-    :param dirs:  direction bins
-    :param c11:  cross spectrum of 1st channel - pressure (or welch specturm)
-    :param c22:  cross spectrum of 2nd channel - u        (or welch specturm)
-    :param c33:  cross spectrum of 3rd channel - v        (or welch specturm)
-    :param c23:  real part of cross spectrum of 2nd and 3rd channel u v
-    :param q12:  imaginary part of 1st and 2nd channel (p u)
-    :param q13:  imaginary part of 1st and 3rd channel (p v)
-    :return:  2D directional spectrum using MLM method (non-iterative)
+    :param freq: frequencies
+    :param dirs: direction bins
+    :param c11: cross spectrum of 1st channel - pressure (or welch specturm)
+    :param c22: cross spectrum of 2nd channel - u        (or welch specturm)
+    :param c33: cross spectrum of 3rd channel - v        (or welch specturm)
+    :param c23: real part of cross spectrum of 2nd and 3rd channel u v
+    :param q12: imaginary part of 1st and 2nd channel (p u)
+    :param q13: imaginary part of 1st and 3rd channel (p v)
+    :param freqs: 
+    :returns: 2D directional spectrum using MLM method (non-iterative)
             IN  per RADIAN UNITS  -> must be converted back to degrees
+
     """
     # calculating sin/cos terms from direction angles
     angRad = np.deg2rad(dirs);  # directions in radians (for sin/cos calcs)
@@ -312,14 +323,14 @@ def mlm(freqs, dirs, c11, c22, c33, c23, q12, q13):
     return eftMLM
 
 def prFunc( L, d, z):
-    """
-    Surface correction for pressure data.  if working with an energy
+    """Surface correction for pressure data.  if working with an energy
     spectrum DIVIDE by the returned prf**2
 
     :param L: wave length  (column)  (m)
     :param d: water depth     ( positve scalar)  (m)
     :param z: gage location below surface (negative) (m)
-    :return: Pressure Response (column) of length freqeuencys
+    :returns: Pressure Response (column) of length freqeuencys
+
     """
     maxCorrectionFactor = 10
     # checks
@@ -343,8 +354,7 @@ def prFunc( L, d, z):
     return prf
 
 def dispersion( h, T):
-    """
-    Linear Dispersion Relationship
+    """Linear Dispersion Relationship
     omega^2 = gk tanh kh
     approximation and iterative method taken from
         ib svendsen "introduction to nearshore hydrodynamics" p 68
@@ -352,9 +362,10 @@ def dispersion( h, T):
     :param h: this is depth in meters
     :param T: this is wave period in seconds
     :return
-        :param L: wave Length estimate
-        :param c: wave speed estimate
-        :param n: group/ wave speed ratio
+    :param L: wave Length estimate
+    :param c: wave speed estimate
+    :param n: group/ wave speed ratio
+
     """
     assert h > 0, 'Water depth must be >0, positive downward convention'
     # set vars
@@ -372,240 +383,18 @@ def dispersion( h, T):
     c = omega / k  # calculate wave speed
     n = 0.5 * (1 + (2 * k * h) / np.sinh(2 * k * h))  # group/ wave speed ratio
 
+    warnings.warn("Function dispersion() may perform similarly to function gkhfs().", UserWarning)
+
     return L, c, n
 
-def findPeakDirs( spec, dirBin):
-    """
-
-    in single (or multiple) 2d spectra, this will find the peak direction for every frequency
-
-    :param spec: spectra in 3 dim (time, freq, dir)
-    :param freqBin:  frequency bin associated with 2nd dimension of spec
-    :param dirBin:   directions associated with 3rd dimension of spec
-    :return:  directions of len ([t], freqbin)
-        eg. for every frequency a direction is returned
-    """
-    peakDirs = np.zeros((spec.shape[0], spec.shape[1]))
-    for t in range(spec.shape[0]):  # looping over time
-        for idx in range(spec.shape[1]):  # looping over frequencies
-            peakDirs[t, idx] = dirBin[np.argmax(spec[t, idx, :])]  # picking max direction for each frequency
-    # for every frequency a direction returned
-    return peakDirs
-
-def findPeakFreq2Dspec(spec, dirBin):
-    """
-    in single (or multiple) 2d spectra, this will find the peak frequency for every direction
-
-    :param spec: spectra in 3 dim (time, freq, dir)
-    :param freqBin:  frequency bin associated with 2nd dimension of spec
-    :param dirBin:   directions associated with 3rd dimension of spec
-    :return:  directions of len ([t], dirbin)
-        eg. for every direction  a frequency is returned
-    """
-    peakFreqs = np.zeros((spec.shape[0], spec.shape[2]))
-    for t in range(spec.shape[0]):  # looping over time
-        for idx in range(spec.shape[1]):  # looping over directions
-            peakFreqs[t, idx] = dirBin[np.argmax(spec[t, :, idx])]  # picking max frequency for each direction
-    # for every frequency a direction returned
-    return peakFreqs
-
-def findTp( spec, wavefreqbin):
-    """
-    This function finds the Tp of a spectra
-
-    :param spec: 2(no time) or 3  dimensional spectrum [t, freq, dir]
-    :param wavefreqbin:  takes both freq bin or period bin
-    :return: array of Tp
-
-    """
-    try:
-        assert spec.ndim == 3, 'This function assumes a 3 dimensional spectrum [t, freq, dir]'
-    except AssertionError:
-        spec = np.expand_dims(spec, axis=0)
-    assert wavefreqbin.shape[0] == spec.shape[1], 'This function expects frequency in the 2nd dimension'
-
-    fspec = np.sum(spec, axis=2)  # frequency spec
-    freqIdx = np.argmax(fspec, axis=1)  # finding the freq/period of max energy
-    fOut = wavefreqbin[freqIdx]  # associating the ind with the freq/period
-
-    return fOut
-
-def findDpAtTp( spec, wavedirbin):
-    """
-    finds the peak direction at peak frequency
-    :param spec: 2 dimensional spectra, dimensioned [time, freq, direction]
-
-    :param wavedirbin: directions associated with spectra (= third dimension)
-
-    :return: array
-        Peak direction at peak frequency
-    """
-    try:
-        assert spec.ndim == 3, 'This function assumes a 3 dimensional spectrum [t, freq, dir]'
-    except AssertionError:
-        spec = np.expand_dims(spec, axis=0)  # mkaind 3 dimensions
-    assert wavedirbin.shape[0] == spec.shape[2], 'This function expects direction as the 3rd dim'
-    TpIdx = np.argmax(spec.sum(axis=2), axis=1)  # finding the Peak period Idx
-    DpOut = np.zeros_like(TpIdx)
-    for tt in range(TpIdx.shape[0]):
-        DpOut[tt] = wavedirbin[np.argmax(spec[tt, TpIdx[tt], :])]  # finding the max idx for each time
-
-    return DpOut
-
-def seaAndSwell2D( specTime, spec, wavefreqbin, wavedirbin, windSpeed, windDirTn, plot=False, depth=26):
-    """
-    This function will make sea and swell spectra given the below varibles.  The wind Directions must be in the same
-    coordinate system as the wave spectra (including wave direction bins)
-    ... still under development
-
-    :param specTime:  this is a time stamp for the data dimensioned by (time_
-    :param spec:  this is the spectral wave energy data dimensioned by (time, wave direction, wave frequency)
-    :param wavefreqbin:  # this are the frequencies associated with the spectral wave data
-    :param wavedirbin:   # these are the direction bins associated with the spectra, same angle convention and
-    :param windSpeed:  # the speed of the wind
-    :param windDirTn:   the wind direction of the
-    :param depth: depth is assumed to be 26 meter wave rider
-    :return:  sea, swell spectra the same size as the input spectra
-    """
-    assert specTime.shape[0] == spec.shape[0], " data doesn't line up, try using winds from model"
-    assert specTime.shape[0] == windSpeed.shape[0], "time must match between wind and wave data"
-    angleWindow = 45  # this is the wind window +/-
-    # 1  input periods into dispersion relationship  # get back speeds for each frequency
-    _, wavespeeds, _ = dispersion(depth, 1 / wavefreqbin)
-
-    # 2  find peak directions for each frequency band
-    peakDirsTN = findPeakDirs(spec=spec, dirBin=wavedirbin)
-
-    # 3 now seperate
-    swellSea, windSea = np.ones_like(spec) * 1e-6, np.ones_like(spec) * 1e-6
-    for tt in range(specTime.shape[0]):
-        for ff in range(wavefreqbin.shape[0]):  # loop through frequency bin
-            if ff in range(wavefreqbin.shape[0])[-3:]:
-                windSea[tt, ff, :] = spec[tt, ff, :]
-            if (windDirTn[tt] + angleWindow >= 360):  # if the upper bound of wind direction wraps to upper directions
-                # upper bound: wave angle has to be between the 360 and the lower bound angle direction limit
-                # lower bound: wave angle has to be above the wind upper bound direction limit
-                if (0 <= peakDirsTN[tt, ff] <= sb.angle_correct(windDirTn[tt] + angleWindow)) | (
-                                360 > peakDirsTN[tt, ff] >= windDirTn[tt] - angleWindow):
-                    if windSpeed[tt] > wavespeeds[ff]:
-                        # the wind is positively reinforcing wave generation --> Sea
-                        windSea[tt, ff, :] = spec[tt, ff, :]
-                    else:
-                        swellSea[tt, ff, :] = spec[tt, ff, :]
-                else:
-                    swellSea[tt, ff, :] = spec[tt, ff, :]
-            elif (windDirTn[tt] - 45 < 0):  # if the lower bound of wind direction wraps to negative directions
-                # upper bound: the wave angle is smaller than the upper bound wind angle
-                # lower bound (with wrap around 360): wave direction is either greater than zero and upper bound wind direction limit
-                #   or wave direction is between the lower bound wind direction and 360
-                if (0 <= peakDirsTN[tt, ff] <= sb.angle_correct(windDirTn[tt] + angleWindow)) | (
-                                sb.angle_correct(windDirTn[tt] - angleWindow) <= peakDirsTN[tt, ff] < 360):
-                    if windSpeed[tt] > wavespeeds[ff]:
-                        # the wind is positively reinforcing wave generation --> Sea
-                        windSea[tt, ff, :] = spec[tt, ff, :]
-                    else:
-                        swellSea[tt, ff, :] = spec[tt, ff, :]
-                else:
-                    swellSea[tt, ff, :] = spec[tt, ff, :]
-            # if wind direction bounds do not wrap0
-            elif (peakDirsTN[tt, ff] <= windDirTn[tt] + angleWindow) & (
-                        peakDirsTN[tt, ff] >= windDirTn[tt] - angleWindow):
-                # the speeds are worth checking because they are within 45 degrees of the wave propagation
-                if windSpeed[tt] > wavespeeds[ff]:
-                    # the wind is positively reinforcing wave generation --> Sea
-                    windSea[tt, ff, :] = spec[tt, ff, :]
-                else:
-                    swellSea[tt, ff, :] = spec[tt, ff, :]
-            else:
-                # the wind direction is not reinforcing the wave direction
-                swellSea[tt, ff, :] = spec[tt, ff, :]
-
-        if plot == True:
-            from matplotlib import pyplot as plt
-
-            cbarMin = np.min(spec[tt])
-            cbarMax = np.max(spec[tt])
-            fname = 'figures/SeaSwellcompare_%s.png' % specTime[tt].strftime('%Y%m%dT%H%M%SZ')
-            plt.figure(figsize=(12, 12))
-            plt.suptitle('Swell And Sea Seperator \n %s' % (specTime[tt].strftime('%Y%m%dT%H%M%SZ')))
-
-            plt.subplot(221)
-            plt.title('Total spectra')
-            plt.ylabel('wave Direction')
-            plt.xlabel('wave Frequency')
-            plt.pcolor(wavefreqbin, wavedirbin, spec[tt].T)
-            plt.plot(wavefreqbin, peakDirsTN[tt], 'w.-', label='peak wave Direction')
-            plt.plot(wavefreqbin, np.tile(sb.angle_correct(windDirTn[tt] + angleWindow), len(wavefreqbin)), 'w--')
-            plt.plot(wavefreqbin, np.tile(sb.angle_correct(windDirTn[tt] - angleWindow), len(wavefreqbin)), 'w--')
-            plt.plot([0, 0.5], [windDirTn[tt], windDirTn[tt]], 'w-', label='Wind direction')
-            # plt.legend(loc='upper right')
-
-            ax1 = plt.subplot(222)
-            plt.title('wind and wave speeds')
-            plt.xlabel('wave Frequency')
-            plt.plot(wavefreqbin, wavespeeds, 'b-', label='wavespeed')
-            plt.plot(wavefreqbin, np.tile(windSpeed[tt], len(wavefreqbin)), 'k-', label='Windspeed +')
-            ax1.set_ylabel('along wind Componant of WaveSpeed', color='b')
-            ax1.text(.2, (windSpeed[tt] + 2) / 2, 'Wind Sea')
-            ax1.text(.2, (windSpeed[tt] + 2), 'Swell Sea')
-            ax1.legend(loc='best')
-
-            plt.subplot(223)
-            plt.title('WindSea')
-            plt.pcolor(wavefreqbin, wavedirbin, windSea[tt].T)  # , vmin=cbarMin, vmax=cbarMax)
-            plt.ylabel('wave Direction')
-            plt.xlabel('wave Frequency')
-            plt.colorbar()
-
-            plt.subplot(224)
-            plt.title('Swell Sea')
-            plt.pcolor(wavefreqbin, wavedirbin, swellSea[tt].T, vmin=cbarMin, vmax=cbarMax)
-            plt.ylabel('wave Direction')
-            plt.xlabel('wave Frequency')
-            plt.colorbar()
-
-            plt.tight_layout(pad=.1, rect=[.03, .03, .95, .9])
-            plt.savefig(fname)
-            plt.close()
-
-    return windSea, swellSea
-
-def seaAndSwell1D(spec, wavefreqbin, truncate=0.1):
-    """
-    this function will take a 1 d spectra
-
-    :param spec: 1 d spectra, can be single or dimensioned [time, frequency
-    :param wavefreqbin: associated wave frequency with frequency
-    :param truncate: value used in truncating the spectra between sea/swell (the valley location)
-    :return:
-        :param windSea:  the wind sea portion of the spectra
-        :param swellSea:  low frequency portion of the spectra associate with swell
-    """
-    assert spec.shape[-1] == len(wavefreqbin), '1D stats need a 1 d spectra'
-    fspec = spec
-
-    # 3 now seperate
-    swellSea, windSea = np.ones_like(fspec) * 1e-6, np.ones_like(fspec) * 1e-6
-
-    idx = np.argmax(wavefreqbin >= truncate)
-
-    if fspec.ndim == 1:
-        windSea[idx:] = fspec[idx:]
-        swellSea[:idx] = fspec[:idx]
-    else:
-        windSea[:, idx:] = fspec[:, idx:]
-        swellSea[:, :idx] = fspec[:, :idx]
-
-    return windSea, swellSea
-
 def stats1D(fspec, frqbins, lowFreq=0.05, highFreq=0.5):
-    """
-    Calculates bulk statistics from a 1 dimenti
+    """Calculates bulk statistics from a 1 dimenti
+
     :param fspec: frequency spectra
     :param frqbins: frequency bins associated with the 1d spectra
-    :param lowFreq: low frequency cut off for analysis
-    :param highFreq: high frequency cutoff for analysis
-    :return: a dictionary with statistics
+    :param lowFreq: low frequency cut off for analysis (Default value = 0.05)
+    :param highFreq: high frequency cutoff for analysis (Default value = 0.5)
+    :returns: a dictionary with statistics
         :key Hmo   Significant wave height
         :key Tp   Period of the peak energy in the frequency spectra, (1/Fp).  AKA Tpd, not to be
                    confused with parabolic fit to spectral period
@@ -614,6 +403,7 @@ def stats1D(fspec, frqbins, lowFreq=0.05, highFreq=0.5):
         :key sprdF  Freq-spec spread (m0*m4 - m2^2)/(m0*m4)  (one definition)
         :key Tm10 Mean Absolute wave Period from -1 moment
         :key meta expanded variable name/descriptions
+
     """
     assert fspec.shape[-1] == len(frqbins), '1D stats need a 1 d spectra'
 
@@ -652,32 +442,20 @@ def stats1D(fspec, frqbins, lowFreq=0.05, highFreq=0.5):
 
     return stats
 
-
 def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
-    """
-    this function will calculate the mean direction from a full spectrum
+    """this function will calculate the mean direction from a full spectrum
     only calculates on one 2D spectrum at a time
     defaults to 0.05 hz to 0.5 hz frequency for the statistics
-
+    
     Code Translated by Spicer Bak from: fd2BulkStats.m written by Kent Hathaway, and adapted
-
 
     :param spec: array
             this is a 2d spectral inputshaped by (time, freq, dir)
-
-    :param frqbins:
-        Frequency vector (not assumed constant)
-
-    :param dirbins:
-        an array of direction bins associated with the 2d spec
-
-    :param lowFreq:
-        low frequency cutoff for the spectral stat's calculation
-
-    :param highFreq:
-        high frequency cutoff for the spectral stat's calculation
-
-    :return: dictionary
+    :param frqbins: Frequency vector (not assumed constant)
+    :param dirbins: an array of direction bins associated with the 2d spec
+    :param lowFreq: low frequency cutoff for the spectral stat's calculation (Default value = 0.05)
+    :param highFreq: high frequency cutoff for the spectral stat's calculation (Default value = 0.5)
+    :returns: dictionary
         :key Hmo   Significant wave height
         :key Tp   Period of the peak energy in the frequency spectra, (1/Fp).  AKA Tpd, not to be
                    confused with parabolic fit to spectral period
@@ -697,6 +475,7 @@ def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
         :key vecAvgMeanDir - vector averaged mean direction (should be the same as Dm - could be checked and removed)
                 taken from wis website
         :key meta expanded variable name/descriptions
+
     """
     assert type(frqbins) in [np.ndarray, np.ma.MaskedArray], 'the input frqeuency bins must be a numpy array'
     assert type(dirbins) in [np.ndarray, np.ma.MaskedArray], 'the input DIRECTION bins must be a numpy array'
@@ -776,7 +555,7 @@ def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
 
     vavgdir = np.arctan2(ysum, xsum)
     vavgdir = np.rad2deg(vavgdir)
-    vavgdir = sb.angle_correct(vavgdir)
+    vavgdir = anglesLib.angle_correct(vavgdir)
 
     # Mean direction at the peak frequency
     Dmp = np.rad2deg(np.arctan2(np.sum(np.sin(Drad) * Dsp * dirbins, axis=1),
@@ -822,15 +601,15 @@ def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
     # print meta
     return stats
 
-
 def fSpecPeaksValleys(spec1d, wavefreqbin):
-    """
-    This function takes a 1 dimensional frequency spectra and finds indicies of spectral peaks
+    """This function takes a 1 dimensional frequency spectra and finds indicies of spectral peaks
         and valleys (ideally used to seperate different swell componants) ... not pollished
 
     :param spec1d: 1 d frequency spectra
-    :param plotfname:  file name for figure to be made
-    :return: peakindexes, valley indexes
+    :param plotfname: file name for figure to be made
+    :param wavefreqbin: 
+    :returns: peakindexes, valley indexes
+
     """
     # import peakutils
     # from scipy import signal
@@ -918,23 +697,96 @@ def fSpecPeaksValleys(spec1d, wavefreqbin):
     #     plt.close()
     return peakIdxs, valIdxs
 
+def findTp( spec, wavefreqbin):
+    """This function finds the Tp of a spectra
+
+    :param spec: 2(no time) or 3  dimensional spectrum [t, freq, dir]
+    :param wavefreqbin: takes both freq bin or period bin
+    :returns: array of Tp
+
+    """
+    try:
+        assert spec.ndim == 3, 'This function assumes a 3 dimensional spectrum [t, freq, dir]'
+    except AssertionError:
+        spec = np.expand_dims(spec, axis=0)
+    assert wavefreqbin.shape[0] == spec.shape[1], 'This function expects frequency in the 2nd dimension'
+
+    fspec = np.sum(spec, axis=2)  # frequency spec
+    freqIdx = np.argmax(fspec, axis=1)  # finding the freq/period of max energy
+    fOut = wavefreqbin[freqIdx]  # associating the ind with the freq/period
+
+    return fOut
+
+def findDpAtTp( spec, wavedirbin):
+    """finds the peak direction at peak frequency
+
+    :param spec: 2 dimensional spectra, dimensioned [time, freq, direction]
+    :param wavedirbin: directions associated with spectra (= third dimension)
+    :returns: array
+        Peak direction at peak frequency
+
+    """
+    try:
+        assert spec.ndim == 3, 'This function assumes a 3 dimensional spectrum [t, freq, dir]'
+    except AssertionError:
+        spec = np.expand_dims(spec, axis=0)  # mkaind 3 dimensions
+    assert wavedirbin.shape[0] == spec.shape[2], 'This function expects direction as the 3rd dim'
+    TpIdx = np.argmax(spec.sum(axis=2), axis=1)  # finding the Peak period Idx
+    DpOut = np.zeros_like(TpIdx)
+    for tt in range(TpIdx.shape[0]):
+        DpOut[tt] = wavedirbin[np.argmax(spec[tt, TpIdx[tt], :])]  # finding the max idx for each time
+
+    return DpOut
+
+def findPeakDirs( spec, dirBin):
+    """in single (or multiple) 2d spectra, this will find the peak direction for every frequency
+
+    :param spec: spectra in 3 dim (time, freq, dir)
+    :param freqBin: frequency bin associated with 2nd dimension of spec
+    :param dirBin: directions associated with 3rd dimension of spec
+    :returns: directions of len ([t], freqbin)
+        eg. for every frequency a direction is returned
+
+    """
+    peakDirs = np.zeros((spec.shape[0], spec.shape[1]))
+    for t in range(spec.shape[0]):  # looping over time
+        for idx in range(spec.shape[1]):  # looping over frequencies
+            peakDirs[t, idx] = dirBin[np.argmax(spec[t, idx, :])]  # picking max direction for each frequency
+    # for every frequency a direction returned
+    return peakDirs
+
+def findPeakFreq2Dspec(spec, dirBin):
+    """in single (or multiple) 2d spectra, this will find the peak frequency for every direction
+
+    :param spec: spectra in 3 dim (time, freq, dir)
+    :param freqBin: frequency bin associated with 2nd dimension of spec
+    :param dirBin: directions associated with 3rd dimension of spec
+    :returns: directions of len ([t], dirbin)
+        eg. for every direction  a frequency is returned
+
+    """
+    peakFreqs = np.zeros((spec.shape[0], spec.shape[2]))
+    for t in range(spec.shape[0]):  # looping over time
+        for idx in range(spec.shape[1]):  # looping over directions
+            peakFreqs[t, idx] = dirBin[np.argmax(spec[t, :, idx])]  # picking max frequency for each direction
+    # for every frequency a direction returned
+    return peakFreqs
 
 def isThisWindSea(waveDirectionAtPeak, waveSpeedAtPeak, windDir, windSpeed):
-    """
-    This function will check the wave direction and the wind direction.  It will do a comparison between the two
+    """This function will check the wave direction and the wind direction.  It will do a comparison between the two
         if the wind is within +/- 45 degrees of the wave direction, and the wind is faster than the wave speed,
         it will be returned True, for wind Sea
 
-    :rtype: object
-    :param waveDirectionAtPeak:  This is a wave direction in degrees (must be same coordinate sys as wind dir)
-    :param waveSpeedAtPeak:      This is speed of wave at peak (speed must be same units as wind Dir)
-    :param windDir:              this is wind Direction (time matched to Wave direction)
-    :param windSpeed:            this is wind speed, Time matched to wave Direction
-    :return: True or False value
+    :param waveDirectionAtPeak: This is a wave direction in degrees (must be same coordinate sys as wind dir)
+    :param waveSpeedAtPeak: This is speed of wave at peak (speed must be same units as wind Dir)
+    :param windDir: this is wind Direction (time matched to Wave direction)
+    :param windSpeed: this is wind speed, Time matched to wave Direction
+    :returns: True or False value
+
     """
     windowAngle = 45
-    windAngleMax = sb.angle_correct(windDir + windowAngle)
-    windAngleMin = sb.angle_correct(windDir - windowAngle)
+    windAngleMax = anglesLib.angle_correct(windDir + windowAngle)
+    windAngleMin = anglesLib.angle_correct(windDir - windowAngle)
     # if there is no wrap
     windSea = False  # setting
     if waveSpeedAtPeak <= windSpeed:  # if speeds match up
@@ -955,17 +807,19 @@ def isThisWindSea(waveDirectionAtPeak, waveSpeedAtPeak, windDir, windSpeed):
 
     return windSea
 
-
 def findidxSeaSwell(spec1d, dspec, wavefreqbin, windSpeed, windDir, depth, plotfname=None):
-    """
-    This function separates sea and swell starting with the 1d frequency spectra and the 1d directional spectra
+    """This function separates sea and swell starting with the 1d frequency spectra and the 1d directional spectra
 
     :param spec1d: 1 d frequency spectrum
     :param wavefreqbin: frequency spectrum associated with wave
     :param dspec: 1d directional spectrum (arctan(b1,a1))
     :param waveDirectionAtPeak: the direction of the wave from
-    :param plotfname:
-    :return: an index corresponding to
+    :param plotfname: return: an index corresponding to (Default value = None)
+    :param windSpeed: 
+    :param windDir: 
+    :param depth: 
+    :returns: an index corresponding to
+
     """
     # body of function
     assert (dspec >= 0).all(), 'please correct wave angles between 0 and 360'
@@ -1057,3 +911,150 @@ def findidxSeaSwell(spec1d, dspec, wavefreqbin, windSpeed, windDir, depth, plotf
         a1 = np.arccos(fspec)
 
         b1 = np.arcsin(fspec)
+
+def seaAndSwell2D(specTime, spec, wavefreqbin, wavedirbin, windSpeed, windDirTn, plot=False, depth=26):
+    """This function will make sea and swell spectra given the below variables.  The wind Directions must be in the same
+    coordinate system as the wave spectra (including wave direction bins)
+    ... still under development
+
+    :param specTime: this is a time stamp for the data dimensioned by (time_
+    :param spec: this is the spectral wave energy data dimensioned by (time, wave direction, wave frequency)
+    :param wavefreqbin: this are the frequencies associated with the spectral wave data
+    :param wavedirbin: these are the direction bins associated with the spectra, same angle convention and
+    :param windSpeed: the speed of the wind
+    :param windDirTn: the wind direction of the
+    :param depth: depth is assumed to be 26 meter wave rider (Default value = 26)
+    :param plot:  (Default value = False)
+    :returns: sea, swell spectra the same size as the input spectra
+
+    """
+    assert specTime.shape[0] == spec.shape[0], " data doesn't line up, try using winds from model"
+    assert specTime.shape[0] == windSpeed.shape[0], "time must match between wind and wave data"
+    angleWindow = 45  # this is the wind window +/-
+    # 1  input periods into dispersion relationship  # get back speeds for each frequency
+    _, wavespeeds, _ = dispersion(depth, 1 / wavefreqbin)
+
+    # 2  find peak directions for each frequency band
+    peakDirsTN = findPeakDirs(spec=spec, dirBin=wavedirbin)
+
+    # 3 now seperate
+    swellSea, windSea = np.ones_like(spec) * 1e-6, np.ones_like(spec) * 1e-6
+    for tt in range(specTime.shape[0]):
+        for ff in range(wavefreqbin.shape[0]):  # loop through frequency bin
+            if ff in range(wavefreqbin.shape[0])[-3:]:
+                windSea[tt, ff, :] = spec[tt, ff, :]
+            if (windDirTn[tt] + angleWindow >= 360):  # if the upper bound of wind direction wraps to upper directions
+                # upper bound: wave angle has to be between the 360 and the lower bound angle direction limit
+                # lower bound: wave angle has to be above the wind upper bound direction limit
+                if (0 <= peakDirsTN[tt, ff] <= anglesLib.angle_correct(windDirTn[tt] + angleWindow)) | (
+                                360 > peakDirsTN[tt, ff] >= windDirTn[tt] - angleWindow):
+                    if windSpeed[tt] > wavespeeds[ff]:
+                        # the wind is positively reinforcing wave generation --> Sea
+                        windSea[tt, ff, :] = spec[tt, ff, :]
+                    else:
+                        swellSea[tt, ff, :] = spec[tt, ff, :]
+                else:
+                    swellSea[tt, ff, :] = spec[tt, ff, :]
+            elif (windDirTn[tt] - 45 < 0):  # if the lower bound of wind direction wraps to negative directions
+                # upper bound: the wave angle is smaller than the upper bound wind angle
+                # lower bound (with wrap around 360): wave direction is either greater than zero and upper bound wind direction limit
+                #   or wave direction is between the lower bound wind direction and 360
+                if (0 <= peakDirsTN[tt, ff] <= anglesLib.angle_correct(windDirTn[tt] + angleWindow)) | (
+                        anglesLib.angle_correct(windDirTn[tt] - angleWindow) <= peakDirsTN[tt, ff] < 360):
+                    if windSpeed[tt] > wavespeeds[ff]:
+                        # the wind is positively reinforcing wave generation --> Sea
+                        windSea[tt, ff, :] = spec[tt, ff, :]
+                    else:
+                        swellSea[tt, ff, :] = spec[tt, ff, :]
+                else:
+                    swellSea[tt, ff, :] = spec[tt, ff, :]
+            # if wind direction bounds do not wrap0
+            elif (peakDirsTN[tt, ff] <= windDirTn[tt] + angleWindow) & (
+                        peakDirsTN[tt, ff] >= windDirTn[tt] - angleWindow):
+                # the speeds are worth checking because they are within 45 degrees of the wave propagation
+                if windSpeed[tt] > wavespeeds[ff]:
+                    # the wind is positively reinforcing wave generation --> Sea
+                    windSea[tt, ff, :] = spec[tt, ff, :]
+                else:
+                    swellSea[tt, ff, :] = spec[tt, ff, :]
+            else:
+                # the wind direction is not reinforcing the wave direction
+                swellSea[tt, ff, :] = spec[tt, ff, :]
+
+        if plot == True:
+            from matplotlib import pyplot as plt
+
+            cbarMin = np.min(spec[tt])
+            cbarMax = np.max(spec[tt])
+            fname = 'figures/SeaSwellcompare_%s.png' % specTime[tt].strftime('%Y%m%dT%H%M%SZ')
+            plt.figure(figsize=(12, 12))
+            plt.suptitle('Swell And Sea Seperator \n %s' % (specTime[tt].strftime('%Y%m%dT%H%M%SZ')))
+
+            plt.subplot(221)
+            plt.title('Total spectra')
+            plt.ylabel('wave Direction')
+            plt.xlabel('wave Frequency')
+            plt.pcolor(wavefreqbin, wavedirbin, spec[tt].T)
+            plt.plot(wavefreqbin, peakDirsTN[tt], 'w.-', label='peak wave Direction')
+            plt.plot(wavefreqbin, np.tile(anglesLib.angle_correct(windDirTn[tt] + angleWindow), len(wavefreqbin)), 'w--')
+            plt.plot(wavefreqbin, np.tile(anglesLib.angle_correct(windDirTn[tt] - angleWindow), len(wavefreqbin)), 'w--')
+            plt.plot([0, 0.5], [windDirTn[tt], windDirTn[tt]], 'w-', label='Wind direction')
+            # plt.legend(loc='upper right')
+
+            ax1 = plt.subplot(222)
+            plt.title('wind and wave speeds')
+            plt.xlabel('wave Frequency')
+            plt.plot(wavefreqbin, wavespeeds, 'b-', label='wavespeed')
+            plt.plot(wavefreqbin, np.tile(windSpeed[tt], len(wavefreqbin)), 'k-', label='Windspeed +')
+            ax1.set_ylabel('along wind Componant of WaveSpeed', color='b')
+            ax1.text(.2, (windSpeed[tt] + 2) / 2, 'Wind Sea')
+            ax1.text(.2, (windSpeed[tt] + 2), 'Swell Sea')
+            ax1.legend(loc='best')
+
+            plt.subplot(223)
+            plt.title('WindSea')
+            plt.pcolor(wavefreqbin, wavedirbin, windSea[tt].T)  # , vmin=cbarMin, vmax=cbarMax)
+            plt.ylabel('wave Direction')
+            plt.xlabel('wave Frequency')
+            plt.colorbar()
+
+            plt.subplot(224)
+            plt.title('Swell Sea')
+            plt.pcolor(wavefreqbin, wavedirbin, swellSea[tt].T, vmin=cbarMin, vmax=cbarMax)
+            plt.ylabel('wave Direction')
+            plt.xlabel('wave Frequency')
+            plt.colorbar()
+
+            plt.tight_layout(pad=.1, rect=[.03, .03, .95, .9])
+            plt.savefig(fname)
+            plt.close()
+
+    return windSea, swellSea
+
+def seaAndSwell1D(spec, wavefreqbin, truncate=0.1):
+    """this function will take a 1 d spectra
+
+    :param spec: 1 d spectra, can be single or dimensioned [time, frequency
+    :param wavefreqbin: associated wave frequency with frequency
+    :param truncate: value used in truncating the spectra between sea/swell (the valley location) (Default value = 0.1)
+    :param windSea: the wind sea portion of the spectra
+    :param swellSea: low frequency portion of the spectra associate with swell
+    :returns: param windSea:  the wind sea portion of the spectra
+
+    """
+    assert spec.shape[-1] == len(wavefreqbin), '1D stats need a 1 d spectra'
+    fspec = spec
+
+    # 3 now seperate
+    swellSea, windSea = np.ones_like(fspec) * 1e-6, np.ones_like(fspec) * 1e-6
+
+    idx = np.argmax(wavefreqbin >= truncate)
+
+    if fspec.ndim == 1:
+        windSea[idx:] = fspec[idx:]
+        swellSea[:idx] = fspec[:idx]
+    else:
+        windSea[:, idx:] = fspec[:, idx:]
+        swellSea[:, :idx] = fspec[:, :idx]
+
+    return windSea, swellSea
