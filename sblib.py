@@ -26,6 +26,7 @@ def reduceDict(dictIn, idxToKeep, exemptList=None):
 
     This function is useful if trying to reduce a dictionary to specific indicies of interest eg with a time matched index
     Improvement to be safer is welcome, or use with caution.
+    :rtype: 
     :param dictIn: dictionary with no limit to how many keys assumes one key is 'time'
     :param idxToKeep: indices to reduce to, must be shorter than key 'time'
     :param exemptList: this is a list of variables to exclude
@@ -443,27 +444,30 @@ def statsBryant(observations, models):
     # symetric Slope
     symr = np.sqrt((models ** 2).sum() / (observations ** 2).sum())
     # coefficient of determination
-    r2 = np.sum((observations - observations.mean()) * (models - models.mean())) \
-         / (np.sqrt(  ((observations - observations.mean()) ** 2).sum()) *
-            np.sqrt(  ((models       - models.mean()      ) ** 2).sum()))
+    r = np.sum( (observations - observations.mean())*(models - models.mean()) ) \
+         / (np.sqrt(  ((observations - observations.mean()) ** 2).sum() ) *
+            np.sqrt(  ((models       - models.mean()      ) ** 2).sum() ) )
+    r2 = r**2 # square to get r2
     # SSres = (residuals ** 2).sum()  ## from wiki
     # SStot = ((observations - observations.mean()) ** 2).sum()
     # r2 = 1 - SSres/SStot
     # wilmont 1985
-    topW = np.abs(models - (observations).sum())
-    botW = (np.abs(models - (observations).mean()) + np.abs(np.nansum(observations - (observations).mean())))
+    topW = np.abs(models - observations).sum()
+    botW = np.sum(np.abs(models - observations.mean()) + np.abs(observations - observations.mean()))
     Wilmont = 1 - topW / botW
 
-    xRMS = np.sqrt((observations).sum() ** 2 / len(observations))
+    xRMS = np.sqrt((observations**2).sum() / len(observations))
+    pRMS = 1 - (RMSE/xRMS)
     pBias = 1 - np.abs(bias) / xRMS
-    IMEDS = (xRMS + pBias) / 2
+    IMEDS = (pRMS + pBias) / 2
     stats = {'bias': bias,
              'RMSEdemeaned': RMSEdemeaned,
              'RMSE': RMSE,
              'RMSEnorm': RMSEnorm,
              'scatterIndex': ScatterIndex,
              'symSlope': symr,
-             'corr': r2,
+             'corr': r,
+             'r2': r2,
              'PscoreWilmont': Wilmont,
              'PscoreIMEDS': IMEDS,
              'residuals': residuals,
@@ -569,15 +573,6 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
         obs_data_s = np.append(obs_data_s, obs_data[indx])
         model_data_s = np.append(model_data_s, data)
 
-    # check to see if these are empty, and if so, interpolate
-    if np.size(time) == 0:
-        # this means it is empty!!!  interpolate obs onto model time
-        obs_data_s = np.interp(model_time, obs_time, obs_data)
-        model_data_s = model_data
-        time = model_time
-    else:
-        pass
-
     # if I was handed a datetime, convert back to datetime
     if dt_check:
         timeunits = 'seconds since 1970-01-01 00:00:00'
@@ -586,9 +581,6 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
         del time
         time = time_n
         del time_n
-    else:
-        pass
-
 
     return time, obs_data_s, model_data_s
 
@@ -616,11 +608,12 @@ def timeMatch_altimeter(altTime, altData, modTime, modData, window=30 * 60):
         altTime = altTime[~altData.mask]
         altData = altData[~altData.mask]
     assert len(altData) == len(altTime), 'Altimeter time and data length must be the same'
+    assert len(modTime) == len(modData), 'Model time and data length must be the same'
     for tt, time in enumerate(modTime):
         idx = np.argmin(np.abs(altTime - time))
         if altTime[idx] - time < window:
             # now append data
-            timeout.append(altTime[idx])
+            timeout.append(modTime[tt])
             dataout.append(altData[idx])
             modout.append(modData[tt])
 
@@ -659,122 +652,6 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
             
     """
     raise NotImplementedError('This function is depricated, The development should be moved to sb.waveLib version!!!!')
-    assert type(frqbins) in [np.ndarray, np.ma.MaskedArray], 'the input frqeuency bins must be a numpy array'
-    assert type(dirbins) in [np.ndarray, np.ma.MaskedArray], 'the input DIRECTION bins must be a numpy array'
-    try:
-        assert np.array(spec).ndim == 3, 'Spectra must be a 3 dimensional array'
-    except AssertionError:
-        spec = np.expand_dims(spec, axis=0)
-    try:
-        assert (spec != 0).all() is not True, 'Spectra must have energy to calculate statistics, all values are 0'
-    except AssertionError:
-        return 0
-    # finding delta freqeucny (may change as in CDIP spectra)
-    frq = np.array(np.zeros(len(frqbins) + 1))  # initializing frqbin bucket
-    frq[0] = frqbins[0]
-    frq[1:] = frqbins
-
-    df = np.diff(frq, n=1)  # change in frequancy banding
-    dd = np.abs(np.median(np.diff(dirbins)))  # dirbins[2] - dirbins[1]  # assume constant directional bin size
-    # finding delta degrees
-    # frequency spec
-    fspec = np.sum(spec, axis=2) * dd  # fd spectra - sum across the frequcny bins to leave 1 x n-frqbins
-    # doing moments over 0.05 to 0.33 Hz (3-20s waves) (mainly for m4 sake)
-    [idx, vals] = findbtw(frqbins, lowFreq, highFreq, type=3)
-
-    m0 = np.sum(fspec * df, axis=1)  # 0th momment
-    m1 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx], axis=1)  # 1st moment
-    m2 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx] ** 2, axis=1)  # 2nd moment
-    m3 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx] ** 3, axis=1)  # 3rd moment
-    m4 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx] ** 4, axis=1)  # 4th moment
-    m11 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx] ** -1, axis=1)  # negitive one moment
-
-    # sigwave height
-    Hm0 = 4 * np.sqrt(m0)
-    # period stuff
-    ipf = fspec.argmax(axis=1)  # indix of max frequency
-    Tp = 1 / frqbins[ipf]  # peak period
-    Tm02 = np.sqrt(m0 / m2)  # mean period
-    Tm01 = m0 / m1  # average period - cmparible to TS Tm
-    Tm10 = m11 / m0
-    # directional stuff
-    Ds = np.sum(spec * np.tile(df, (len(dirbins), 1)).T, axis=1)  # directional spectra (directional Spred)
-    Dsp = []
-    for ii in range(0, len(ipf)):
-        Dsp.append(spec[ii, ipf[ii], :])  # direction spread at peak-f (ipf)
-    Dsp = np.array(Dsp)
-    idp = Dsp.argmax(axis=1)  # index of direction at peak frquency
-    Dp = dirbins[idp]  # peak direction
-
-    Drad = np.deg2rad(dirbins)  # making a radian degree bin
-    # mean wave direction (e.g. Kuik 1988, used by USACE WIS)
-    Xcomp = np.sum(np.cos(Drad) * Ds, axis=1)  # removed denominator as it canceles out in calculation
-    Ycomp = np.sum(np.sin(Drad) * Ds, axis=1)  # removed denominator as it canceles out in calculation
-    Dm = np.rad2deg(np.arctan2(Ycomp, Xcomp))
-    Dm = angle_correct(Dm, rad=False)  # fixing directions above or below 360
-    # Vector Dm (Hesser)
-    sint = np.sin(Drad)  # sine of dirbins
-    cost = np.cos(Drad)  # cosine of dirbins
-
-    sint2 = np.tile(sint, [len(frqbins), 1])  # 2d diretion size of the spectra
-    cost2 = np.tile(cost, [len(frqbins), 1])
-    delsq = np.tile(df, [len(dirbins), 1]).T
-
-    for tt in range(0, spec.shape[0]):
-        xsum[tt] = sum(np.sum(cost2 * delsq * spec[tt, :, :], axis=1))  # summing along Xcomponant directions, then
-        ysum[tt] = sum(np.sum(sint2 * delsq * spec[tt, :, :], axis=1))  # y componant
-
-    vavgdir = np.rad2deg(np.arctan2(ysum, xsum))
-    vavgdir = angle_correct(vavgdir)
-    # assert vavgdir == Dm, 'Dm is calculated wrong ... at least once'
-    # Mean direction at the peak frequency
-    Dmp = np.rad2deg(np.arctan2(np.sum(np.sin(Drad) * Dsp, axis=1),
-                                np.sum(np.cos(Drad) * Dsp, axis=1)))  # converting back to degrees
-    Dmp = angle_correct(Dmp)
-    # f-spec spread
-    sprdF = (m0 * m4 - m2 ** 2) / (m0 * m4)
-
-    # fd-spec spread
-    sprdD = np.rad2deg(np.sqrt(2.0 * (1.0 - np.sqrt(Xcomp ** 2 + Ycomp ** 2))))
-
-    ##### Exceprt from Kent's code for spreading - not sure how to handle
-    # fd-spec spread, do a linear interp to get closer to half-power
-    # % from the delta-deg increments
-    # hp = np.max(Dsp)/2;
-
-    ##### Exceprt from Kent's code for spreading - not sure how to handle
-    #        % fd-spec spread, do a linear interp to get closer to half-power
-    # % from the delta-deg increments
-    # hp = np.max(Dsp)/2;
-    # fd-spec spread, do a linear interp to get closer to half-power from the
-    # delta-deg increments
-    ##### Exceprt from Kent's code for spreading - not sure how to handle
-    #        % fd-spec spread, do a linear interp to get closer to half-power
-    # % from the delta-deg increments
-    # hp = max(Dsp)/2;
-    # ihp=find(Dsp > hp);
-    #
-    #  % Left (d1) and right (d2) interps: Y=Dir, X=E   
-    # d1=interp1([Dsp(ihp(1)-1) Dsp(ihp(1)+1)], [dwdir(ihp(1)-1) dwdir(ihp(1)+1)], hp);
-    # d2=interp1([Dsp(ihp(end)-1) Dsp(ihp(end)+1)], [dwdir(ihp(end)-1) dwdir(ihp(end)+1)], hp);
-    # sprdDhp = d2 - d1;
-
-    # wrapping up data into dictionary
-    meta = 'Tp - peak period, Tm - mean period, Tave - average period, comparable to Time series mean period, Dp - peak direction, Dm - mean direction, Dmp - mean direction at peak frequency, vavgdir - Vector Averaged Mean Direction,sprdF - frequency spread, sprdD - directional spread'
-    stats = {'Hm0': Hm0,
-             'Tp': Tp,
-             'Tm': Tm02,
-             'Tave': Tm01,
-             'Dp': Dp,
-             'Dm': Dm,
-             'Dmp': Dmp,
-             'VecAvgMeanDir': vavgdir,
-             'sprdF': sprdF,
-             'sprdD': sprdD,
-             'meta': meta
-             }
-    # print meta
-    return Hm0, Tp, Tm02, Tm01, Dp, Dm, Dmp, vavgdir, sprdF, sprdD, stats, Tm10
 
 def geo2STWangle(geo_angle_in, zeroAngle=70., METin=1, fixanglesout=0):
     """
@@ -786,7 +663,7 @@ def geo2STWangle(geo_angle_in, zeroAngle=70., METin=1, fixanglesout=0):
     :param geo_angle_in:  an array or list of angles to be rotated from MET convention of angle from
     :param zeroAngle:  the angle of the pier, from this the azimuth is calculated (MET CONVENTION)
     :param METin:  = 1 if the input angle is in MET convention (angle from)
-    :param fixanglesout: if set to 1, will correct out angles to +/-180
+    :param fixanglesout: if set to True, will correct out angles to +/-180
 
     :return:
         angle_out corrected angle back out, into math space
@@ -805,6 +682,14 @@ def geo2STWangle(geo_angle_in, zeroAngle=70., METin=1, fixanglesout=0):
         flip = np.argwhere(STWangle > 180)  # indicies that need to be flipped
         STWangle[flip] -= 360
     return STWangle
+def mtime2epoch(timeIn):
+     """
+     Function will convert matlab time to epoch time
+     :param timeIn:  array of time in
+     :return:  epoch times out
+     """
+     Start = 719529 # 1970-01-01 in days since 0000-01-01
+     return (timeIn - Start)*24*60*60
 
 def STWangle2geo(STWangle, pierang=70, METout=1):
     """
@@ -1174,3 +1059,29 @@ def vectorRotation(vector, theta=90, axis='z'):
         return r_vector[0:2]
 
 
+def makeNCdir(netCDFdir, version_prefix, date_str, model):
+    """
+    All this function is going to do is take in some info from CSHORE analysis,
+    return the appropriate filepath where the netcdf file is to be saved, and make sure that folder exists
+    :param netCDFdir:  parent directory for the netCDF files to be saved
+    :param version_prefix: what version of the model are you running
+    :param date_str: this is the date string that tells this thing what month/year it is.
+                     it doesn't matter if you hand it the file savename (WITHOUT the COLONS) or the input datestring
+                     (WITH THE COLONS) because it only looks at the first 7 characters, which are the same either way
+    :param model: this is the name of the model you are running -> this is in here because some
+                  of the models have the same version prefixes
+    :return: path
+    """
+    import os
+    # parse my date string
+    year = date_str[0:4]
+
+    mList = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+    month = mList[int(date_str[5:7])-1]
+
+    NCpath = os.path.join(netCDFdir, model, version_prefix, year, month)
+
+    if not os.path.exists(NCpath):  # if it doesn't exist
+        os.makedirs(NCpath)  # make the directory
+
+    return NCpath
