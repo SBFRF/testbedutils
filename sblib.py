@@ -15,6 +15,50 @@ import netCDF4 as nc
 import anglesLib
 import math
 
+########################################
+#  following functions deal with general things
+########################################
+
+def reduceDict(dictIn, idxToKeep, exemptList=None):
+    """
+    This function will take a dictionary and  reduce it by given indicies, making a COPY of the array
+    it assumes that all things of multidimensions have time in the first dimension
+
+    WARNING: This could potentially be dangerous as it works by checking each key to see if its the length of the
+        variable dictIn['time'].  If it is then it will reduce the variable to keep the idxToKeep.  If not it will
+        skip the key
+
+    This function is useful if trying to reduce a dictionary to specific indicies of interest eg with a time matched index
+    Improvement to be safer is welcome, or use with caution.
+    :rtype: 
+    :param dictIn: dictionary with no limit to how many keys assumes one key is 'time'
+    :param idxToKeep: indices to reduce to, must be shorter than key 'time'
+    :param exemptList: this is a list of variables to exclude
+            default values are 'time', 'name', 'xFRF', 'yFRF'
+    :return:
+        a dictionary with the same keys that were input
+            all keys that came in with the same length as 'time' have been reduced to use the indices of idxToKeep
+    """
+    assert 'time' in dictIn, 'This function must have a variable "time"'
+    if exemptList == None:
+        exemptList = ['time', 'name', 'xFRF', 'yFRF', 'xm', 'ym']
+    idxToKeep = np.array(idxToKeep, dtype=int) # force data to integer type
+    dictOut = dictIn.copy()
+    for key in dictIn:
+        # if things are longer than the indicies of interest and not 'time'
+        # print 'key %s size %d' %(key, np.size(dictIn[key], axis=0))
+        try:
+            if key not in exemptList and dictIn[key].dtype.kind not in ['U', 'S'] and np.size(dictIn[key],
+                                                                                              axis=0) == len(
+                    dictIn['time']):
+                # then reduce
+                dictOut[key] = dictIn[key][idxToKeep]  # reduce variable
+                # print 'key %s Made it past test and new size %d' %(key, len(dictIn[key]))
+        except (IndexError, AttributeError):
+            pass  # this passes for single number (not arrays), and attribute error passes for single datetime objects
+    dictOut['time'] = dictIn['time'][idxToKeep]  # # once the rest are done finally reduce 'time'
+    return dictOut
+
 class Bunch(object):
     """allows user to access dictionary data from 'object'
     instead of object['key']
@@ -32,26 +76,152 @@ class Bunch(object):
     def __init__(self, aDict):
         self.__dict__.update(aDict)
 
-def whatIsYesterday(now=DT.date.today(), string=1, days=1):
-    """this function finds what yesterday's date string is in the format
-    of yyyy-mm-dd
+def makeNCdir(netCDFdir, version_prefix, date_str, model):
+    """
+    All this function is going to do is take in some info from CSHORE analysis,
+    return the appropriate filepath where the netcdf file is to be saved, and make sure that folder exists
+    :param netCDFdir:  parent directory for the netCDF files to be saved
+    :param version_prefix: what version of the model are you running
+    :param date_str: this is the date string that tells this thing what month/year it is.
+                     it doesn't matter if you hand it the file savename (WITHOUT the COLONS) or the input datestring
+                     (WITH THE COLONS) because it only looks at the first 7 characters, which are the same either way
+    :param model: this is the name of the model you are running -> this is in here because some
+                  of the models have the same version prefixes
+    :return: path
+    """
+    import os
+    # parse my date string
+    year = date_str[0:4]
 
-    :param s: now:: the date to start counting backwards from
-    
-        string:: (1) output is in stiring format (default)
-                 (2) output is in datetime format
-        days:: how many days to count backwards from
-           default = 1
-    :return
-        the date of yesterday ( "days" previous to input 'now')
-    :param now:  (Default value = DT.date.today()
+    mList = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October',
+             'November', 'December']
+    month = mList[int(date_str[5:7]) - 1]
+
+    NCpath = os.path.join(netCDFdir, model, version_prefix, year, month)
+
+    if not os.path.exists(NCpath):  # if it doesn't exist
+        os.makedirs(NCpath)  # make the directory
+
+    return NCpath
+
+def statsBryant(observations, models):
+    """This function does Non-Directional Statsistics
+    These statistics are from the Bryant Wave stats CHETN - I - 91
+
+    :param observations: array of observational data
+    :param models: array of model data
+    :returns: dictiornay
+        :key  'bias' average of residuals
+        :key  'RMSEdemeaned': RMSEdemeaned,
+        :key  'RMSE': R oot mean square error
+        :key  'RMSEnorm': normalized root Mean square error also Percent RMSE
+        :key  'scatterIndex': ScatterIndex
+        :key  'symSlope': symetrical slope
+        :key  'corr': R^2 --- coefficient of determination
+        :key  'PscoreWilmont': performance score developed by Wilmont
+        :key  'PscoreIMEDS':  see Hanson 2007 for description
+        :key  'residuals': model - observations
+        :
 
     """
+    obsNaNs = np.argwhere(np.isnan(observations)).squeeze()
+    modNaNs = np.argwhere(np.isnan(models)).squeeze()
+    if type(observations) == np.ma.masked_array or type(models) == np.ma.masked_array:
+        raise NotImplementedError('this handles masked arrays poorly, fix or remove before use')
+    if len(obsNaNs) > 0:
+        warnings.warn('warning found nans in bryant stats')
+        observations = np.delete(observations, obsNaNs)
+        models = np.delete(models, obsNaNs)  # removing corresponding model data, that cannot be compared
+        modNaNs = np.argwhere(np.isnan(models))
+        if len(modNaNs) > 0:
+            observations = np.delete(observations, modNaNs)
+            models = np.delete(models, modNaNs)  # removing c
+    elif len(modNaNs) > 0:
+        warnings.warn('warning found nans in bryant stats')
+        models = np.delete(models, modNaNs)
+        observations = np.delete(observations, modNaNs, 0)
+        obsNaNs = np.argwhere(np.isnan(observations))
+        if len(obsNaNs) > 0:
+            observations = np.delete(observations, obsNaNs)
+            models = np.delete(models, obsNaNs)  # removing cor
+    assert len(observations) == len(models), 'these data must be the same length'
 
-    yesterday = now - DT.timedelta(days)
-    if string == 1:
-        yesterday = DT.date.strftime(yesterday, '%Y-%m-%d')
-    return yesterday
+    residuals = models - observations
+    bias = np.nansum(residuals) / len(residuals)
+
+    ## RMSE's
+    # demeaned RMSE
+    RMSEdemeaned = np.sqrt(np.sum((residuals - bias) ** 2) / (len(observations) - 1))
+    # regular RMSE
+    RMSE = np.sqrt(np.sum(residuals ** 2) / len(observations))
+    # normalized RMSE or percentage
+    RMSEnorm = np.sqrt(np.sum(residuals ** 2) / np.sum(observations ** 2))
+    # scatter index - a normalize measure of error often times presented as %
+    ScatterIndex = RMSE / np.mean(observations)
+    # symetric Slope
+    symr = np.sqrt((models ** 2).sum() / (observations ** 2).sum())
+    # coefficient of determination
+    r = np.sum((observations - observations.mean()) * (models - models.mean())) \
+        / (np.sqrt(((observations - observations.mean()) ** 2).sum()) *
+           np.sqrt(((models - models.mean()) ** 2).sum()))
+    r2 = r ** 2  # square to get r2
+    # SSres = (residuals ** 2).sum()  ## from wiki
+    # SStot = ((observations - observations.mean()) ** 2).sum()
+    # r2 = 1 - SSres/SStot
+    # wilmont 1985
+    topW = np.abs(models - observations).sum()
+    botW = np.sum(np.abs(models - observations.mean()) + np.abs(observations - observations.mean()))
+    Wilmont = 1 - topW / botW
+
+    xRMS = np.sqrt((observations ** 2).sum() / len(observations))
+    pRMS = 1 - (RMSE / xRMS)
+    pBias = 1 - np.abs(bias) / xRMS
+    IMEDS = (pRMS + pBias) / 2
+    stats = {'bias': bias,
+             'RMSEdemeaned': RMSEdemeaned,
+             'RMSE': RMSE,
+             'RMSEnorm': RMSEnorm,
+             'scatterIndex': ScatterIndex,
+             'symSlope': symr,
+             'corr': r,
+             'r2': r2,
+             'PscoreWilmont': Wilmont,
+             'PscoreIMEDS': IMEDS,
+             'residuals': residuals,
+             'meta': 'please see Bryant, et al.(2016). Evaluation Statistics computed for the WIS ERDC/CHL CHETN-I-91'}
+
+    return stats
+
+def makegif(flist, ofname, size=None, dt=0.5):
+    """This function uses imageio to create gifs from a list of images
+
+    kwargs for mimwrite http://imageio.readthedocs.org/en/latest/format_gif.html#gif
+
+    :param flist: a sorted list of files to be made into gifs (including path)
+    :param ofname: output gif filename (including path)
+    :param size: size of pictures (default not resized)
+    :param loop: number of loops to do, 0 is default and infinite
+    :param dt:  (Default value = 0.5)
+    :returns: will write a gif to ofname location
+
+    """
+    # images = [Image.open(fn) for fn in flist]
+    #
+    # for im in images:
+    #     im.thumbnail(size, Image.ANTIALIAS)
+    # images2gif.writeGif(ofname, images, duration=dt, nq=15)
+    import imageio
+    images = []
+    if size != None:
+        for im in images:
+            im.thumbnail(size, Image.ANTIALIAS)
+    for filename in flist:
+        images.append(imageio.imread(filename))
+    imageio.mimwrite(ofname, images, duration=dt)
+
+########################################
+#  following functions deal with averaging
+########################################
 
 def baseRound(x, base=5):
     """This function will round any value to a multiple of the base,
@@ -64,6 +234,45 @@ def baseRound(x, base=5):
     """
     x = np.array(x, dtype=float)
     return base * np.round(x/base)
+
+def weightedAvg(toBeAveraged, weights, avgAxis=0, inverseWeight=False):
+    """This function does a weighted average on a multidimensional array
+
+    :param toBeAveraged: values to be averaged (array)
+    :param weights: values to be used as weights (does not have to be normalized)
+    :param avgAxis: axis over which to average (Default value = 0)
+    :param inverseWeight: if true will invert the weights, high values weighted higher with marked FALSE
+            to weight high values lower, inverseWeight must be True (Default value = False)
+    :returns: an array of weighted average
+
+    """
+    if inverseWeight == True:
+        weights = 1/weights
+    assert toBeAveraged.shape == weights.shape, 'data and weights need to be the same shapes to be averaged'
+    averagedData = np.sum(weights * toBeAveraged, axis=avgAxis) / (weights).sum(axis=avgAxis)
+    return averagedData
+
+def running_mean(data, window):
+    """
+    found running mean function on the internet, untested
+    :param data: data to run mean
+    :param window: window over which to take mean
+    :return: meaned data
+    """
+    cumsum = np.cumsum(np.insert(data, 0, 0))
+    return (cumsum[window:] - cumsum[:-window]) / window
+
+########################################
+#  following functions deal with time
+########################################
+def mtime2epoch(timeIn):
+    """
+    Function will convert matlab time to epoch time
+    :param timeIn:  array of time in
+    :return:  epoch times out
+    """
+    Start = 719529  # 1970-01-01 in days since 0000-01-01
+    return (timeIn - Start) * 24 * 60 * 60
 
 def roundtime(timeIn=None, roundTo=60):
     """"
@@ -124,242 +333,34 @@ def createDateList(start, end, delta):
         yield curr
         curr += delta
 
-def statsBryant(observations, models):
-    """This function does Non-Directional Statsistics
-    These statistics are from the Bryant Wave stats CHETN - I - 91
+def whatIsYesterday(now=DT.date.today(), string=1, days=1):
+    """this function finds what yesterday's date string is in the format
+    of yyyy-mm-dd
 
-    :param observations: array of observational data
-    :param models: array of model data
-    :returns: dictiornay
-        :key  'bias' average of residuals
-        :key  'RMSEdemeaned': RMSEdemeaned,
-        :key  'RMSE': R oot mean square error
-        :key  'RMSEnorm': normalized root Mean square error also Percent RMSE
-        :key  'scatterIndex': ScatterIndex
-        :key  'symSlope': symetrical slope
-        :key  'corr': R^2 --- coefficient of determination
-        :key  'PscoreWilmont': performance score developed by Wilmont
-        :key  'PscoreIMEDS':  see Hanson 2007 for description
-        :key  'residuals': model - observations
-        :
+    :param s: now:: the date to start counting backwards from
 
-    """
-    obsNaNs = np.argwhere(np.isnan(observations)).squeeze()
-    modNaNs = np.argwhere(np.isnan(models)).squeeze()
-    if type(observations) == np.ma.masked_array or type(models) == np.ma.masked_array:
-        raise NotImplementedError('this handles masked arrays poorly, fix or remove before use')
-    if len(obsNaNs) > 0:
-        warnings.warn('warning found nans in bryant stats')
-        observations = np.delete(observations, obsNaNs)
-        models = np.delete(models, obsNaNs)  # removing corresponding model data, that cannot be compared
-        modNaNs = np.argwhere(np.isnan(models))
-        if len(modNaNs) > 0:
-            observations = np.delete(observations, modNaNs)
-            models = np.delete(models, modNaNs)  # removing c
-    elif len(modNaNs) > 0:
-        warnings.warn('warning found nans in bryant stats')
-        models = np.delete(models, modNaNs)
-        observations = np.delete(observations, modNaNs,0)
-        obsNaNs = np.argwhere(np.isnan(observations))
-        if len(obsNaNs) > 0:
-            observations = np.delete(observations, obsNaNs)
-            models = np.delete(models, obsNaNs)  # removing cor
-    assert len(observations) == len(models), 'these data must be the same length'
-
-    residuals = models - observations
-    bias = np.nansum(residuals) / len(residuals)
-
-    ## RMSE's
-    # demeaned RMSE
-    RMSEdemeaned = np.sqrt(np.sum((residuals - bias) ** 2) / (len(observations) - 1))
-    # regular RMSE
-    RMSE = np.sqrt(np.sum(residuals ** 2) / len(observations))
-    # normalized RMSE or percentage
-    RMSEnorm = np.sqrt(np.sum(residuals ** 2) / np.sum(observations ** 2))
-    # scatter index - a normalize measure of error often times presented as %
-    ScatterIndex = RMSE / np.mean(observations)
-    # symetric Slope
-    symr = np.sqrt((models ** 2).sum() / (observations ** 2).sum())
-    # coefficient of determination
-    r2 = np.sum((observations - observations.mean()) * (models - models.mean())) \
-         / (np.sqrt(  ((observations - observations.mean()) ** 2).sum()) *
-            np.sqrt(  ((models       - models.mean()      ) ** 2).sum()))
-    # SSres = (residuals ** 2).sum()  ## from wiki
-    # SStot = ((observations - observations.mean()) ** 2).sum()
-    # r2 = 1 - SSres/SStot
-    # wilmont 1985
-    topW = np.abs(models - (observations).sum())
-    botW = (np.abs(models - (observations).mean()) + np.abs(np.nansum(observations - (observations).mean())))
-    Wilmont = 1 - topW / botW
-
-    xRMS = np.sqrt((observations).sum() ** 2 / len(observations))
-    pBias = 1 - np.abs(bias) / xRMS
-    IMEDS = (xRMS + pBias) / 2
-    stats = {'bias': bias,
-             'RMSEdemeaned': RMSEdemeaned,
-             'RMSE': RMSE,
-             'RMSEnorm': RMSEnorm,
-             'scatterIndex': ScatterIndex,
-             'symSlope': symr,
-             'corr': r2,
-             'PscoreWilmont': Wilmont,
-             'PscoreIMEDS': IMEDS,
-             'residuals': residuals,
-             'meta': 'please see Bryant, et al.(2016). Evaluation Statistics computed for the WIS ERDC/CHL CHETN-I-91'}
-
-    return stats
-
-def makegif(flist, ofname, size=None, dt=0.5):
-    """This function uses imageio to create gifs from a list of images
-    
-    kwargs for mimwrite http://imageio.readthedocs.org/en/latest/format_gif.html#gif
-
-    :param flist: a sorted list of files to be made into gifs (including path)
-    :param ofname: output gif filename (including path)
-    :param size: size of pictures (default not resized)
-    :param loop: number of loops to do, 0 is default and infinite
-    :param dt:  (Default value = 0.5)
-    :returns: will write a gif to ofname location
-
-    """
-    # images = [Image.open(fn) for fn in flist]
-    #
-    # for im in images:
-    #     im.thumbnail(size, Image.ANTIALIAS)
-    # images2gif.writeGif(ofname, images, duration=dt, nq=15)
-    import imageio
-    images = []
-    if size != None:
-        for im in images:
-            im.thumbnail(size, Image.ANTIALIAS)
-    for filename in flist:
-        images.append(imageio.imread(filename))
-    imageio.mimwrite(ofname, images, duration=dt)
-
-def running_mean(data, window):
-    """found running mean function on the internet, untested
-
-    :param data: data to run mean
-    :param window: window over which to take mean
-    :returns: meaned data
-
-    """
-    cumsum = np.cumsum(np.insert(data, 0, 0))
-    return (cumsum[window:] - cumsum[:-window]) / window
-
-def find_nearest(array, value):
-    """Function looks for value in array and returns the closest array value
-    (to 'value') and index of that value
-
-    :param array: array to to find things in
-    :param value: value to search against
-    :return returns a number from the array value, that is closest to value input
-
-    """
-    idx = (np.abs(array - value)).argmin()
-    return array[idx], idx
-
-def findUniqueFromTuple(a, axis=1):
-    """This function finds the unique values of a multi dimensional tuple (quickly)
-
-    :param a: an array of multidimensional size
-    :param axis: this is the axis that it looks for unique values using (default is horizontal)
-    :returns: array of unique tuples
-        warning, values are not sorted
-
-    """
-    if axis == 0:
-        a = a.T
-
-    b = np.ascontiguousarray(a).view(np.dtype((np.void, a.dtype.itemsize * a.shape[1])))
-    _, idx = np.unique(b, return_index=True)
-
-    unique_a = a[idx]
-    return unique_a
-
-def weightedAvg(toBeAveraged, weights, avgAxis=0, inverseWeight=False):
-    """This function does a weighted average on a multidimensional array
-
-    :param toBeAveraged: values to be averaged (array)
-    :param weights: values to be used as weights (does not have to be normalized)
-    :param avgAxis: axis over which to average (Default value = 0)
-    :param inverseWeight: if true will invert the weights, high values weighted higher with marked FALSE
-            to weight high values lower, inverseWeight must be True (Default value = False)
-    :returns: an array of weighted average
-
-    """
-    if inverseWeight == True:
-        weights = 1/weights
-    assert toBeAveraged.shape == weights.shape, 'data and weights need to be the same shapes to be averaged'
-    averagedData = np.sum(weights * toBeAveraged, axis=avgAxis) / (weights).sum(axis=avgAxis)
-    return averagedData
-
-def findbtw(data, lwth, upth, type=0):
-    """This function finds both values and indicies of a list values between two values
-    :TODO: probably could be improved by using boolean compares
-
-    :param upth: upper level threshold
-    :param lwth: lower level threshold
-    :param data: list (or numpy array?)
-    :param type: 0 = non inclusive  ie. lwth < list <  upth
-        1 = low incluisve  ie. lwth <=list <  upth
-        2 = high inclusive ie. lwth < list <= upth
-        3 = all inclusive  ie  lwth <=list <= upth
+        string:: (1) output is in stiring format (default)
+                 (2) output is in datetime format
+        days:: how many days to count backwards from
+           default = 1
     :return
-        indicies returns idices that meet established criteria
-        values   returns associated values from da (Default value = 0)
+        the date of yesterday ( "days" previous to input 'now')
+    :param now:  (Default value = DT.date.today()
 
     """
-    indices = []
-    vals = []
-    shp = np.shape(data)
-    if len(shp) == 2:
-        for i, in enumerate(data):
-            for j, elem in enumerate(range):
-                if type == 0:
-                    if elem < upth and elem > lwth:
-                        indices.append((i, j))
-                        vals.append(elem)
-                elif type == 1:
-                    if elem < upth and elem >= lwth:
-                        indices.append((i, j))
-                        vals.append(elem)
-                elif type == 2:
-                    if elem <= upth and elem > lwth:
-                        indices.append((i, j))
-                        vals.append(elem)
-                elif type == 3:
-                    if elem <= upth and elem >= lwth:
-                        indices.append((i, j))
-                        vals.append(elem)
-    if len(shp) == 1:
-        for j, elem in enumerate(data):
-            if type == 0:
-                if elem < upth and elem > lwth:
-                    indices.append((j))
-                    vals.append(elem)
-            elif type == 1:
-                if elem < upth and elem >= lwth:
-                    indices.append((j))
-                    vals.append(elem)
-            elif type == 2:
-                if elem <= upth and elem > lwth:
-                    indices.append((j))
-                    vals.append(elem)
-            elif type == 3:
-                if elem <= upth and elem >= lwth:
-                    indices.append((j))
-                    vals.append(elem)
 
-    return indices, vals
+    yesterday = now - DT.timedelta(days)
+    if string == 1:
+        yesterday = DT.date.strftime(yesterday, '%Y-%m-%d')
+    return yesterday
 
 def timeMatch(obs_time, obs_data, model_time, model_data):
     """This is the time match function from the IMEDs lite version created by ASA
     This has been removed from the IMEDS package to simplify use.
     This method returns the matching model data to the closest obs point.
-    
+
     similar to time match imeds
-    
+
     Time Matching is done by creating a threshold by taking the median of the difference of each time
        then taking the minimum of the difference between the two input times divided by 2.
        a small, arbitrary (as far as I know) factor is then subtracted from that minimum to remove the possiblity
@@ -433,15 +434,6 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
         obs_data_s = np.append(obs_data_s, obs_data[indx])
         model_data_s = np.append(model_data_s, data)
 
-    # check to see if these are empty, and if so, interpolate
-    if np.size(time) == 0:
-        # this means it is empty!!!  interpolate obs onto model time
-        obs_data_s = np.interp(model_time, obs_time, obs_data)
-        model_data_s = model_data
-        time = model_time
-    else:
-        pass
-
     # if I was handed a datetime, convert back to datetime
     if dt_check:
         timeunits = 'seconds since 1970-01-01 00:00:00'
@@ -450,9 +442,6 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
         del time
         time = time_n
         del time_n
-    else:
-        pass
-
 
     return time, obs_data_s, model_data_s
 
@@ -460,7 +449,7 @@ def timeMatch_altimeter(altTime, altData, modTime, modData, window=30 * 60):
     """this function will loop though variable modTim and find the closest value
     then look to see if it's within a window (default, 30 minutes),
      return altimeter data, and matched time
-    
+
      Note: this might be slower than imeds time match or time match,
            which is based on the imeds time match
 
@@ -504,6 +493,7 @@ def timeMatch_altimeter(altTime, altData, modTime, modData, window=30 * 60):
         altTime = altTime[~altData.mask]
         altData = altData[~altData.mask]
     assert len(altData) == len(altTime), 'Altimeter time and data length must be the same'
+    assert len(modTime) == len(modData), 'Model time and data length must be the same'
     for tt, time in enumerate(modTime):
         idx = np.argmin(np.abs(altTime - time))
         if altTime[idx] - time < window:
@@ -512,52 +502,124 @@ def timeMatch_altimeter(altTime, altData, modTime, modData, window=30 * 60):
             timeout.append(modTime[tt])
             modout.append(modData[tt])
 
-    if dt_check:
-        timeunits = 'seconds since 1970-01-01 00:00:00'
-        tOut = np.array(timeout)
-        tOutN = nc.num2date(tOut, timeunits)
-        del tOut
-        tOut = tOutN
-        del tOutN
+    return np.array(timeout), np.array(dataout), np.array(modout)
 
-    return tOut, np.array(dataout), np.array(modout)
+########################################
+#  following functions deal with finding things
+########################################
 
-def reduceDict(dictIn, idxToKeep, exemptList=None):
-    """This function will take a dictionary and  reduce it by given indicies, making a COPY of the array
-    it assumes that all things of multidimensions have time in the first dimension
-    
-    WARNING: This could potentially be dangerous as it works by checking each key to see if its the lenth of the
-        variable dictIn['time'].  If it is then it will reduce the variable to keep the idxToKeep.  If not it will
-        skip the key
-    
-    This function is useful if trying to reduce a dictionary to specific indicies of interest eg with a time matched index
-    Improvement to be safer is welcome, or use with caution.
+def findbtw(data, lwth, upth, type=0):
+    """This function finds both values and indicies of a list values between two values
+    :TODO: probably could be improved by using boolean compares
 
-    :param dictIn: dictionary with no limit to how many keys assumes one key is 'time'
-    :param idxToKeep: indices to reduce to, must be shorter than key 'time'
-    :param exemptList: this is a list of variables to exclude
-            default values are 'time', 'name', 'xFRF', 'yFRF'
-    :returns: a dictionary with the same keys that were input
-            all keys that came in with the same length as 'time' have been reduced to use the indices of idxToKeep
+    :param upth: upper level threshold
+    :param lwth: lower level threshold
+    :param data: list (or numpy array?)
+    :param type: 0 = non inclusive  ie. lwth < list <  upth
+        1 = low incluisve  ie. lwth <=list <  upth
+        2 = high inclusive ie. lwth < list <= upth
+        3 = all inclusive  ie  lwth <=list <= upth
+    :return
+        indicies returns idices that meet established criteria
+        values   returns associated values from da (Default value = 0)
 
     """
-    assert 'time' in dictIn, 'This function must have a variable "time"'
-    if exemptList == None:
-        exemptList = ['time', 'name', 'xFRF', 'yFRF', 'xm', 'ym']
-    idxToKeep = np.array(idxToKeep, dtype=int) # force data to integer type
-    dictOut = dictIn.copy()
-    for key in dictIn:
-        # if things are longer than the indicies of interest and not 'time'
-        # print 'key %s size %d' %(key, np.size(dictIn[key], axis=0))
-        try:
-            if key not in exemptList and dictIn[key].dtype.kind not in ['U','S'] and np.size(dictIn[key], axis=0) == len(dictIn['time']):
-                # then reduce
-                dictOut[key] = dictIn[key][idxToKeep]  # reduce variable
-                # print 'key %s Made it past test and new size %d' %(key, len(dictIn[key]))
-        except (IndexError, AttributeError):
-            pass  # this passes for single number (not arrays), and attribute error passes for single datetime objects
-    dictOut['time'] = dictIn['time'][idxToKeep]  # # once the rest are done finally reduce 'time'
-    return dictOut
+    indices = []
+    vals = []
+    shp = np.shape(data)
+    if len(shp) == 2:
+        for i, in enumerate(data):
+            for j, elem in enumerate(range):
+                if type == 0:
+                    if elem < upth and elem > lwth:
+                        indices.append((i, j))
+                        vals.append(elem)
+                elif type == 1:
+                    if elem < upth and elem >= lwth:
+                        indices.append((i, j))
+                        vals.append(elem)
+                elif type == 2:
+                    if elem <= upth and elem > lwth:
+                        indices.append((i, j))
+                        vals.append(elem)
+                elif type == 3:
+                    if elem <= upth and elem >= lwth:
+                        indices.append((i, j))
+                        vals.append(elem)
+    if len(shp) == 1:
+        for j, elem in enumerate(data):
+            if type == 0:
+                if elem < upth and elem > lwth:
+                    indices.append((j))
+                    vals.append(elem)
+            elif type == 1:
+                if elem < upth and elem >= lwth:
+                    indices.append((j))
+                    vals.append(elem)
+            elif type == 2:
+                if elem <= upth and elem > lwth:
+                    indices.append((j))
+                    vals.append(elem)
+            elif type == 3:
+                if elem <= upth and elem >= lwth:
+                    indices.append((j))
+                    vals.append(elem)
+
+    return indices, vals
+
+def find_nearest(array, value):
+    """Function looks for value in array and returns the closest array value
+    (to 'value') and index of that value
+
+    :param array: array to to find things in
+    :param value: value to search against
+    :return returns a number from the array value, that is closest to value input
+
+    """
+    idx = (np.abs(array - value)).argmin()
+    return array[idx], idx
+
+def findUniqueFromTuple(a, axis=1):
+    """This function finds the unique values of a multi dimensional tuple (quickly)
+
+    :param a: an array of multidimensional size
+    :param axis: this is the axis that it looks for unique values using (default is horizontal)
+    :returns: array of unique tuples
+        warning, values are not sorted
+    """
+
+    if axis == 0:
+        a = a.T
+
+    b = np.ascontiguousarray(a).view(np.dtype((np.void, a.dtype.itemsize * a.shape[1])))
+    _, idx = np.unique(b, return_index=True)
+
+    unique_a = a[idx]
+    return unique_a
+
+########################################
+#  following functions deal with depricated functions 4/20/18
+########################################
+
+def FRFcoord(p1, p2):
+    """
+    place older
+    """
+    raise ImportError('please use the function in sblib.geoprocess')
+
+def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
+    """this function will calculate the mean direction from a full spectrum
+        Function is depricated
+    :param spec:
+    :param dirbins:
+    :param frqbins:
+    :param lowFreq:  (Default value = 0.05)
+    :param highFreq:  (Default value = 0.5)
+    :returns: Code Translated by Spicer Bak from: fd2BulkStats.m written by Kent Hathaway
+
+    """
+    raise NotImplementedError('This function is depricated, The development should be moved to sb.waveLib version!!!!')
+
 
 def dist(x1,y1, x2,y2, x0,y0):
     """
@@ -576,25 +638,3 @@ def dist(x1,y1, x2,y2, x0,y0):
 
     return dist
 
-
-def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
-    """this function will calculate the mean direction from a full spectrum
-        Function is depricated
-    :param spec: 
-    :param dirbins: 
-    :param frqbins: 
-    :param lowFreq:  (Default value = 0.05)
-    :param highFreq:  (Default value = 0.5)
-    :returns: Code Translated by Spicer Bak from: fd2BulkStats.m written by Kent Hathaway
-
-    """
-    raise NotImplementedError('This function is depricated, The development should be moved to sb.waveLib version!!!!')
-
-def FRFcoord(p1, p2):
-    """place older
-
-    :param p1: 
-    :param p2: 
-
-    """
-    raise ImportError('please use the function in sblib.geoprocess')
