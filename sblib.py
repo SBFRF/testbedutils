@@ -13,6 +13,7 @@ import datetime as DT
 import warnings
 import netCDF4 as nc
 import anglesLib
+import math
 
 class Bunch(object):
     """allows user to access dictionary data from 'object'
@@ -557,6 +558,23 @@ def reduceDict(dictIn, idxToKeep, exemptList=None):
             pass  # this passes for single number (not arrays), and attribute error passes for single datetime objects
     dictOut['time'] = dictIn['time'][idxToKeep]  # # once the rest are done finally reduce 'time'
     return dictOut
+
+def dist(x1,y1, x2,y2, x0,y0):
+    """
+    This function computes the perpendicular distance between a line connecting points p1 (x1, y1) and p2 (x2, y2)
+    and a third point (x0, y0)
+    :param x1: x-coord of first line end point
+    :param y1: y-coord of first line end point
+    :param x2: x-coord of second line end point
+    :param y2: y-coord of second line end point
+    :param x0: x-coord of comparison point
+    :param y0: y-coord of comparison point
+    :return:
+    """
+
+    dist = np.abs((y2-y1)*x0 - (x2-x1)*y0 + x2*y1 - y2*x1)/float(math.sqrt((y2 - y1)**2 + (x2 - x1)**2))
+
+    return dist
 
 
 def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
