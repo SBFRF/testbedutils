@@ -90,8 +90,8 @@ def makeNCdir(netCDFdir, version_prefix, date_str, model):
     # parse my date string
     year = date_str[0:4]
 
-    mList = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October',
-             'November', 'December']
+    mList = ['01-Jan', '02-Feb', '03-March', '04-Apr', '05-May', '06-Jun', '07-Jul', '08-Aug', '09-Sep', '10-Oct',
+             '11-Nov', '12-Dec']
     month = mList[int(date_str[5:7]) - 1]
 
     NCpath = os.path.join(netCDFdir, model, version_prefix, year, month)
