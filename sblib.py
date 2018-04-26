@@ -12,6 +12,9 @@ import numpy as np
 import datetime as DT
 import warnings
 import netCDF4 as nc
+import anglesLib
+import math
+
 ########################################
 #  following functions deal with general things
 ########################################
@@ -583,8 +586,8 @@ def findUniqueFromTuple(a, axis=1):
     :param axis: this is the axis that it looks for unique values using (default is horizontal)
     :returns: array of unique tuples
         warning, values are not sorted
-
     """
+
     if axis == 0:
         a = a.T
 
@@ -616,4 +619,22 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
 
     """
     raise NotImplementedError('This function is depricated, The development should be moved to sb.waveLib version!!!!')
+
+
+def dist(x1,y1, x2,y2, x0,y0):
+    """
+    This function computes the perpendicular distance between a line connecting points p1 (x1, y1) and p2 (x2, y2)
+    and a third point (x0, y0)
+    :param x1: x-coord of first line end point
+    :param y1: y-coord of first line end point
+    :param x2: x-coord of second line end point
+    :param y2: y-coord of second line end point
+    :param x0: x-coord of comparison point
+    :param y0: y-coord of comparison point
+    :return:
+    """
+
+    dist = np.abs((y2-y1)*x0 - (x2-x1)*y0 + x2*y1 - y2*x1)/float(math.sqrt((y2 - y1)**2 + (x2 - x1)**2))
+
+    return dist
 
