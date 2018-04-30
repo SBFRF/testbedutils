@@ -7,9 +7,14 @@ import cPickle as pickle
 def extract_time(data,index):
     """This function takes a dictionary [data] and pulles out all of the keys at specific index [index]
         specific to cBathy dictionary keys
-    :param data: dictionary
-    :param index: index to be removed
-    :returns: new dictionary with only the indexs selected returned
+
+    Args:
+      data: dictionary
+      index: index to be removed
+
+    Returns:
+      new dictionary with only the indexs selected returned
+
     """
     vars = data.keys()
     new = {}
@@ -24,20 +29,24 @@ def cbathy_kalman_filter(new, prior, waveHs):
     """This function does a kalman filter designed for implmeneting wave height thresholds into the cbathy
     algorithm, this operates on a single time step only!!!
 
-    :param new: a dictionary with keys associated with get data
-        :key 'xm': frf x coords
-        :key 'ym': frf y coords
-        :key 'time': current time
-        :key 'depthfCError': curent estimate error
-        :key 'depthfC': current estimate
-    :param prior: a saved dictionary with bathys derived from times when wave heights were below the threshold of choice
-        :key 'time':
-        :key 'depthKF': previous filtered estimate
-        :key 'P':
-    :param waveHs:
+    Args:
+      new: a dictionary with keys associated with get data
+    :key 'xm': frf x coords
+    :key 'ym': frf y coords
+    :key 'time': current time
+    :key 'depthfCError': curent estimate error
+    :key 'depthfC': current estimate
+      prior: a saved dictionary with bathys derived from times when wave heights were below the threshold of choice
+    :key 'time':
+    :key 'depthKF': previous filtered estimate
+    :key 'P':
+      waveHs: return: new dictionary
+    :key 'P':
 
-    :return: new dictionary
-        :key 'P':
+    Returns:
+      new dictionary
+      :key 'P':
+
     """
     if type(prior['time']) == list and len(prior['time']) == 1:
         prior['time'] = prior['time'][0]
@@ -105,28 +114,31 @@ def cbathy_kalman_filter(new, prior, waveHs):
     return new
 
 def cBathy_ThresholdedLogic(cBathy, rawspec, waveHsThreshold=1.2):
-    """
-    Logic associated with creating the wave height thresholded kalman filtered cBathy representation
-    :param cBathy: dictionary from go.getcBathy data
-    :param rawspec: dictionary from go.getwavespec function
-    :param waveHsThreshold: a decimal value for which to compare when generating the new kalman filter
+    """Logic associated with creating the wave height thresholded kalman filtered cBathy representation
 
-    :return: the original cBathy dictionary
-        :key 'ym': yfrf coords
-        :key 'yFRF': yfrf coords
-        :key 'epochtime': epoch time
-        :key 'xm': xfrf coords
-        :key 'xFRF': xfrf coords
-        :key 'depthKF': kalman filtered depth estimate (updated with only estimates below wave height threshold
-        :key 'depthfC': individual depth estimates
-        :key 'P': Process error
-        :key 'depthfCError: individual depth estimate error
-        :key 'surveyMeanTime': last time data was updated
-        :key 'elevation': negative depth KF values
-        :key 'k', Does not return
-        :key 'depth':, does not return
-        :key fB': , does not return
-        :key 'time': date time objects for each filtered estimate
+    Args:
+      cBathy: dictionary from go.getcBathy data
+      rawspec: dictionary from go.getwavespec function
+      waveHsThreshold: a decimal value for which to compare when generating the new kalman filter (Default value = 1.2)
+
+    Returns:
+      the original cBathy dictionary
+      :key 'ym': yfrf coords
+      :key 'yFRF': yfrf coords
+      :key 'epochtime': epoch time
+      :key 'xm': xfrf coords
+      :key 'xFRF': xfrf coords
+      :key 'depthKF': kalman filtered depth estimate (updated with only estimates below wave height threshold
+      :key 'depthfC': individual depth estimates
+      :key 'P': Process error
+      :key 'depthfCError: individual depth estimate error
+      :key 'surveyMeanTime': last time data was updated
+      :key 'elevation': negative depth KF values
+      :key 'k', Does not return
+      :key 'depth':, does not return
+      :key fB': , does not return
+      :key 'time': date time objects for each filtered estimate
+
     """
     ##### define inital global variables for function
     version_prefix = 'cBKF-T' # assume only one version
