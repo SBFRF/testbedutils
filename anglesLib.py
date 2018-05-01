@@ -7,11 +7,14 @@ import numpy as np
 def cart2pol(x, y):
     """this translates from cartesian coords to polar coordinates (radians)
 
-    :param x: x componant
-    :param y: y componant
-    :returns: return:
-        r radial componant
-        theta angular compoanat (returned in radian)
+    Args:
+      x: x componant
+      y: y componant
+
+    Returns:
+      returns: return:
+      r radial componant
+      theta angular compoanat (returned in radian)
 
     """
     r = np.sqrt(x ** 2 + y ** 2)
@@ -22,10 +25,13 @@ def pol2cart(r, theta):
     """this translates from polar coords (radians) to polar coordinates
     assumed radian input for theta
 
-    :param r: speed, magnatude
-    :param theta: direction (in radians)
-    :returns: x - componant
-        y - componant
+    Args:
+      r: speed, magnatude
+      theta: direction (in radians)
+
+    Returns:
+      x - componant
+      y - componant
 
     """
     if (np.max(theta) > 2 * np.pi).any():
@@ -40,11 +46,14 @@ def geo2STWangle(geo_angle_in, zeroAngle=70., METin=1, fixanglesout=0):
     variable pierang is the angle from shore to 90 degrees (shore coordinates) in geographic convention
     ie the pier at Duck NC is at an angle of 70 degrees TN (stateplane) and this is assumed to be shore perpendicular
 
-    :param geo_angle_in: an array or list of angles to be rotated from MET convention of angle from
-    :param zeroAngle: the angle of the pier, from this the azimuth is calculated (MET CONVENTION) (Default value = 70.)
-    :param METin: 1 if the input angle is in MET convention (angle from) (Default value = 1)
-    :param fixanglesout: if set to 1, will correct out angles to +/-180 (Default value = 0)
-    :returns: angle_out corrected angle back out, into math space
+    Args:
+      geo_angle_in: an array or list of angles to be rotated from MET convention of angle from
+      zeroAngle: the angle of the pier, from this the azimuth is calculated (MET CONVENTION) (Default value = 70.)
+      METin: 1 if the input angle is in MET convention (angle from) (Default value = 1)
+      fixanglesout: if set to 1, will correct out angles to +/-180 (Default value = 0)
+
+    Returns:
+      angle_out corrected angle back out, into math space
 
     """
     # assert len(np.shape(geo_angle_in)) <= 1, 'function geo2STWangle not tested in more than 1 dimension'
@@ -67,11 +76,14 @@ def STWangle2geo(STWangle, pierang=70, METout=1):
      definition and + CCW)
     and translates them into geospatial grid angles (with a MET -from- convention and a CW+ convention)
 
-    :param gridangle: an array or list of angles to be rotated
-    :param pierang: the (MET CONVENTION) (Default value = 70)
-    :param METout: if left 1, this creates output into a MET conveinton with the definition in the from (Default value = 1)
-    :param STWangle: 
-    :returns: angle_out array of angles returned back to geographic convention (true north, clockwise positive)
+    Args:
+      gridangle: an array or list of angles to be rotated
+      pierang: the (MET CONVENTION) (Default value = 70)
+      METout: if left 1, this creates output into a MET conveinton with the definition in the from (Default value = 1)
+      STWangle: returns: angle_out array of angles returned back to geographic convention (true north, clockwise positive)
+
+    Returns:
+      angle_out array of angles returned back to geographic convention (true north, clockwise positive)
 
     """
     # TODO this needs to be renamed
@@ -88,10 +100,13 @@ def vectorRotation(vector, theta=90, axis='z'):
     """This function does a vector rotation of the vector input in vector, rotated by theta
     NO NO NO NO -> +theta results in clockwise rotation!!!!!
 
-    :param vector: 2d or 3d vector you want rotated... [x, y, z]
-    :param axis: axis you want it rotated about 'x' = [1, 0, 0], 'y' = [0, 1, 0], 'z' = [0, 0, 1] (Default value = 'z')
-    :param theta: angle in decimal degrees (Default value = 90)
-    :returns: vector rotated CCW theta degrees about axis, uses Euler-Rodrigues formula
+    Args:
+      vector: 2d or 3d vector you want rotated... [x, y, z]
+      axis: axis you want it rotated about 'x' = [1, 0, 0], 'y' = [0, 1, 0], 'z' = [0, 0, 1] (Default value = 'z')
+      theta: angle in decimal degrees (Default value = 90)
+
+    Returns:
+      vector rotated CCW theta degrees about axis, uses Euler-Rodrigues formula
 
     """
 
@@ -143,10 +158,13 @@ def angle_correct(angle_in, rad=0):
     """this function takes angles in that are both positve and negative
     and corrects them to posivitve only
 
-    :param angle_in: param rad: radian =0 input angles are in degrees
-                radian =1 input anglesa are in radian
-    :param rad:  (Default value = 0)
-    :returns: array of corrected angles in
+    Args:
+      angle_in: param rad: radian =0 input angles are in degrees
+    radian =1 input anglesa are in radian
+      rad: Default value = 0)
+
+    Returns:
+      array of corrected angles in
 
     """
     angle_in = np.array(angle_in)

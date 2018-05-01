@@ -1,12 +1,19 @@
 import numpy as np
-import datetime as dt
+import datetime as DT
+import sblib as sb
+import os, glob
+import cPickle as pickle
 
 def extract_time(data,index):
     """This function takes a dictionary [data] and pulles out all of the keys at specific index [index]
+        specific to cBathy dictionary keys
 
-    :param data: dictionary
-    :param index: index to be removed
-    :returns: new dictionary with only the indexs selected returned
+    Args:
+      data: dictionary
+      index: index to be removed
+
+    Returns:
+      new dictionary with only the indexs selected returned
 
     """
     vars = data.keys()
@@ -22,13 +29,23 @@ def cbathy_kalman_filter(new, prior, waveHs):
     """This function does a kalman filter designed for implmeneting wave height thresholds into the cbathy
     algorithm, this operates on a single time step only!!!
 
-    HELLO SPICER! ADD DICTIONARY KEYS HERE!
-    :param new: a dictionary with keys associated with get data
-        :key
-        :key
-        :key
-    :param prior: a saved dictionary with bathys derived from times when wave heights were below the threshold of choice
-    :param waveHs: return:
+    Args:
+      new: a dictionary with keys associated with get data
+    :key 'xm': frf x coords
+    :key 'ym': frf y coords
+    :key 'time': current time
+    :key 'depthfCError': curent estimate error
+    :key 'depthfC': current estimate
+      prior: a saved dictionary with bathys derived from times when wave heights were below the threshold of choice
+    :key 'time':
+    :key 'depthKF': previous filtered estimate
+    :key 'P':
+      waveHs: return: new dictionary
+    :key 'P':
+
+    Returns:
+      new dictionary
+      :key 'P':
 
     """
     if type(prior['time']) == list and len(prior['time']) == 1:
@@ -94,5 +111,143 @@ def cbathy_kalman_filter(new, prior, waveHs):
     new['P'] = Pk.reshape((ylen,xlen))
     new['depthKFError'] = np.sqrt(new['P'])
 
-
     return new
+
+def cBathy_ThresholdedLogic(cBathy, rawspec, waveHsThreshold=1.2):
+    """Logic associated with creating the wave height thresholded kalman filtered cBathy representation
+
+    Args:
+      cBathy: dictionary from go.getcBathy data
+      rawspec: dictionary from go.getwavespec function
+      waveHsThreshold: a decimal value for which to compare when generating the new kalman filter (Default value = 1.2)
+
+    Returns:
+      the original cBathy dictionary
+      :key 'ym': yfrf coords
+      :key 'yFRF': yfrf coords
+      :key 'epochtime': epoch time
+      :key 'xm': xfrf coords
+      :key 'xFRF': xfrf coords
+      :key 'depthKF': kalman filtered depth estimate (updated with only estimates below wave height threshold
+      :key 'depthfC': individual depth estimates
+      :key 'P': Process error
+      :key 'depthfCError: individual depth estimate error
+      :key 'surveyMeanTime': last time data was updated
+      :key 'elevation': negative depth KF values
+      :key 'k', Does not return
+      :key 'depth':, does not return
+      :key fB': , does not return
+      :key 'time': date time objects for each filtered estimate
+
+    """
+    ##### define inital global variables for function
+    version_prefix = 'cBKF-T' # assume only one version
+    #### Find which pickle to load
+    best = DT.timedelta(3002)  # needs to be within X days to start to be considered
+    pickList = glob.glob('/home/number/cmtb/cBathy_Study/pickles/{}_*_TimeAvgcBathy*.pickle'.format(version_prefix))
+    loadPickleFname = None
+    # Sort through pickles containing good cBathy bathymetries
+    for file in pickList:
+        delta =  cBathy['time'][0] - DT.datetime.strptime(file.split('/')[-1].split('_')[1], '%Y%m%dT%H%M%SZ')  # days old
+        if delta.total_seconds() > 0 and delta.total_seconds() < best.total_seconds() :
+            best = delta  # the new delta is currently the best, save it as the best
+            # change the current load name to the current best
+            loadPickleFname = file #'cBathy_Study/pickles/%s_%s_%s_TimeAvgcBathy.pickle' %(version_prefix, timerun, file.split('/')[-1].split('_')[2])
+
+    ##### begin Running logic
+    # first ensure that the wave data and cbathy have same time step,
+    # if they don't interpolate the wavdata to the cbathy time stamp
+    if ~np.in1d(rawspec['time'], cBathy['time']).all():
+        # interpolate the rawspec to the cbathy time frame
+        rawspec['Hs'] = np.interp(cBathy['epochtime'], xp=rawspec['epochtime'], fp=rawspec['Hs'])
+        rawspec['epochtime'] = cBathy['epochtime']
+    try:
+        time, idxObs, idxcBathy = sb.timeMatch(rawspec['epochtime'][:], range(rawspec['epochtime'][:].shape[0]),
+                                               cBathy['epochtime'], range(len(cBathy['time'])))
+        # find idx of waves below this value
+        badIdx = np.argwhere(rawspec['Hs'][idxObs.astype(int)] > waveHsThreshold).squeeze()
+    except TypeError:  # when cbath== None
+        badIdx = np.array([])
+    ##########################################
+    # Begin Thresholded kalman filtered logic
+    #########################################
+    ttO = np.size(cBathy['time'])-np.size(badIdx) # expected output time dimension
+    depthKF = np.zeros((ttO, cBathy['depthKF'].shape[1], cBathy['depthKF'].shape[2]))
+    depthKFE, P, depthfC, depthfCE = np.zeros_like(depthKF), np.zeros_like(depthKF), np.zeros_like(depthKF), np.zeros_like(depthKF)
+    timeO, etimeO, rc = np.zeros((ttO), dtype=object), np.zeros((ttO)), 0
+    if cBathy == None and loadPickleFname != None and os.path.isfile(loadPickleFname):
+        # need to catch the Nones before trying to loop over it
+        # load Old Cbathy
+        # print '          CBThresh: No cbathy found at this Time (dark?), using old Good Cbathy .... loading Pickle: %s' % loadPickleFname
+        # with open(loadPickleFname, 'rb') as handle:
+        #     cBathy = pickle.load(file=handle)
+        pass # don't make if its not new cBathy estimate
+    else:
+        for tt in range(len(cBathy['time'])):  # this may need to be changed for not implmented error above
+            # -- may need this for more time steps np.size(badIdx) < np.size(idxObs) and
+            # figure out if we have good waves (createing good cbathy) then if so do the new kalman filter logic here
+            if tt not in badIdx:  # if there's at least 1 good value,
+                # cbathy at time tt is considered good!
+                if rc >= 1:
+                    cbathyold = {'ym': cBathy['ym'],
+                                 'epochtime': etimeO[rc-1],
+                                 'xm': cBathy['xm'],
+                                 'depthKF': depthKF[rc-1],
+                                 'depthfC': depthfC[rc-1],
+                                 'P': P[rc-1],
+                                 'depthfCError': depthfCE[rc-1],
+                                 # 'k',
+                                 # 'depth':,
+                                 # 'fB': ,
+                                 'time': timeO[rc-1],
+                                 'depthKFError': depthKFE[rc-1]}
+                elif loadPickleFname is not None and os.path.isfile(loadPickleFname):
+                    with open(loadPickleFname, 'rb') as handle:
+                        cbathyold = pickle.load(handle)
+                        print '     CBThresh: wave height good, Kalman filtering from %s' % loadPickleFname
+                else:
+                    raise ImportError('You need a cBathy to seed the first kalman filter step ')
+                cBathySingle = extract_time(cBathy, tt)
+                temp = cbathy_kalman_filter(cBathySingle, cbathyold, rawspec['Hs'])
+                # overwrite old kalman filtered results with new kalman filtered results
+                depthKF[rc] = temp['depthKF']
+                depthKFE[rc] = temp['depthKFError']
+                P[rc] = temp['P']
+                depthfCE[rc] = temp['depthfCError']
+                depthfC[rc] = temp['depthfC']
+                timeO[rc] = temp['time']
+                etimeO[rc] = temp['epochtime']
+                rc +=1
+
+            else:  # cbathy @ time tt is considered bad!
+                pass
+        if np.size(timeO)>0:
+            # Done creating the 'day's newcBathy output
+            # save last file
+            savePickleFname = '/home/number/cmtb/cBathy_Study/pickles/%s_%s_TimeAvgcBathy.pickle' % (
+                version_prefix, timeO[-1].strftime('%Y%m%dT%H%M%SZ'))
+            print '      CBThresh: Kalman filtered, now saving pickle {}'.format(savePickleFname)
+            cBathyOut = {'ym': cBathy['ym'],
+                         'yFRF': cBathy['ym'],
+                         'epochtime': etimeO,
+                         'xm': cBathy['xm'],
+                         'xFRF': cBathy['xm'],
+                         'depthKF': depthKF,
+                         'depthfC': depthfC,
+                         'P': P,
+                         'depthfCError': depthfCE,
+                         'surveyMeanTime': etimeO[-1],
+                         'elevation': -depthKF,
+                         # 'k',
+                         # 'depth':,
+                         # 'fB': ,
+                         'time': timeO,
+                         'depthKFError': depthKFE}
+
+            with open(savePickleFname, 'wb') as handle:
+                # reduce if its more than one (still works on single dictionary)
+                cBathyOutPick = sb.reduceDict(cBathyOut, -1)
+                pickle.dump(cBathyOutPick, file=handle, protocol=pickle.HIGHEST_PROTOCOL)
+        else:
+            cBathyOut = None
+    return cBathyOut
