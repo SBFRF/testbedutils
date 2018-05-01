@@ -9,6 +9,7 @@ import geoprocess as gp
 import sblib as sb
 from anglesLib import geo2STWangle
 from getdatatestbed.getDataFRF import getObs, getDataTestBed
+import scipy.spatial
 
 def frf2ij(xfrf, yfrf, x0, y0, dx, dy, ni, nj):
     """Convert FRF coordinates to ij grid locations.
@@ -1163,6 +1164,38 @@ def convertGridNodes2ncsp(x0, y0, azi, xPos, yPos):
     northing = y0 + N_j + N_i
 
     return easting, northing
+
+def findNearestUnstructNode(xFRF, yFRF, ugridDict):
+
+    """
+    This script will take in the xFRF and yFRF coordinates of an instrument (or any other location of interest)
+    and then find the index of the closest node in an unstructured grid.  it also returns the distance between that the
+    position handed to the function and the closest grid node.
+
+    :param xFRF: xFRF location (of an instrument or other location of interest)
+
+    :param yFRF: yFRF location (of an instrument or other location of interest)
+
+    :param ugridDict:
+        :key xFRF: - xFRF of all the points in the unstructured grid
+        :key yFRF: - yFRF of all the points in the unstructured grid
+
+    :return:
+    ind - index in the list of grid points that is closest to the input xFRF and yFRF position
+    dist - distance from the unstruct grid point to the xFRF and yFRF position.
+    """
+
+    assert 'xFRF' in ugridDict.keys(), 'Error: xFRF is a required key in ugridDict'
+    assert 'yFRF' in ugridDict.keys(), 'Error: yFRF is a required key in ugridDict'
+
+    points = np.column_stack((ugridDict['xFRF'], ugridDict['yFRF']))
+    qPt = np.column_stack((xFRF, yFRF))
+
+    # compute nearest neighbor
+    kdt = scipy.spatial.cKDTree(points)
+    dist, ind = kdt.query(qPt, 1)
+
+    return ind, dist
 
 
 
