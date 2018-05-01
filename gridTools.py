@@ -9,6 +9,7 @@ from getdatatestbed.getDataFRF import getObs
 import geoprocess as gp
 import sblib as sb
 from anglesLib import geo2STWangle
+import MakeUpdatedBathyDEM as mbD
 
 def frf2ij(xfrf, yfrf, x0, y0, dx, dy, ni, nj):
     """Convert FRF coordinates to ij grid locations.
@@ -139,18 +140,18 @@ def makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=None, dSTR_e=None, scalecDict=No
     filelist = ['http://134.164.129.55/thredds/dodsC/FRF/geomorphology/elevationTransects/survey/surveyTransects.ncml']
     # this is just the location of the ncml for the transects!!!!!
 
-    nc_b_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TestNCfiles'
-    nc_b_name = 'backgroundDEMt0.nc'
+    nc_b_loc = '/home/david/BathyTroubleshooting/BackgroundFiles'
+    nc_b_name = 'backgroundDEMt0_tel.nc'
     # these together are the location of the standard background bathymetry that we started from.
 
     # Yaml files for my .nc files!!!!!
-    global_yaml = 'C:\Users\dyoung8\PycharmProjects\makebathyinterp\yamls\BATHY\FRFt0_global.yml'
-    var_yaml = 'C:\Users\dyoung8\PycharmProjects\makebathyinterp\yamls\BATHY\FRFt0_TimeMean_var.yml'
+    global_yaml = '/home/david/PycharmProjects/makebathyinterp/yamls/BATHY/FRFt0_global.yml'
+    var_yaml = '/home/david/PycharmProjects/makebathyinterp/yamls/BATHY/FRFt0_TimeMean_var.yml'
 
     # CS-array url - I just use this to get the position, not for any other data
     cs_array_url = 'http://134.164.129.55/thredds/dodsC/FRF/oceanography/waves/8m-array/2017/FRF-ocean_waves_8m-array_201707.nc'
     # where do I want to save any QA/QC figures
-    fig_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\Test Figures\TimeWA_figs'
+    fig_loc = '/home/david/BathyTroubleshooting/BackgroundFiles/TestFigs'
 
     #check scalecDict
     if scalecDict is None:
@@ -220,6 +221,10 @@ def makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=None, dSTR_e=None, scalecDict=No
     xFRFi_vec = old_bathy.variables['xFRF'][:]
     yFRFi_vec = old_bathy.variables['yFRF'][:]
 
+    # if xFRF, yFRF are masked, remove?
+    xFRFi_vec = np.array(xFRFi_vec)
+    yFRFi_vec = np.array(yFRFi_vec)
+
     # read out the dx and dy of the background grid!!!
     # assume this is constant grid spacing!!!!!
     dx = abs(xFRFi_vec[1] - xFRFi_vec[0])
@@ -271,7 +276,7 @@ def makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=None, dSTR_e=None, scalecDict=No
         gridDict['xFRFi_vec'] = xFRFi_vec
         gridDict['yFRFi_vec'] = yFRFi_vec
 
-        temp = subgridBounds2(surveyDict, gridDict, maxSpace=249)
+        temp = mbD.subgridBounds2(surveyDict, gridDict, maxSpace=249)
         x0 = temp['x0']
         x1 = temp['x1']
         y0 = temp['y0']
@@ -917,3 +922,172 @@ def CreateGridNodesInStatePlane(x0, y0, azi, dx, dy, ni, nj):
     jcoords = np.array([easting_j, northing_j])
 
     return icoords, jcoords
+
+def interpIntegratedBathy4UnstructGrid(ugridDict, THREDDS='FRF', forcedSurveyDate=None, bathy=None):
+
+    """
+    This function basically takes scattered x & y points and returns elevations at those points interpolated from the
+    most recent integrated bathy product.
+
+    DLY Note - 3/27/2018: this function has only been verified to work for NCSP meters!!!!
+                          other coordinate systems and english units have not been checked!!!
+
+    :param ugridDict:
+        :key x: - xFRF, NCSP Easting, UTM Easting, or Lat
+        :key y:  - yFRF, NCSP Northing, UTM Easting, or Lon
+        :key coord_system: - string containing the coordinate system for your corners ('FRF' 'utm', 'stateplane', or 'LAT/LON') (Default value = 'FRF')
+        :key units: ('meters', 'm') or ('feet', 'ft')
+
+        # note: if coord_system is 'UTM' this code assumes you are in zone number 18 and zone letter S!  This is the
+        # zone number/letter in the vicinity of the FRF property!!!!
+
+    :param THREDDS: 'FRF' or 'CHL', will default to 'FRF'
+    :param forcedSurveyDate: datestring in the format of '2017-10-10T00:00:00Z' or datetime. will use most recent survey if not specified.
+    :param bathy: this is blank unless you want to directly hand it a bathy dictionary.  the dictionary needs to be in the same format as the output of cmtb_data.getBathyIntegratedTransect()
+    :returns: out:
+        :key z: - elevation at each of those points interpolated from the integrated bathymetry product - units will be same as input.  will return nans where extrapolated.
+        :key surveyDate:  - datestring or datetime of the survey that these values came from.
+    """
+
+    # first check the coord_system string to see if it matches!
+    coord_list = ['FRF', 'LAT/LON', 'utm', 'stateplane', 'ncsp']
+    import pandas as pd
+    import string
+    exclude = set(string.punctuation)
+    columns = ['coord', 'user']
+    df = pd.DataFrame(index=range(0, np.size(coord_list)), columns=columns)
+    df['coord'] = coord_list
+    df['user'] = ugridDict['coord_system']
+    df['coordToken'] = df.coord.apply(lambda x: ''.join(ch for ch in str(x) if ch not in exclude).strip().upper())
+    df['coordToken'] = df.coordToken.apply(lambda x: ''.join(str(x).split()))
+    df['userToken'] = df.user.apply(lambda x: ''.join(ch for ch in str(x) if ch not in exclude).strip().upper())
+    df['userToken'] = df.userToken.apply(lambda x: ''.join(str(x).split()))
+    coordToken = np.unique(np.asarray(df['userToken']))[0]
+    assert df['coordToken'].str.contains(coordToken).any(), 'Error: invalid coord_system string.  Acceptable strings include %s' % coord_list
+
+    # first deal with lat/lon stuff
+    if coordToken == 'LATLON':
+        # if corners are in LAT/LON then we convert directly to FRF and work from that
+        temp = gp.LatLon2ncsp(ugridDict['y'], ugridDict['x'])
+        temp2 = gp.ncsp2FRF(temp['StateplaneE'], temp['StateplaneN'])
+        x = temp2['xFRF']  # these should be in m
+        y = temp2['yFRF']  # these should be in m
+    else:
+
+        # check to see if we are in m or feet
+        del df
+        units_list = ['meters', 'm', 'feet', 'ft']
+        columns = ['coord', 'user']
+        df = pd.DataFrame(index=range(0, np.size(units_list)), columns=columns)
+        df['units'] = units_list
+        df['user'] = ugridDict['units']
+        df['unitToken'] = df.units.apply(lambda x: ''.join(ch for ch in str(x) if ch not in exclude).strip().upper())
+        df['unitToken'] = df.unitToken.apply(lambda x: ''.join(str(x).split()))
+        df['userToken'] = df.user.apply(lambda x: ''.join(ch for ch in str(x) if ch not in exclude).strip().upper())
+        df['userToken'] = df.userToken.apply(lambda x: ''.join(str(x).split()))
+        unitToken = np.unique(np.asarray(df['userToken']))[0]
+        assert df['unitToken'].str.contains(unitToken).any(), 'Error: invalid units string.  Acceptable strings include %s' % units_list
+        feetFlag = False
+        if unitToken in ['FT', 'FEET']:
+            # convert to meters and flag
+            feetFlag = True
+            ugridDict['x'] = 0.3048*ugridDict['x']
+            ugridDict['y'] = 0.3048*ugridDict['y']
+        else:
+            pass
+
+        # convert to FRF coords.
+        if coordToken in ['STATEPLANE', 'NCSP']:
+            temp = gp.ncsp2FRF(ugridDict['x'], ugridDict['y'])
+            x = temp['xFRF']  # these should be in m
+            y = temp['yFRF']  # these should be in m
+        elif coordToken == 'UTM':
+            temp = gp.utm2ncsp(ugridDict['x'], ugridDict['y'], 18, 'S')
+            temp2 = gp.ncsp2FRF(temp['easting'], temp['northing'])
+            x = temp2['xFRF']
+            y = temp2['yFRF']
+        elif coordToken == 'FRF':
+            x = ugridDict['x']
+            y = ugridDict['y']
+        else:
+            pass
+    # okay, so I should have everything converted to FRF coordinates and meters.  Yay!
+    if bathy is None:
+        # i don't already have an integrated bathy, so now I pull the integrated bathymetry
+        if forcedSurveyDate is None:
+            forcedSurveyDate = DT.datetime.strftime(DT.datetime.now(), '%Y-%m-%dT%H:%M:%SZ')
+        elif isinstance(forcedSurveyDate, DT.datetime):
+            forcedSurveyDate = DT.datetime.strftime(forcedSurveyDate, '%Y-%m-%dT%H:%M:%SZ')
+        else:
+            pass
+
+        start_time = DT.datetime.strptime(forcedSurveyDate, '%Y-%m-%dT%H:%M:%SZ')
+
+        # pull that bathymetry down.
+        cmtb_data = getDataTestBed(start_time, start_time + DT.timedelta(days=0, hours=0, minutes=1), THREDDS)
+        bathy_data = cmtb_data.getBathyIntegratedTransect()
+    else:
+        # i already have pulled it so there is no reason to get it again
+        bathy_data = bathy
+
+    # now i interpolate
+    gridX = bathy_data['xFRF']
+    gridY = bathy_data['yFRF']
+    elevation = bathy_data['elevation']
+    stime = bathy_data['time']
+    # get me a grid!!!!
+    xGrid, yGrid = np.meshgrid(gridX, gridY)
+
+    # interpolate to it like a boss.
+    # reshape my DEM into a list of points
+    xPts = xGrid.reshape((1, xGrid.shape[0] * xGrid.shape[1]))[0]
+    yPts = yGrid.reshape((1, yGrid.shape[0] * yGrid.shape[1]))[0]
+    points = (xPts, yPts)
+    values = elevation.reshape((1, elevation.shape[0] * elevation.shape[1]))[0]
+    # do the interpolation
+    newElevation = griddata(points, values, (x, y), method='linear')
+
+    # this elevation is in meters
+    # do I need to convert back?
+    if feetFlag:
+        # convert back to ft
+        newElevation = 3.28084 * newElevation
+    else:
+        pass
+
+    # put this stuff in my return dict and declare glorious victory?
+    out = {}
+    out['z'] = newElevation
+    out['surveyDate'] = stime
+
+    return out
+
+def convertGridNodes2ncsp(x0, y0, azi, xPos, yPos):
+
+    """
+    this function is used to convert the cms grid nodes from the CMS convention in the .tel file to NCSP so
+    you can interpolate our gridded bathymetry onto it.
+
+    :param x0: integer/float describing origin in x (easting)
+    :param y0: integer/float describing origin in y (northing)
+    :param azi: grid azimuth defining rotation of grid
+    :param xPos: 1D np.array that contains the x-distance from the origin from the .tel file
+    :param yPos: 1D np.array that contains the y-distance from the origin from the .tel file
+    :return
+            easting: 1D np.array of the NC stateplane easting of the grid nodes
+            northing: 1D np.array of the NC stateplane northing of the grid nodes
+
+    """
+
+    # calculating change in alongshore coordinate for northing and easting
+    # given the associated dx dy
+    E_j = yPos * np.cos(np.deg2rad(azi + 90))
+    N_j = yPos * np.sin(np.deg2rad(azi + 90))
+    # calculating change in cross-shore coordinate for northing and easting
+    E_i = xPos * np.cos(np.deg2rad(azi))
+    N_i = xPos * np.sin(np.deg2rad(azi))
+    # add em all up.
+    easting = x0 + E_j + E_i
+    northing = y0 + N_j + N_i
+
+    return easting, northing
