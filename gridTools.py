@@ -9,6 +9,8 @@ import geoprocess as gp
 import sblib as sb
 from anglesLib import geo2STWangle
 import MakeUpdatedBathyDEM as mbD
+from getdatatestbed import getDataFRF
+import scipy.spatial
 
 def frf2ij(xfrf, yfrf, x0, y0, dx, dy, ni, nj):
     """Convert FRF coordinates to ij grid locations.
@@ -450,12 +452,15 @@ def makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=None, dSTR_e=None, scalecDict=No
     xFRF = xFRFi[0, :]
     yFRF = yFRFi[:, 1]
 
+
     cleaned_elevation = np.ma.masked_array(elevation, np.isnan(elevation))
     cleaned_weights = np.ma.masked_array(weights, np.isnan(weights))
 
     # do a nanmean on the elevation!!!!
     Z = np.ma.average(cleaned_elevation, axis=0, weights=cleaned_weights)
 
+
+    """
     # plot the mean to see if that is the problem?
     fig_name = 'backgroundDEM_' + 'TimeMean_NoScaleC' + '.png'
     plt.pcolor(xFRFi_vec, yFRFi_vec, Z[:, :], cmap=plt.cm.jet, vmin=-13, vmax=5)
@@ -466,6 +471,7 @@ def makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=None, dSTR_e=None, scalecDict=No
     plt.legend()
     plt.savefig(os.path.join(fig_loc, fig_name))
     plt.close()
+    """
 
 
     # run this through the DEM_generator function to smooth it....
@@ -536,7 +542,7 @@ def makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=None, dSTR_e=None, scalecDict=No
     nc_dict['xFRF'] = xFRF
     nc_dict['yFRF'] = yFRF
 
-    nc_name = 'backgroundDEMt0_TimeMean' + '.nc'
+    nc_name = 'backgroundDEMt0tel_TimeMean' + '.nc'
     makenc.makenc_t0BATHY(os.path.join(dir_loc, nc_name), nc_dict, globalYaml=global_yaml, varYaml=var_yaml)
 
     if plot is None:
@@ -1116,7 +1122,7 @@ def interpIntegratedBathy4UnstructGrid(ugridDict, THREDDS='FRF', forcedSurveyDat
         start_time = DT.datetime.strptime(forcedSurveyDate, '%Y-%m-%dT%H:%M:%SZ')
 
         # pull that bathymetry down.
-        cmtb_data = getDataTestBed(start_time, start_time + DT.timedelta(days=0, hours=0, minutes=1), THREDDS)
+        cmtb_data = getDataFRF.getDataTestBed(start_time, start_time + DT.timedelta(days=0, hours=0, minutes=1), THREDDS)
         bathy_data = cmtb_data.getBathyIntegratedTransect()
     else:
         # i already have pulled it so there is no reason to get it again
