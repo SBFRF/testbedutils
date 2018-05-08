@@ -1097,7 +1097,7 @@ def interpIntegratedBathy4UnstructGrid(ugridDict, THREDDS='FRF', forcedSurveyDat
             x = ugridDict['x']
             y = ugridDict['y']
 
-    # okay, so I should have everything converted to FRF coordinates and meters.  Yay!
+    # okay, so I should have everything converted to FRF coordinates and meters.
     if bathy is None:
         # i don't already have an integrated bathy, so now I pull the integrated bathymetry
         if forcedSurveyDate is None:
@@ -1145,7 +1145,6 @@ def interpIntegratedBathy4UnstructGrid(ugridDict, THREDDS='FRF', forcedSurveyDat
     return out
 
 def convertGridNodes2ncsp(x0, y0, azi, xPos, yPos):
-
     """this function is used to convert the cms grid nodes from the CMS convention in the .tel file to NCSP so
     you can interpolate our gridded bathymetry onto it.
 
