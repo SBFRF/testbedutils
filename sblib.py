@@ -12,7 +12,6 @@ import numpy as np
 import datetime as DT
 import warnings
 import netCDF4 as nc
-import anglesLib
 import math
 
 ########################################
@@ -75,6 +74,7 @@ class Bunch(object):
     :return class: with objects being the same as the keys from dictionary
 
     Returns:
+        class
 
     """
 
@@ -89,13 +89,13 @@ def makeNCdir(netCDFdir, version_prefix, date_str, model):
       netCDFdir: parent directory for the netCDF files to be saved
       version_prefix: what version of the model are you running
       date_str: this is the date string that tells this thing what month/year it is.
-    it doesn't matter if you hand it the file savename (WITHOUT the COLONS) or the input datestring
-    (WITH THE COLONS) because it only looks at the first 7 characters, which are the same either way
+            it doesn't matter if you hand it the file savename (WITHOUT the COLONS) or the input datestring
+            (WITH THE COLONS) because it only looks at the first 7 characters, which are the same either way
       model: this is the name of the model you are running -> this is in here because some
-    of the models have the same version prefixes
+            of the models have the same version prefixes
 
     Returns:
-      path
+      path (str)
 
     """
     import os
@@ -123,16 +123,17 @@ def statsBryant(observations, models):
 
     Returns:
       dictiornay
-      :key  'bias' average of residuals
-      :key  'RMSEdemeaned': RMSEdemeaned,
-      :key  'RMSE': R oot mean square error
-      :key  'RMSEnorm': normalized root Mean square error also Percent RMSE
-      :key  'scatterIndex': ScatterIndex
-      :key  'symSlope': symetrical slope
-      :key  'corr': R^2 --- coefficient of determination
-      :key  'PscoreWilmont': performance score developed by Wilmont
-      :key  'PscoreIMEDS':  see Hanson 2007 for description
-      :key  'residuals': model - observations
+            'bias' average of residuals
+            'RMSEdemeaned': RMSEdemeaned,
+            'RMSE': R oot mean square error
+            'RMSEnorm': normalized root Mean square error also Percent RMSE
+            'scatterIndex': ScatterIndex
+            'symSlope': symetrical slope
+            'corr': r
+            'r2': coefficient of determination (corr squared)
+            'PscoreWilmont': performance score developed by Wilmont
+            'PscoreIMEDS':  see Hanson 2007 for description
+            'residuals': model - observations
       :
 
     """
@@ -206,8 +207,10 @@ def statsBryant(observations, models):
 
 def makegif(flist, ofname, size=None, dt=0.5):
     """This function uses imageio to create gifs from a list of images
-    
-    kwargs for mimwrite http://imageio.readthedocs.org/en/latest/format_gif.html#gif
+        requires imageio library
+
+    References:
+        http://imageio.readthedocs.org/en/latest/format_gif.html#gif
 
     Args:
       flist: a sorted list of files to be made into gifs (including path)
@@ -321,6 +324,7 @@ def roundtime(timeIn=None, roundTo=60):
       timeIn: Default value = None)
 
     Returns:
+        rounded datetime objects
 
     """
     # making dt a list
@@ -361,34 +365,30 @@ def createDateList(start, end, delta):
       delta: 
 
     Returns:
-
+        generator
     """
     curr = start
     while curr <= end:
         yield curr
         curr += delta
 
-def whatIsYesterday(now=DT.date.today(), string=1, days=1):
+def whatIsYesterday(now=DT.date.today(), stringOut=True, days=1):
     """this function finds what yesterday's date string is in the format
     of yyyy-mm-dd
 
     Args:
-      s: now:: the date to start counting backwards from
-    
-    string:: (1) output is in stiring format (default)
-    (2) output is in datetime format
-    days:: how many days to count backwards from
-    default = 1
-    :return
-    the date of yesterday ( "days" previous to input 'now')
-      now: Default value = DT.date.today()
+        now: the date to start counting backwards from (default = right now)
+        stringOut (bool): calls for string output (default = True) false returns Datetime object
+        days (int): how many days to count backwards from (Default = 1)
 
     Returns:
+        the date of yesterday ( "days" previous to input 'now')
+        Default value = DT.date.today()
 
     """
 
     yesterday = now - DT.timedelta(days)
-    if string == 1:
+    if stringOut == True:
         yesterday = DT.date.strftime(yesterday, '%Y-%m-%d')
     return yesterday
 
@@ -412,8 +412,8 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
 
     Returns:
       time, (as float)
-      obs_data_s -  data as input
-      model_data_s  - data as input
+      obs_data_s: data as input
+      model_data_s: data as input
 
     """
 
@@ -551,6 +551,27 @@ def timeMatch_altimeter(altTime, altData, modTime, modData, window=30 * 60):
 ########################################
 #  following functions deal with finding things
 ########################################
+def dist(x1, y1, x2, y2, x0, y0):
+    """This function computes the perpendicular distance between a line connecting points p1 (x1, y1) and p2 (x2, y2)
+    and a third point (x0, y0)
+
+    Args:
+      x1: x-coord of first line end point
+      y1: y-coord of first line end point
+      x2: x-coord of second line end point
+      y2: y-coord of second line end point
+      x0: x-coord of comparison point
+      y0: y-coord of comparison point
+
+    Returns:
+        distance of point
+
+    """
+
+    dist = np.abs((y2 - y1) * x0 - (x2 - x1) * y0 + x2 * y1 - y2 * x1) / float(
+        math.sqrt((y2 - y1) ** 2 + (x2 - x1) ** 2))
+
+    return dist
 
 def findbtw(data, lwth, upth, type=0):
     """This function finds both values and indicies of a list values between two values
@@ -561,15 +582,16 @@ def findbtw(data, lwth, upth, type=0):
       lwth: lower level threshold
       data: list (or numpy array?)
       type: 0 = non inclusive  ie. lwth < list <  upth
-    1 = low incluisve  ie. lwth <=list <  upth
-    2 = high inclusive ie. lwth < list <= upth
-    3 = all inclusive  ie  lwth <=list <= upth
-    :return
-    indicies returns idices that meet established criteria
-    values   returns associated values from da (Default value = 0)
+
+            1 = low incluisve  ie. lwth <=list <  upth
+
+            2 = high inclusive ie. lwth < list <= upth
+
+            3 = all inclusive  ie  lwth <=list <= upth
 
     Returns:
-
+        indicies returns idices that meet established criteria
+        values   returns associated values from da (Default value = 0)
     """
     indices = []
     vals = []
@@ -621,9 +643,9 @@ def find_nearest(array, value):
     Args:
       array: array to to find things in
       value: value to search against
-    :return returns a number from the array value, that is closest to value input
 
     Returns:
+        a number from the array value, that is closest to value input
 
     """
     idx = (np.abs(array - value)).argmin()
@@ -684,24 +706,4 @@ def waveStat(spec, dirbins, frqbins, lowFreq=0.05, highFreq=0.5):
     """
     raise NotImplementedError('This function is depricated, The development should be moved to sb.waveLib version!!!!')
 
-
-def dist(x1,y1, x2,y2, x0,y0):
-    """This function computes the perpendicular distance between a line connecting points p1 (x1, y1) and p2 (x2, y2)
-    and a third point (x0, y0)
-
-    Args:
-      x1: x-coord of first line end point
-      y1: y-coord of first line end point
-      x2: x-coord of second line end point
-      y2: y-coord of second line end point
-      x0: x-coord of comparison point
-      y0: y-coord of comparison point
-
-    Returns:
-
-    """
-
-    dist = np.abs((y2-y1)*x0 - (x2-x1)*y0 + x2*y1 - y2*x1)/float(math.sqrt((y2 - y1)**2 + (x2 - x1)**2))
-
-    return dist
 
