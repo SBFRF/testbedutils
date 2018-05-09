@@ -30,22 +30,29 @@ def cbathy_kalman_filter(new, prior, waveHs):
     algorithm, this operates on a single time step only!!!
 
     Args:
-      new: a dictionary with keys associated with get data
-    :key 'xm': frf x coords
-    :key 'ym': frf y coords
-    :key 'time': current time
-    :key 'depthfCError': curent estimate error
-    :key 'depthfC': current estimate
-      prior: a saved dictionary with bathys derived from times when wave heights were below the threshold of choice
-    :key 'time':
-    :key 'depthKF': previous filtered estimate
-    :key 'P':
-      waveHs: return: new dictionary
-    :key 'P':
+      new(dict): a dictionary with keys associated with get data
+         'xm': frf x coords
+
+         'ym': frf y coords
+
+         'time': current time
+
+         'depthfCError': curent estimate error
+
+         'depthfC': current estimate
+
+      prior (dict): a saved dictionary with bathys derived from times when wave heights were below the threshold of choice
+         'time':
+
+         'depthKF': previous filtered estimate
+
+         'P':
+      waveHs (float): single wave height value
+
 
     Returns:
       new dictionary
-      :key 'P':
+         'P':
 
     """
     if type(prior['time']) == list and len(prior['time']) == 1:
@@ -123,21 +130,29 @@ def cBathy_ThresholdedLogic(cBathy, rawspec, waveHsThreshold=1.2):
 
     Returns:
       the original cBathy dictionary
-      :key 'ym': yfrf coords
-      :key 'yFRF': yfrf coords
-      :key 'epochtime': epoch time
-      :key 'xm': xfrf coords
-      :key 'xFRF': xfrf coords
-      :key 'depthKF': kalman filtered depth estimate (updated with only estimates below wave height threshold
-      :key 'depthfC': individual depth estimates
-      :key 'P': Process error
-      :key 'depthfCError: individual depth estimate error
-      :key 'surveyMeanTime': last time data was updated
-      :key 'elevation': negative depth KF values
-      :key 'k', Does not return
-      :key 'depth':, does not return
-      :key fB': , does not return
-      :key 'time': date time objects for each filtered estimate
+           'ym': yfrf coords
+
+           'yFRF': yfrf coords
+
+           'epochtime': epoch time
+
+           'xm': xfrf coords
+
+           'xFRF': xfrf coords
+
+           'depthKF': kalman filtered depth estimate (updated with only estimates below wave height threshold
+
+           'depthfC': individual depth estimates
+
+           'P': Process error
+
+           'depthfCError: individual depth estimate error
+
+           'surveyMeanTime': last time data was updated
+
+           'elevation': negative depth KF values
+
+           'time': date time objects for each filtered estimate
 
     """
     ##### define inital global variables for function
