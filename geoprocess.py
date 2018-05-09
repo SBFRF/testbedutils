@@ -78,7 +78,7 @@ def FRF2ncsp(xFRF, yFRF):
 def ncsp2FRF(p1, p2):
     """this function converts nc StatePlane (3200 fips) to FRF coordinates
     based on kent Hathaways Code
-        #
+    #
     #  15 Dec 2014
     #  Kent Hathaway.
     #  Translated from Matlab to python 2015-11-30 - Spicer Bak
@@ -100,10 +100,10 @@ def ncsp2FRF(p1, p2):
     #  spE = state plane easting (m)
     
     NAD83-86	2014
-    Origin Latitude          36.1775975
-    Origin Longitude         75.7496860
-    m/degLat             110963.357
-    m/degLon              89953.364
+    Origin Latitude       36.1775975
+    Origin Longitude      75.7496860
+    m/degLat              110963.357
+    m/degLon               89953.364
     GridAngle (deg)          18.1465
     Angle FRF to Lat/Lon     71.8535
     Angle FRF to State Grid  69.9747
@@ -114,8 +114,10 @@ def ncsp2FRF(p1, p2):
     p1=566.93;  p2=515.11;  % south rail at 1860
     ALat = 36.1836000
     ALon = 75.7454804
-    p2= 36.18359977;  p1=-75.74548109;
-    SP:  p1 = 902307.92; 	p2 = 274771.22;
+    p2= 36.18359977;
+    p1=-75.74548109;
+    SP:  p1 = 902307.92;
+    p2 = 274771.22;
 
     Args:
       spE: North carolina state plane coordinate system - Easting
@@ -132,7 +134,6 @@ def ncsp2FRF(p1, p2):
 
     """
     r2d = 180.0 / np.pi;
-
     Eom = 901951.6805;  # % E Origin State Plane
     Nom = 274093.1562;  # % N Origin State Plane
     spAngle = (90 - 69.974707831) / r2d
@@ -184,7 +185,8 @@ def ncsp2LatLon(spE, spN):
     EPSG = 3358  # taken from spatialreference.org/ref/epsg/3358
     # NC stateplane NAD83
     spNC = pyproj.Proj(init="epsg:%s" %EPSG)
-    LL = pyproj.Proj(init='epsg:4269')  # epsg for NAD83 projection
+    epsgLL =  4269 # 4326
+    LL = pyproj.Proj(init='epsg:{}'.format(epsgLL))  # epsg for NAD83 projection
     lon, lat = pyproj.transform(spNC, LL, spE, spN)
     ans = {'lon': lon, 'lat': lat, 'StateplaneE': spE, 'StateplaneN': spN}
     return ans
@@ -216,7 +218,9 @@ def LatLon2ncsp(lon, lat):
     EPSG = 3358  # taken from spatialreference.org/ref/epsg/3358
     # NC stateplane NAD83
     spNC = pyproj.Proj(init="epsg:%s" %EPSG)
-    LL = pyproj.Proj(init='epsg:4269')  # epsg for NAD83 projection
+    epsgLL =  4269 # 4326
+    LL = pyproj.Proj(init='epsg:{}'.format(epsgLL))  # epsg for NAD83 projection
+
     spE, spN = pyproj.transform(LL, spNC, lon, lat)
     ans = {'lon': lon, 'lat': lat, 'StateplaneE': spE, 'StateplaneN': spN}
     return ans
@@ -309,14 +313,14 @@ def FRFcoord(p1, p2, coordType=None):
         FRF2 = (p2 > -10000) and (p2 < 10000)
 
     # Determine Data type
-    if LL1 and LL2:  # lat/lon input
+    if LL1 and LL2 or coordType in ['LL', 'geographic', 'LatLon']:  # lat/lon input
         sp = LatLon2ncsp(p1, p2)  # convert from lon/lat to state plane
         frf = ncsp2FRF(sp['StateplaneE'], sp['StateplaneN'])  # convert from nc state plane to FRF coords
         utm = LatLon2utm(p2, p1)  # convert to utm from lon/lat
         coordsOut = {'xFRF': frf['xFRF'], 'yFRF': frf['yFRF'], 'StateplaneE': sp['StateplaneE'],
                      'StateplaneN': sp['StateplaneN'], 'Lat': p2, 'Lon': p1, 'utmE': utm['utmE'], 'utmN': utm['utmN']}
 
-    elif SP1 and SP2:  # state plane input
+    elif SP1 and SP2 or coordType in ['spnc', 'ncsp']:  # state plane input
         frf = ncsp2FRF(p1, p2)     # convert state plane to FRF
         ll = ncsp2LatLon(p1, p2)  # convert state plane to Lat Lon
         utm = LatLon2utm(ll['lat'], ll['lon'])
