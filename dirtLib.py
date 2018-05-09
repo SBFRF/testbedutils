@@ -3,7 +3,6 @@ import numpy as np
 
 # density of water
 def dens_fun(t, s):
-
     """this function is used to estimate the density of water given the temperature and salinity.  It is the python translation of Brad Johnson's denfun in Matlab.
     Approximation is based on that of Van Rijn, L.C. (1993) Handbook for Sediment Transport by Currents and Waves
 
@@ -32,7 +31,6 @@ def dens_fun(t, s):
 
 # kinematic viscosity
 def kvis_fun(t):
-
     """this function is used to estimate the kinematic viscosity of water given the temperature.  It is the Python translation of Brad Johnson's kvisfun in Matlab.
     Approximation is based on that of Van Rijn, L.C. (1993) Handbook for Sediment Transport by Currents and Waves
 
@@ -49,7 +47,6 @@ def kvis_fun(t):
 
 # fall velocity
 def vfall(d50, t, s, sg):
-
     """this function is used to estimate the fall velocity of a particular grain size based on Soulsby's (1997) optimization.
     It is the Python translation of Brad Johnson's vfall function in Matlab, which, based on the docstring in that .m file, he got from Jarrell Smith
 
@@ -62,6 +59,8 @@ def vfall(d50, t, s, sg):
     Returns:
       w_f - terminal velocity in m/s
 
+    References
+        Soulsby's (1997)
     """
 
     g = 9.81  # acceleration due to gravity (m2/s)
