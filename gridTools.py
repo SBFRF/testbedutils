@@ -8,6 +8,8 @@ import makenc
 import geoprocess as gp
 import sblib as sb
 from anglesLib import geo2STWangle
+from getdatatestbed import getDataFRF
+import scipy.spatial
 
 def frf2ij(xfrf, yfrf, x0, y0, dx, dy, ni, nj):
     """Convert FRF coordinates to ij grid locations.
@@ -21,24 +23,37 @@ def frf2ij(xfrf, yfrf, x0, y0, dx, dy, ni, nj):
       x0(float): Grid origin x-coordinate (FRF)
       y0(float): Grid origin y-coordinate (FRF)
       dx(float): Grid resolution in x-direction.
+        can be array of variable spaced cells, if so will handle it as cell centric values
       dy(float): Grid resolution in y-direction.
       ni(int): Number of grid cells in the i direction.
       nj(int): Number of grid cells in the j direction.
 
     Returns:
-
+        i and j locations in cell
     """
     dx_is_single_value = isinstance(dx, (float, int, long))
     dy_is_single_value = isinstance(dy, (float, int, long))
 
-    # This routine does not handle variable grid spacing.
+    # This routine assumes cell centric values (more cells than dx/dy values)
     if not dx_is_single_value or not dy_is_single_value:
-        raise NotImplementedError('This routine does not handle variable grid spacing')
+        assert ni-1 == dx.shape[0], 'cell number must be greater than cell size '
+        assert nj-1 == dy.shape[0], 'cell number must be greater than cell size '
+        varibleSpaced = True
 
-    xFRFgrid = x0 - np.arange(ni - 1)*dx - 0.5*dx
-    yFRFgrid = y0 - np.arange(nj - 1)*dy - 0.5*dy
-
-    i = np.abs(xfrf - xFRFgrid).argmin()
+    if varibleSpaced == True:
+        raise  NotImplementedError('See example in CMS wave')
+        # shift origin to cell center instead of cell vertex
+        x0N = x0 - dx[0]/2
+        y0N = y0 - dy[0]/2
+        # create new dx/dy array
+        #dxN = dx[:-1] + np.diff(dx)/2
+        # dyN = dy[:-1] + np.diff(dy)/2
+        xFRFgrid, yFRFgrid = createGridNodesinFRF(x0N, y0N, dx, dy, ni, nj)
+        xFRFgrid = x0 - np.arange(ni - 1) * dx
+    else:
+        xFRFgrid = x0 - np.arange(ni - 1) * dx - 0.5 * dx  # cell centric position of newly generated grid points in xFRF
+        yFRFgrid = y0 - np.arange(nj - 1) * dy - 0.5 * dy  # cell centric position of newly generated grid points in yFRF
+    i = np.abs(xfrf - xFRFgrid).argmin()  # find i and j values close to these locations
     j = np.abs(yfrf - yFRFgrid).argmin()
 
     # Convert from python base 0 indexing to STWAVE base 1.
@@ -210,6 +225,7 @@ def makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=None, dSTR_e=None, scalecDict=No
       netCDF file of the time mean bathymetry
 
     """
+    import MakeUpdatedBathyDEM as mbD
     # TODO add directions as to where to import these or how to get them, where they should be located ....
     from bsplineFunctions import bspline_pertgrid
     from scaleCinterp_python.DEM_generator import DEM_generator
@@ -218,18 +234,18 @@ def makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=None, dSTR_e=None, scalecDict=No
     filelist = ['http://134.164.129.55/thredds/dodsC/FRF/geomorphology/elevationTransects/survey/surveyTransects.ncml']
     # this is just the location of the ncml for the transects!!!!!
 
-    nc_b_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TestNCfiles'
-    nc_b_name = 'backgroundDEMt0.nc'
+    nc_b_loc = '/home/david/BathyTroubleshooting/BackgroundFiles'
+    nc_b_name = 'backgroundDEMt0_tel.nc'
     # these together are the location of the standard background bathymetry that we started from.
 
     # Yaml files for my .nc files!!!!!
-    global_yaml = 'C:\Users\dyoung8\PycharmProjects\makebathyinterp\yamls\BATHY\FRFt0_global.yml'
-    var_yaml = 'C:\Users\dyoung8\PycharmProjects\makebathyinterp\yamls\BATHY\FRFt0_TimeMean_var.yml'
+    global_yaml = '/home/david/PycharmProjects/makebathyinterp/yamls/BATHY/FRFt0_global.yml'
+    var_yaml = '/home/david/PycharmProjects/makebathyinterp/yamls/BATHY/FRFt0_TimeMean_var.yml'
 
     # CS-array url - I just use this to get the position, not for any other data
     cs_array_url = 'http://134.164.129.55/thredds/dodsC/FRF/oceanography/waves/8m-array/2017/FRF-ocean_waves_8m-array_201707.nc'
     # where do I want to save any QA/QC figures
-    fig_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\Test Figures\TimeWA_figs'
+    fig_loc = '/home/david/BathyTroubleshooting/BackgroundFiles/TestFigs'
 
     #check scalecDict
     if scalecDict is None:
@@ -242,14 +258,10 @@ def makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=None, dSTR_e=None, scalecDict=No
     #check dSTR_s
     if dSTR_s is None:
         dSTR_s = '1970-01-01T00:00:00Z' # set it to before the first survey
-    else:
-        pass
 
     #check dSTR_e
     if dSTR_e is None:
         dSTR_e = DT.datetime.strftime(DT.datetime.now(), '%Y-%m-%dT%H:%M:%SZ')  # set it to right now
-    else:
-        pass
 
     # force the survey to start at the first of the month and end at the last of the month!!!!
     dSTR_s = dSTR_s[0:7] + '-01T00:00:00Z'
@@ -298,6 +310,10 @@ def makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=None, dSTR_e=None, scalecDict=No
     Zi = old_bathy.variables['elevation'][:]
     xFRFi_vec = old_bathy.variables['xFRF'][:]
     yFRFi_vec = old_bathy.variables['yFRF'][:]
+
+    # if xFRF, yFRF are masked, remove?
+    xFRFi_vec = np.array(xFRFi_vec)
+    yFRFi_vec = np.array(yFRFi_vec)
 
     # read out the dx and dy of the background grid!!!
     # assume this is constant grid spacing!!!!!
@@ -350,7 +366,7 @@ def makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=None, dSTR_e=None, scalecDict=No
         gridDict['xFRFi_vec'] = xFRFi_vec
         gridDict['yFRFi_vec'] = yFRFi_vec
 
-        temp = subgridBounds2(surveyDict, gridDict, maxSpace=249)
+        temp = mbD.subgridBounds2(surveyDict, gridDict, maxSpace=249)
         x0 = temp['x0']
         x1 = temp['x1']
         y0 = temp['y0']
@@ -445,12 +461,15 @@ def makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=None, dSTR_e=None, scalecDict=No
     xFRF = xFRFi[0, :]
     yFRF = yFRFi[:, 1]
 
+
     cleaned_elevation = np.ma.masked_array(elevation, np.isnan(elevation))
     cleaned_weights = np.ma.masked_array(weights, np.isnan(weights))
 
     # do a nanmean on the elevation!!!!
     Z = np.ma.average(cleaned_elevation, axis=0, weights=cleaned_weights)
 
+
+    """
     # plot the mean to see if that is the problem?
     fig_name = 'backgroundDEM_' + 'TimeMean_NoScaleC' + '.png'
     plt.pcolor(xFRFi_vec, yFRFi_vec, Z[:, :], cmap=plt.cm.jet, vmin=-13, vmax=5)
@@ -461,6 +480,7 @@ def makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=None, dSTR_e=None, scalecDict=No
     plt.legend()
     plt.savefig(os.path.join(fig_loc, fig_name))
     plt.close()
+    """
 
 
     # run this through the DEM_generator function to smooth it....
@@ -531,7 +551,7 @@ def makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=None, dSTR_e=None, scalecDict=No
     nc_dict['xFRF'] = xFRF
     nc_dict['yFRF'] = yFRF
 
-    nc_name = 'backgroundDEMt0_TimeMean' + '.nc'
+    nc_name = 'backgroundDEMt0tel_TimeMean' + '.nc'
     makenc.makenc_t0BATHY(os.path.join(dir_loc, nc_name), nc_dict, globalYaml=global_yaml, varYaml=var_yaml)
 
     if plot is None:
@@ -1011,33 +1031,31 @@ def CreateGridNodesInStatePlane(x0, y0, azi, dx, dy, ni, nj):
     return icoords, jcoords
 
 def interpIntegratedBathy4UnstructGrid(ugridDict, THREDDS='FRF', forcedSurveyDate=None, bathy=None):
-    """This function basically takes scattered x & y points and returns elevations at those points interpolated from the
+
+    """
+    This function basically takes scattered x & y points and returns elevations at those points interpolated from the
     most recent integrated bathy product.
-    
+
     DLY Note - 3/27/2018: this function has only been verified to work for NCSP meters!!!!
                           other coordinate systems and english units have not been checked!!!
 
-    Args:
-      ugridDict: key 'x': - xFRF, NCSP Easting, UTM Easting, or Lat
-      ugridDict: key 'y': - yFRF, NCSP Northing, UTM Easting, or Lon
-      ugridDict: key 'coord_system': - string containing the coordinate system for your corners ('FRF' 'utm', 'stateplane', or 'LAT/LON') (Default value = 'FRF')
-      ugridDict: key 'units': ('meters', 'm') or ('feet', 'ft')
-    
+    :param ugridDict:
+        :key x: - xFRF, NCSP Easting, UTM Easting, or Lat
+        :key y:  - yFRF, NCSP Northing, UTM Easting, or Lon
+        :key coord_system: - string containing the coordinate system for your corners ('FRF' 'utm', 'stateplane', or 'LAT/LON') (Default value = 'FRF')
+        :key units: ('meters', 'm') or ('feet', 'ft')
 
-      THREDDS: FRF' or 'CHL', will default to 'FRF'
-      forcedSurveyDate: datestring in the format of '2017-10-10T00:00:00Z' or datetime. will use most recent survey if not specified. (Default value = None)
-      bathy: this is blank unless you want to directly hand it a bathy dictionary.  the dictionary needs to be in the same format as the output of cmtb_data.getBathyIntegratedTransect() (Default value = None)
+        # note: if coord_system is 'UTM' this code assumes you are in zone number 18 and zone letter S!  This is the
+        # zone number/letter in the vicinity of the FRF property!!!!
 
-    Returns:
-      out:
-      :key z: - elevation at each of those points interpolated from the integrated bathymetry product - units will be same as input.  will return nans where extrapolated.
-      :key surveyDate:  - datestring or datetime of the survey that these values came from.
-
-
-    # note: if coord_system is 'UTM' this code assumes you are in zone number 18 and zone letter S!  This is the
-    # zone number/letter in the vicinity of the FRF property!!!!
+    :param THREDDS: 'FRF' or 'CHL', will default to 'FRF'
+    :param forcedSurveyDate: datestring in the format of '2017-10-10T00:00:00Z' or datetime. will use most recent survey if not specified.
+    :param bathy: this is blank unless you want to directly hand it a bathy dictionary.  the dictionary needs to be in the same format as the output of cmtb_data.getBathyIntegratedTransect()
+    :returns: out:
+        :key z: - elevation at each of those points interpolated from the integrated bathymetry product - units will be same as input.  will return nans where extrapolated.
+        :key surveyDate:  - datestring or datetime of the survey that these values came from.
     """
-    from getdatatestbed.getDataFRF import getDataTestBed
+
     # first check the coord_system string to see if it matches!
     coord_list = ['FRF', 'LAT/LON', 'utm', 'stateplane', 'ncsp']
     import pandas as pd
@@ -1062,6 +1080,7 @@ def interpIntegratedBathy4UnstructGrid(ugridDict, THREDDS='FRF', forcedSurveyDat
         x = temp2['xFRF']  # these should be in m
         y = temp2['yFRF']  # these should be in m
     else:
+
         # check to see if we are in m or feet
         del df
         units_list = ['meters', 'm', 'feet', 'ft']
@@ -1081,7 +1100,8 @@ def interpIntegratedBathy4UnstructGrid(ugridDict, THREDDS='FRF', forcedSurveyDat
             feetFlag = True
             ugridDict['x'] = 0.3048*ugridDict['x']
             ugridDict['y'] = 0.3048*ugridDict['y']
-
+        else:
+            pass
 
         # convert to FRF coords.
         if coordToken in ['STATEPLANE', 'NCSP']:
@@ -1104,11 +1124,13 @@ def interpIntegratedBathy4UnstructGrid(ugridDict, THREDDS='FRF', forcedSurveyDat
             forcedSurveyDate = DT.datetime.strftime(DT.datetime.now(), '%Y-%m-%dT%H:%M:%SZ')
         elif isinstance(forcedSurveyDate, DT.datetime):
             forcedSurveyDate = DT.datetime.strftime(forcedSurveyDate, '%Y-%m-%dT%H:%M:%SZ')
+        else:
+            pass
 
         start_time = DT.datetime.strptime(forcedSurveyDate, '%Y-%m-%dT%H:%M:%SZ')
 
         # pull that bathymetry down.
-        cmtb_data = getDataTestBed(start_time, start_time + DT.timedelta(days=0, hours=0, minutes=1), THREDDS)
+        cmtb_data = getDataFRF.getDataTestBed(start_time, start_time + DT.timedelta(days=0, hours=0, minutes=1), THREDDS)
         bathy_data = cmtb_data.getBathyIntegratedTransect()
     else:
         # i already have pulled it so there is no reason to get it again
@@ -1136,6 +1158,8 @@ def interpIntegratedBathy4UnstructGrid(ugridDict, THREDDS='FRF', forcedSurveyDat
     if feetFlag:
         # convert back to ft
         newElevation = 3.28084 * newElevation
+    else:
+        pass
 
     # put this stuff in my return dict and declare glorious victory?
     out = {}
@@ -1146,19 +1170,17 @@ def interpIntegratedBathy4UnstructGrid(ugridDict, THREDDS='FRF', forcedSurveyDat
 
 def convertGridNodes2ncsp(x0, y0, azi, xPos, yPos):
     """this function is used to convert the cms grid nodes from the CMS convention in the .tel file to NCSP so
+
     you can interpolate our gridded bathymetry onto it.
 
-    Args:
-      x0: integer/float describing origin in x (easting)
-      y0: integer/float describing origin in y (northing)
-      azi: grid azimuth defining rotation of grid
-      xPos: 1D np.array that contains the x-distance from the origin from the .tel file
-      yPos: 1D np.array that contains the y-distance from the origin from the .tel file
+    :param x0: integer/float describing origin in x (easting)
+    :param y0: integer/float describing origin in y (northing)
+    :param azi: grid azimuth defining rotation of grid
+    :param xPos: 1D np.array that contains the x-distance from the origin from the .tel file
+    :param yPos: 1D np.array that contains the y-distance from the origin from the .tel file
     :return
-    easting: 1D np.array of the NC stateplane easting of the grid nodes
-    northing: 1D np.array of the NC stateplane northing of the grid nodes
-
-    Returns:
+            easting: 1D np.array of the NC stateplane easting of the grid nodes
+            northing: 1D np.array of the NC stateplane northing of the grid nodes
 
     """
 
@@ -1175,5 +1197,32 @@ def convertGridNodes2ncsp(x0, y0, azi, xPos, yPos):
 
     return easting, northing
 
+def findNearestUnstructNode(xFRF, yFRF, ugridDict):
+    """This script will take in the xFRF and yFRF coordinates of an instrument (or any other location of interest)
+    and then find the index of the closest node in an unstructured grid.  it also returns the distance between that the
+    position handed to the function and the closest grid node.
 
+    :param xFRF: xFRF location (of an instrument or other location of interest)
 
+    :param yFRF: yFRF location (of an instrument or other location of interest)
+
+    :param ugridDict:
+        :key xFRF: - xFRF of all the points in the unstructured grid
+        :key yFRF: - yFRF of all the points in the unstructured grid
+
+    :return:
+    ind - index in the list of grid points that is closest to the input xFRF and yFRF position
+    dist - distance from the unstruct grid point to the xFRF and yFRF position.
+    """
+
+    assert 'xFRF' in ugridDict.keys(), 'Error: xFRF is a required key in ugridDict'
+    assert 'yFRF' in ugridDict.keys(), 'Error: yFRF is a required key in ugridDict'
+
+    points = np.column_stack((ugridDict['xFRF'], ugridDict['yFRF']))
+    qPt = np.column_stack((xFRF, yFRF))
+
+    # compute nearest neighbor
+    kdt = scipy.spatial.cKDTree(points)
+    dist, ind = kdt.query(qPt, 1)
+
+    return ind, dist
