@@ -12,9 +12,8 @@ def cart2pol(x, y):
       y: y componant
 
     Returns:
-      returns: return:
-      r radial componant
-      theta angular compoanat (returned in radian)
+        r radial componant
+        theta angular compoanat (returned in radian)
 
     """
     r = np.sqrt(x ** 2 + y ** 2)
@@ -30,8 +29,8 @@ def pol2cart(r, theta):
       theta: direction (in radians)
 
     Returns:
-      x - componant
-      y - componant
+       x - componant
+       y - componant
 
     """
     if (np.max(theta) > 2 * np.pi).any():
@@ -53,7 +52,7 @@ def geo2STWangle(geo_angle_in, zeroAngle=70., METin=1, fixanglesout=0):
       fixanglesout: if set to 1, will correct out angles to +/-180 (Default value = 0)
 
     Returns:
-      angle_out corrected angle back out, into math space
+      angle_out corrected angle back out, into cartesian space
 
     """
     # assert len(np.shape(geo_angle_in)) <= 1, 'function geo2STWangle not tested in more than 1 dimension'
@@ -154,14 +153,14 @@ def vectorRotation(vector, theta=90, axis='z'):
     else:
         return r_vector[0:2]
 
-def angle_correct(angle_in, rad=0):
+def angle_correct(angle_in, rad=False):
     """this function takes angles in that are both positve and negative
     and corrects them to posivitve only
 
     Args:
       angle_in: param rad: radian =0 input angles are in degrees
-    radian =1 input anglesa are in radian
-      rad: Default value = 0)
+      rad (bool): input anglesa are in radian (Default value = False)
+
 
     Returns:
       array of corrected angles in
