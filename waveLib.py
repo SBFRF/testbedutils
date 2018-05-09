@@ -120,22 +120,21 @@ def timeseriesPUV(p, u, v, t, waterDepth, gaugeDepth):
 
 def qkhfs(w, h):
     """Quick iterative calculation of kh in gravity-wave dispersion relationship
-    kh = qkhfs(w, h )
-    
-    Orbital velocities from kh are accurate to 3e-12 !
-        RL Soulsby (2006) \"Simplified calculation of wave orbital velocities\"
-        HR Wallingford Report TR 155, February 2006
-        Eqns. 12a - 14
+            kh = qkhfs(w, h )
+
+    References:
+        Orbital velocities from kh are accurate to 3e-12 !
+            RL Soulsby (2006) \"Simplified calculation of wave orbital velocities\"
+            HR Wallingford Report TR 155, February 2006
+            Eqns. 12a - 14
 
     Args:
       w: angular wave frequency = 2*pi/T where T = wave period [1/s]
       h: water depth [m]
     
-    :return
-    kh - wavenumber * depth [ ]
 
     Returns:
-
+        kh - wavenumber * depth [ ]
     """
     g = 9.81
     x = w ** 2.0 * h / g
@@ -154,36 +153,34 @@ def qkhfs(w, h):
     return kh
 
 def HPchop_spec(spec, dirbin, angadj=0, corrected=1):
-    """NOTE: tHIS FUNCTION DOES NOT FLIP THE ANGLE CONVENTION FROM CARTESIAN TO GEOGRAPHIC
-    USE GEO2GRID SPEC ROTATE FOR THIS
-    This function chops a spectra into half plane, assuming already shore normal waves,
+    """This function chops a spectra into half plane, assuming already shore normal waves,
     it will remove half of the spectra not incident to shore
-    
-    ASSUMPTIONS:
+
+    NOTE: THIS FUNCTION DOES NOT FLIP THE ANGLE CONVENTION FROM CARTESIAN TO GEOGRAPHIC
+    USE GEO2GRID SPEC ROTATE FOR THIS
+
+      ASSUMPTIONS:
         waves are already shore normal
         follows MET convention (angles measured in the from direction)
 
     Args:
       spec: 2D directional spectra (record count x frq x direction )
       dirbin: associated directions with the spectra
-    normal: 1=shore normal chopping 0=FRF pier -> true north chopping
-      angadj: rotation angle to make 0 shorenormal
-    angle in deg true north of shore perpendicular
-    MET convention (shore->sea)
-    THE PORTION OF THE SPECTRA traveling opposite this WILL BE REMOVED ()
-    
-    :return
-    newspec:   new Half plane spectra
-    
-    newdirband: direction bands associated with Halplane spectra
-    if angadj ==0 directions are output as Shore Normal
-    if angadj !=0 directions are output as True North
-    corrected: corrected = 1 for input being between 0:360
-    corrected = 0 for input containing negative values
-    (will return in the same fashion) (Default value = 0)
-      corrected: Default value = 1)
+      angadj: rotation angle to make 0 shorenormal angle in deg true north of shore perpendicular
+            MET convention (shore->sea)THE PORTION OF THE SPECTRA traveling opposite this
+            will be removed (Default value = 0)
+      corrected (bool):  corrected = True for input being between 0:360
+                        corrected = False for input containing negative values
+                        (Default value = True)
 
     Returns:
+        newspec:    new Half plane spectra
+
+        newdirband: direction bands associated with Halfplane spectra
+
+    Notes:
+        if angadj ==0 directions are output as Shore Normal
+        if angadj !=0 directions are output as True North
 
     """
     dirbin = np.array(dirbin)
@@ -237,10 +234,9 @@ def makeMLMspecFromAsBs(a0, a1, b1, a2, b2, waterDepth, freqs, dirs):
       b1: 1st fouier coefficient componant
       a2: 2nd fouier coefficient componant
       b2: 2nd fouier coefficient componant
-      waterDepth: param freqs:
-      dirs: returns: array [t, freq, dir]
-    an array of 2dimensional frequency direction spectra
-      freqs: 
+      waterDepth: water depth [m]
+      param freqs: frequencies
+      dirs: directions
 
     Returns:
       array [t, freq, dir]
@@ -286,7 +282,7 @@ def mlm(freqs, dirs, c11, c22, c33, c23, q12, q13):
       q12: imaginary part of 1st and 2nd channel (p u)
       q13: imaginary part of 1st and 3rd channel (p v)
       freqs: returns: 2D directional spectrum using MLM method (non-iterative)
-    IN  per RADIAN UNITS  -> must be converted back to degrees
+            IN  per RADIAN UNITS  -> must be converted back to degrees
 
     Returns:
       2D directional spectrum using MLM method (non-iterative)
@@ -377,17 +373,19 @@ def dispersion( h, T):
     """Linear Dispersion Relationship
     omega^2 = gk tanh kh
     approximation and iterative method taken from
-        ib svendsen "introduction to nearshore hydrodynamics" p 68
+
+    References:
+        ib svendsen: "introduction to nearshore hydrodynamics" p 68
 
     Args:
       h: this is depth in meters
       T: this is wave period in seconds
-    :return
+
+    Returns:
       L: wave Length estimate
       c: wave speed estimate
       n: group/ wave speed ratio
 
-    Returns:
 
     """
     assert h > 0, 'Water depth must be >0, positive downward convention'
@@ -421,14 +419,14 @@ def stats1D(fspec, frqbins, lowFreq=0.05, highFreq=0.5):
 
     Returns:
       a dictionary with statistics
-      :key Hmo   Significant wave height
-      :key Tp   Period of the peak energy in the frequency spectra, (1/Fp).  AKA Tpd, not to be
-      confused with parabolic fit to spectral period
-      :key Tm  -- Tm02   Mean spectral period (Tm0,2, from moments 0 & 2), sqrt(m0/m2)
-      :key Tave -- Tm01   Average period, frequency sprectra weighted, from first moment (Tm0,1)
-      :key sprdF  Freq-spec spread (m0*m4 - m2^2)/(m0*m4)  (one definition)
-      :key Tm10 Mean Absolute wave Period from -1 moment
-      :key meta expanded variable name/descriptions
+         Hmo   Significant wave height
+         Tp   Period of the peak energy in the frequency spectra, (1/Fp).  AKA Tpd, not to be
+            confused with parabolic fit to spectral period
+         Tm  -- Tm02   Mean spectral period (Tm0,2, from moments 0 & 2), sqrt(m0/m2)
+         Tave -- Tm01   Average period, frequency sprectra weighted, from first moment (Tm0,1)
+         sprdF  Freq-spec spread (m0*m4 - m2^2)/(m0*m4)  (one definition)
+         Tm10 Mean Absolute wave Period from -1 moment
+         meta expanded variable name/descriptions
 
     """
     assert fspec.shape[-1] == len(frqbins), '1D stats need a 1 d spectra'
@@ -474,6 +472,8 @@ def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
     defaults to 0.05 hz to 0.5 hz frequency for the statistics
     
     Code Translated by Spicer Bak from: fd2BulkStats.m written by Kent Hathaway, and adapted
+    References:
+        USACE Wave Information Study (WIS) website
 
     Args:
       spec: array
@@ -485,25 +485,22 @@ def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
 
     Returns:
       dictionary
-      :key Hmo   Significant wave height
-      :key Tp   Period of the peak energy in the frequency spectra, (1/Fp).  AKA Tpd, not to be
-      confused with parabolic fit to spectral period
-      :key Tm   -- Tm02   Mean spectral period (Tm0,2, from moments 0 & 2), sqrt(m0/m2)
-      :key Tave  -- Tm01   Average period, frequency sprectra weighted, from first moment (Tm0,1)
-      :key Dmp   Mean direction at the peak frequency
-      :key Dp   Peak direction at the peak frequency
-      :key Dm   Mean wave direction
-      :key sprdF  Freq-spec spread (m0*m4 - m2^2)/(m0*m4)  (one definition)
-      :key sprdD  Directional spread (m0*m4 - m2^2)/(m0*m4)  (one definition, Kuik 1988, buoys),
-      total sea-swell
-      sprdD = r2d * sqrt(2.0 * (1.0 - sqrt(Xcomp.^2 + Ycomp^2)));
-      where  Xcomp = sum(sin(Drad) .* Ds .* dwdir) ./ sum(Ds .* dwdir);
-      Ycomp = sum(cos(Drad) .* Ds .* dwdir) ./ sum(Ds .* dwdir);
-      :key  sprdDhp  half-power direction width in direction spectra at peak freq (not currently incorporated)Input:
-      :key Tm10 Mean Absolute wave Period from -1 moment
-      :key vecAvgMeanDir - vector averaged mean direction (should be the same as Dm - could be checked and removed)
-      taken from wis website
-      :key meta expanded variable name/descriptions
+           Hmo   Significant wave height
+           Tp   Period of the peak energy in the frequency spectra, (1/Fp).  AKA Tpd, not to be
+                confused with parabolic fit to spectral period
+           Tm   -- Tm02   Mean spectral period (Tm0,2, from moments 0 & 2), sqrt(m0/m2)
+           Tave  -- Tm01   Average period, frequency sprectra weighted, from first moment (Tm0,1)
+           Dmp   Mean direction at the peak frequency
+           Dp   Peak direction at the peak frequency
+           Dm   Mean wave direction
+           sprdF  Freq-spec spread (m0*m4 - m2^2)/(m0*m4)  (one definition)
+           sprdD  Directional spread (m0*m4 - m2^2)/(m0*m4)  (one definition, Kuik 1988, buoys),
+                 total sea-swell
+           sprdDhp  half-power direction width in direction spectra at peak freq (not currently incorporated)Input:
+           Tm10 Mean Absolute wave Period from -1 moment
+           vecAvgMeanDir - vector averaged mean direction (should be the same as Dm - could be checked and removed)
+                taken from wis website
+           meta expanded variable name/descriptions
 
     """
     assert type(frqbins) in [np.ndarray, np.ma.MaskedArray], 'the input frqeuency bins must be a numpy array'
@@ -522,7 +519,7 @@ def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
     # frq = np.array(np.zeros(len(frqbins) + 1))  # initializing frqbin bucket
     # # frq[0] = frqbins[0]
     # # frq[1:] = frqbins
-    # # df = np.diff(frq, n=1)  # dhange in frequancy banding
+    # # df = np.diff(frq, n=1)  # change in frequency banding
     df = np.diff(np.append(frqbins[0], frqbins), n=1)
     dd = np.abs(np.median(np.diff(dirbins)))  # dirbins[2] - dirbins[1]  # assume constant directional bin size
     # finding delta degrees
@@ -531,7 +528,7 @@ def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
     # doing moments over 0.05 to 0.33 Hz (3-20s waves) (mainly for m4 sake)
     [idx, vals] = sb.findbtw(frqbins, lowFreq, highFreq, type=3)
 
-    m0 = np.sum(fspec * df, axis=1)  # 0th momment
+    m0 = np.sum(fspec * df, axis=1)  # 0th moment
     m1 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx], axis=1)  # 1st moment
     m2 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx] ** 2, axis=1)  # 2nd moment
     # m3 = np.sum(fSpecOut[:, idx] * df[idx] * frqbins[idx] ** 3, axis=1)  # 3rd moment
