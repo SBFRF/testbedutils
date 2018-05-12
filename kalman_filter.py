@@ -93,8 +93,10 @@ def cbathy_kalman_filter(new, prior, waveHs):
 #     new['depthKF'][idd] = prior['depthKF'][idd]
 #     new['P'][idd] = prior['P'][idd]
 #     new['depthKFError'] = np.sqrt(new['P'])
-
-    idx = np.argwhere(hk.mask).squeeze()       # find idx of missing points in new array
+    if isinstance(hk, np.ma.masked_array):
+        idx = np.argwhere(hk.mask).squeeze()       # find idx of missing points in new array
+    else:
+        idx = np.argwhere(np.isnan(hk)).squeeze()
     hk[idx] = prior['depthKF'].flatten()[idx]  # fill kalman filtered depth estimates with old values when missing
     Pk[idx] = prior['P'].flatten()[idx]        # fill error variance with old values when missing
     # package for departure
@@ -103,6 +105,17 @@ def cbathy_kalman_filter(new, prior, waveHs):
     new['depthKFError'] = np.sqrt(new['P'])
 
     return new
+
+def replacecBathyMasksWithNans(dictionary):
+    """function will replace dictionary keys that are masked arrays filled with numpy.nans
+    :param dictionary: an arbitrary dictionary with keys
+
+    :return: unmasked dictonary with nans in place of mask=True
+    """
+    for var in dictionary:
+        if isinstance(dictionary[var], np.ma.masked_array):
+            dictionary[var] = np.ma.filled(dictionary[var], fill_value=np.nan)
+    return dictionary
 
 def cBathy_ThresholdedLogic(cBathy, rawspec, waveHsThreshold=1.2):
     """
@@ -156,6 +169,9 @@ def cBathy_ThresholdedLogic(cBathy, rawspec, waveHsThreshold=1.2):
         badIdx = np.argwhere(rawspec['Hs'][idxObs.astype(int)] > waveHsThreshold).squeeze()
     except TypeError:  # when cbath== None
         badIdx = np.array([])
+    if isinstance(cBathy['depthKF'], np.ma.masked_array):
+        cBathy = replacecBathyMasksWithNans(cBathy)
+
     ##########################################
     # Begin Thresholded kalman filtered logic
     #########################################
@@ -193,16 +209,32 @@ def cBathy_ThresholdedLogic(cBathy, rawspec, waveHsThreshold=1.2):
                     with open(loadPickleFname, 'rb') as handle:
                         cbathyold = pickle.load(handle)
                         print '     CBThresh: wave height good, Kalman filtering from %s' % loadPickleFname
+                    if cbathyold['elevation'].shape != cBathy['depthKF'].shape[1:] :# load from background
+                        print '  Loading from background, you changed your grid shape'
+                        from getdatatestbed import getDataFRF
+                        go = getDataFRF.getObs(cBathy['time'][0], cBathy['time'][-1])
+                        full = go.getBathyGridcBathy()
+                        cbathyold = sb.reduceDict(full,-1)
+                        xinds = np.where(np.in1d(cbathyold['xm'], cBathy['xm']))[0]
+                        yinds = np.where(np.in1d(cbathyold['ym'], cBathy['ym']))[0]
+                        for key in cbathyold.keys():
+                            if key is 'xm':
+                                cbathyold[key] = cbathyold[key][xinds]
+                            elif key is 'ym':
+                                cbathyold[key] = cbathyold[key][xinds]
+                            elif key not in ['epochtime', 'time', 'xm', 'ym']:
+                                cbathyold[key] = cbathyold[key][slice(yinds[0], yinds[-1]+1), slice(xinds[0], xinds[-1]+1)]
                 else:
                     raise ImportError('You need a cBathy to seed the first kalman filter step ')
+
                 cBathySingle = extract_time(cBathy, tt)
                 temp = cbathy_kalman_filter(cBathySingle, cbathyold, rawspec['Hs'])
                 # overwrite old kalman filtered results with new kalman filtered results
-                depthKF[rc] = temp['depthKF']
-                depthKFE[rc] = temp['depthKFError']
-                P[rc] = temp['P']
-                depthfCE[rc] = temp['depthfCError']
-                depthfC[rc] = temp['depthfC']
+                depthKF[rc] = np.ma.filled(temp['depthKF'], fill_value=np.nan) # temp['depthKF']
+                depthKFE[rc] = np.ma.filled(temp['depthKFError'], fill_value=np.nan)
+                P[rc] = np.ma.filled(temp['P'], fill_value=np.nan)
+                depthfCE[rc] = np.ma.filled(temp['depthfCError'], fill_value=np.nan)
+                depthfC[rc] = np.ma.filled(temp['depthfC'], fill_value=np.nan)
                 timeO[rc] = temp['time']
                 etimeO[rc] = temp['epochtime']
                 rc +=1
