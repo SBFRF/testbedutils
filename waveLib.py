@@ -14,18 +14,21 @@ def timeseriesPUV(p, u, v, t, waterDepth, gaugeDepth):
     
      below parameters and makes them into magical wave data
 
-    :param p: pressure in cm
-    :param u: u velocities
-    :param v: v velocities
-    :param t: time stamp
-    :param waterDepth: positive in meters
-    :param gaugeDepth: negative in meters
-    :param frequency: spectra
-    :param a1: interped to np.arange(0.04, 0.5, 0.0075)
-    :param b1: interped to np.arange(0.04, 0.5, 0.0075)
-    :param a2: interped to np.arange(0.04, 0.5, 0.0075)
-    :param b2: interped to np.arange(0.04, 0.5, 0.0075)
-    :returns: param frequency spectra
+    Args:
+      p: pressure in cm
+      u: u velocities
+      v: v velocities
+      t: time stamp
+      waterDepth: positive in meters
+      gaugeDepth: negative in meters
+      frequency: spectra
+      a1: interped to np.arange(0.04, 0.5, 0.0075)
+      b1: interped to np.arange(0.04, 0.5, 0.0075)
+      a2: interped to np.arange(0.04, 0.5, 0.0075)
+      b2: interped to np.arange(0.04, 0.5, 0.0075)
+
+    Returns:
+      param frequency spectra
 
     """
     from scipy.signal import welch, csd
@@ -117,19 +120,21 @@ def timeseriesPUV(p, u, v, t, waterDepth, gaugeDepth):
 
 def qkhfs(w, h):
     """Quick iterative calculation of kh in gravity-wave dispersion relationship
-    kh = qkhfs(w, h )
-    
-    Orbital velocities from kh are accurate to 3e-12 !
-        RL Soulsby (2006) \"Simplified calculation of wave orbital velocities\"
-        HR Wallingford Report TR 155, February 2006
-        Eqns. 12a - 14
+            kh = qkhfs(w, h )
 
-    :param w: angular wave frequency = 2*pi/T where T = wave period [1/s]
-    :param h: water depth [m]
+    References:
+        Orbital velocities from kh are accurate to 3e-12 !
+            RL Soulsby (2006) \"Simplified calculation of wave orbital velocities\"
+            HR Wallingford Report TR 155, February 2006
+            Eqns. 12a - 14
+
+    Args:
+      w: angular wave frequency = 2*pi/T where T = wave period [1/s]
+      h: water depth [m]
     
-    :return
+
+    Returns:
         kh - wavenumber * depth [ ]
-
     """
     g = 9.81
     x = w ** 2.0 * h / g
@@ -148,33 +153,34 @@ def qkhfs(w, h):
     return kh
 
 def HPchop_spec(spec, dirbin, angadj=0, corrected=1):
-    """NOTE: tHIS FUNCTION DOES NOT FLIP THE ANGLE CONVENTION FROM CARTESIAN TO GEOGRAPHIC
-    USE GEO2GRID SPEC ROTATE FOR THIS
-    This function chops a spectra into half plane, assuming already shore normal waves,
+    """This function chops a spectra into half plane, assuming already shore normal waves,
     it will remove half of the spectra not incident to shore
-    
-    ASSUMPTIONS:
+
+    NOTE: THIS FUNCTION DOES NOT FLIP THE ANGLE CONVENTION FROM CARTESIAN TO GEOGRAPHIC
+    USE GEO2GRID SPEC ROTATE FOR THIS
+
+      ASSUMPTIONS:
         waves are already shore normal
         follows MET convention (angles measured in the from direction)
 
-    :param spec: 2D directional spectra (record count x frq x direction )
-    :param dirbin: associated directions with the spectra
-                    normal: 1=shore normal chopping 0=FRF pier -> true north chopping
-    :param angadj: rotation angle to make 0 shorenormal
-            angle in deg true north of shore perpendicular
-            MET convention (shore->sea)
-            THE PORTION OF THE SPECTRA traveling opposite this WILL BE REMOVED ()
-    
-    :return
-        newspec:   new Half plane spectra
-    
-        newdirband: direction bands associated with Halplane spectra
-                if angadj ==0 directions are output as Shore Normal
-                if angadj !=0 directions are output as True North
-            corrected: corrected = 1 for input being between 0:360
-                       corrected = 0 for input containing negative values
-                       (will return in the same fashion) (Default value = 0)
-    :param corrected:  (Default value = 1)
+    Args:
+      spec: 2D directional spectra (record count x frq x direction )
+      dirbin: associated directions with the spectra
+      angadj: rotation angle to make 0 shorenormal angle in deg true north of shore perpendicular
+            MET convention (shore->sea)THE PORTION OF THE SPECTRA traveling opposite this
+            will be removed (Default value = 0)
+      corrected (bool):  corrected = True for input being between 0:360
+                        corrected = False for input containing negative values
+                        (Default value = True)
+
+    Returns:
+        newspec:    new Half plane spectra
+
+        newdirband: direction bands associated with Halfplane spectra
+
+    Notes:
+        if angadj ==0 directions are output as Shore Normal
+        if angadj !=0 directions are output as True North
 
     """
     dirbin = np.array(dirbin)
@@ -222,16 +228,19 @@ def makeMLMspecFromAsBs(a0, a1, b1, a2, b2, waterDepth, freqs, dirs):
     translated from matlab from kent hathaway, by spicer bak
     (could be improved, verified)
 
-    :param a0: frequency spectrum
-    :param a1: 1st fouier coeffieicnt componant
-    :param b1: 1st fouier coefficient componant
-    :param a2: 2nd fouier coefficient componant
-    :param b2: 2nd fouier coefficient componant
-    :param waterDepth: 
-    :param freqs: 
-    :param dirs: 
-    :returns: array [t, freq, dir]
-        an array of 2dimensional frequency direction spectra
+    Args:
+      a0: frequency spectrum
+      a1: 1st fouier coeffieicnt componant
+      b1: 1st fouier coefficient componant
+      a2: 2nd fouier coefficient componant
+      b2: 2nd fouier coefficient componant
+      waterDepth: water depth [m]
+      param freqs: frequencies
+      dirs: directions
+
+    Returns:
+      array [t, freq, dir]
+      an array of 2dimensional frequency direction spectra
 
     """
     waveFreqBins = freqs
@@ -263,17 +272,21 @@ def mlm(freqs, dirs, c11, c22, c33, c23, q12, q13):
     % c  --------------------------------------------------------------------
     ccould be improved (verified)
 
-    :param freq: frequencies
-    :param dirs: direction bins
-    :param c11: cross spectrum of 1st channel - pressure (or welch specturm)
-    :param c22: cross spectrum of 2nd channel - u        (or welch specturm)
-    :param c33: cross spectrum of 3rd channel - v        (or welch specturm)
-    :param c23: real part of cross spectrum of 2nd and 3rd channel u v
-    :param q12: imaginary part of 1st and 2nd channel (p u)
-    :param q13: imaginary part of 1st and 3rd channel (p v)
-    :param freqs: 
-    :returns: 2D directional spectrum using MLM method (non-iterative)
+    Args:
+      freq: frequencies
+      dirs: direction bins
+      c11: cross spectrum of 1st channel - pressure (or welch specturm)
+      c22: cross spectrum of 2nd channel - u        (or welch specturm)
+      c33: cross spectrum of 3rd channel - v        (or welch specturm)
+      c23: real part of cross spectrum of 2nd and 3rd channel u v
+      q12: imaginary part of 1st and 2nd channel (p u)
+      q13: imaginary part of 1st and 3rd channel (p v)
+      freqs: returns: 2D directional spectrum using MLM method (non-iterative)
             IN  per RADIAN UNITS  -> must be converted back to degrees
+
+    Returns:
+      2D directional spectrum using MLM method (non-iterative)
+      IN  per RADIAN UNITS  -> must be converted back to degrees
 
     """
     # calculating sin/cos terms from direction angles
@@ -326,10 +339,13 @@ def prFunc( L, d, z):
     """Surface correction for pressure data.  if working with an energy
     spectrum DIVIDE by the returned prf**2
 
-    :param L: wave length  (column)  (m)
-    :param d: water depth     ( positve scalar)  (m)
-    :param z: gage location below surface (negative) (m)
-    :returns: Pressure Response (column) of length freqeuencys
+    Args:
+      L: wave length  (column)  (m)
+      d: water depth     ( positve scalar)  (m)
+      z: gage location below surface (negative) (m)
+
+    Returns:
+      Pressure Response (column) of length freqeuencys
 
     """
     maxCorrectionFactor = 10
@@ -357,14 +373,19 @@ def dispersion( h, T):
     """Linear Dispersion Relationship
     omega^2 = gk tanh kh
     approximation and iterative method taken from
-        ib svendsen "introduction to nearshore hydrodynamics" p 68
 
-    :param h: this is depth in meters
-    :param T: this is wave period in seconds
-    :return
-    :param L: wave Length estimate
-    :param c: wave speed estimate
-    :param n: group/ wave speed ratio
+    References:
+        ib svendsen: "introduction to nearshore hydrodynamics" p 68
+
+    Args:
+      h: this is depth in meters
+      T: this is wave period in seconds
+
+    Returns:
+      L: wave Length estimate
+      c: wave speed estimate
+      n: group/ wave speed ratio
+
 
     """
     assert h > 0, 'Water depth must be >0, positive downward convention'
@@ -390,19 +411,22 @@ def dispersion( h, T):
 def stats1D(fspec, frqbins, lowFreq=0.05, highFreq=0.5):
     """Calculates bulk statistics from a 1 dimenti
 
-    :param fspec: frequency spectra
-    :param frqbins: frequency bins associated with the 1d spectra
-    :param lowFreq: low frequency cut off for analysis (Default value = 0.05)
-    :param highFreq: high frequency cutoff for analysis (Default value = 0.5)
-    :returns: a dictionary with statistics
-        :key Hmo   Significant wave height
-        :key Tp   Period of the peak energy in the frequency spectra, (1/Fp).  AKA Tpd, not to be
-                   confused with parabolic fit to spectral period
-        :key Tm  -- Tm02   Mean spectral period (Tm0,2, from moments 0 & 2), sqrt(m0/m2)
-        :key Tave -- Tm01   Average period, frequency sprectra weighted, from first moment (Tm0,1)
-        :key sprdF  Freq-spec spread (m0*m4 - m2^2)/(m0*m4)  (one definition)
-        :key Tm10 Mean Absolute wave Period from -1 moment
-        :key meta expanded variable name/descriptions
+    Args:
+      fspec: frequency spectra
+      frqbins: frequency bins associated with the 1d spectra
+      lowFreq: low frequency cut off for analysis (Default value = 0.05)
+      highFreq: high frequency cutoff for analysis (Default value = 0.5)
+
+    Returns:
+      a dictionary with statistics
+         Hmo   Significant wave height
+         Tp   Period of the peak energy in the frequency spectra, (1/Fp).  AKA Tpd, not to be
+            confused with parabolic fit to spectral period
+         Tm  -- Tm02   Mean spectral period (Tm0,2, from moments 0 & 2), sqrt(m0/m2)
+         Tave -- Tm01   Average period, frequency sprectra weighted, from first moment (Tm0,1)
+         sprdF  Freq-spec spread (m0*m4 - m2^2)/(m0*m4)  (one definition)
+         Tm10 Mean Absolute wave Period from -1 moment
+         meta expanded variable name/descriptions
 
     """
     assert fspec.shape[-1] == len(frqbins), '1D stats need a 1 d spectra'
@@ -448,33 +472,35 @@ def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
     defaults to 0.05 hz to 0.5 hz frequency for the statistics
     
     Code Translated by Spicer Bak from: fd2BulkStats.m written by Kent Hathaway, and adapted
+    References:
+        USACE Wave Information Study (WIS) website
 
-    :param spec: array
-            this is a 2d spectral inputshaped by (time, freq, dir)
-    :param frqbins: Frequency vector (not assumed constant)
-    :param dirbins: an array of direction bins associated with the 2d spec
-    :param lowFreq: low frequency cutoff for the spectral stat's calculation (Default value = 0.05)
-    :param highFreq: high frequency cutoff for the spectral stat's calculation (Default value = 0.5)
-    :returns: dictionary
-        :key Hmo   Significant wave height
-        :key Tp   Period of the peak energy in the frequency spectra, (1/Fp).  AKA Tpd, not to be
-                   confused with parabolic fit to spectral period
-        :key Tm   -- Tm02   Mean spectral period (Tm0,2, from moments 0 & 2), sqrt(m0/m2)
-        :key Tave  -- Tm01   Average period, frequency sprectra weighted, from first moment (Tm0,1)
-        :key Dmp   Mean direction at the peak frequency
-        :key Dp   Peak direction at the peak frequency
-        :key Dm   Mean wave direction
-        :key sprdF  Freq-spec spread (m0*m4 - m2^2)/(m0*m4)  (one definition)
-        :key sprdD  Directional spread (m0*m4 - m2^2)/(m0*m4)  (one definition, Kuik 1988, buoys),
+    Args:
+      spec: array
+    this is a 2d spectral inputshaped by (time, freq, dir)
+      frqbins: Frequency vector (not assumed constant)
+      dirbins: an array of direction bins associated with the 2d spec
+      lowFreq: low frequency cutoff for the spectral stat's calculation (Default value = 0.05)
+      highFreq: high frequency cutoff for the spectral stat's calculation (Default value = 0.5)
+
+    Returns:
+      dictionary
+           Hmo   Significant wave height
+           Tp   Period of the peak energy in the frequency spectra, (1/Fp).  AKA Tpd, not to be
+                confused with parabolic fit to spectral period
+           Tm   -- Tm02   Mean spectral period (Tm0,2, from moments 0 & 2), sqrt(m0/m2)
+           Tave  -- Tm01   Average period, frequency sprectra weighted, from first moment (Tm0,1)
+           Dmp   Mean direction at the peak frequency
+           Dp   Peak direction at the peak frequency
+           Dm   Mean wave direction
+           sprdF  Freq-spec spread (m0*m4 - m2^2)/(m0*m4)  (one definition)
+           sprdD  Directional spread (m0*m4 - m2^2)/(m0*m4)  (one definition, Kuik 1988, buoys),
                  total sea-swell
-                 sprdD = r2d * sqrt(2.0 * (1.0 - sqrt(Xcomp.^2 + Ycomp^2)));
-                 where  Xcomp = sum(sin(Drad) .* Ds .* dwdir) ./ sum(Ds .* dwdir);
-                        Ycomp = sum(cos(Drad) .* Ds .* dwdir) ./ sum(Ds .* dwdir);
-        :key  sprdDhp  half-power direction width in direction spectra at peak freq (not currently incorporated)Input:
-        :key Tm10 Mean Absolute wave Period from -1 moment
-        :key vecAvgMeanDir - vector averaged mean direction (should be the same as Dm - could be checked and removed)
+           sprdDhp  half-power direction width in direction spectra at peak freq (not currently incorporated)Input:
+           Tm10 Mean Absolute wave Period from -1 moment
+           vecAvgMeanDir - vector averaged mean direction (should be the same as Dm - could be checked and removed)
                 taken from wis website
-        :key meta expanded variable name/descriptions
+           meta expanded variable name/descriptions
 
     """
     assert type(frqbins) in [np.ndarray, np.ma.MaskedArray], 'the input frqeuency bins must be a numpy array'
@@ -493,7 +519,7 @@ def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
     # frq = np.array(np.zeros(len(frqbins) + 1))  # initializing frqbin bucket
     # # frq[0] = frqbins[0]
     # # frq[1:] = frqbins
-    # # df = np.diff(frq, n=1)  # dhange in frequancy banding
+    # # df = np.diff(frq, n=1)  # change in frequency banding
     df = np.diff(np.append(frqbins[0], frqbins), n=1)
     dd = np.abs(np.median(np.diff(dirbins)))  # dirbins[2] - dirbins[1]  # assume constant directional bin size
     # finding delta degrees
@@ -502,7 +528,7 @@ def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
     # doing moments over 0.05 to 0.33 Hz (3-20s waves) (mainly for m4 sake)
     [idx, vals] = sb.findbtw(frqbins, lowFreq, highFreq, type=3)
 
-    m0 = np.sum(fspec * df, axis=1)  # 0th momment
+    m0 = np.sum(fspec * df, axis=1)  # 0th moment
     m1 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx], axis=1)  # 1st moment
     m2 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx] ** 2, axis=1)  # 2nd moment
     # m3 = np.sum(fSpecOut[:, idx] * df[idx] * frqbins[idx] ** 3, axis=1)  # 3rd moment
@@ -605,10 +631,13 @@ def fSpecPeaksValleys(spec1d, wavefreqbin):
     """This function takes a 1 dimensional frequency spectra and finds indicies of spectral peaks
         and valleys (ideally used to seperate different swell componants) ... not pollished
 
-    :param spec1d: 1 d frequency spectra
-    :param plotfname: file name for figure to be made
-    :param wavefreqbin: 
-    :returns: peakindexes, valley indexes
+    Args:
+      spec1d: 1 d frequency spectra
+      plotfname: file name for figure to be made
+      wavefreqbin: returns: peakindexes, valley indexes
+
+    Returns:
+      peakindexes, valley indexes
 
     """
     # import peakutils
@@ -700,9 +729,12 @@ def fSpecPeaksValleys(spec1d, wavefreqbin):
 def findTp( spec, wavefreqbin):
     """This function finds the Tp of a spectra
 
-    :param spec: 2(no time) or 3  dimensional spectrum [t, freq, dir]
-    :param wavefreqbin: takes both freq bin or period bin
-    :returns: array of Tp
+    Args:
+      spec: 2(no time) or 3  dimensional spectrum [t, freq, dir]
+      wavefreqbin: takes both freq bin or period bin
+
+    Returns:
+      array of Tp
 
     """
     try:
@@ -720,10 +752,13 @@ def findTp( spec, wavefreqbin):
 def findDpAtTp( spec, wavedirbin):
     """finds the peak direction at peak frequency
 
-    :param spec: 2 dimensional spectra, dimensioned [time, freq, direction]
-    :param wavedirbin: directions associated with spectra (= third dimension)
-    :returns: array
-        Peak direction at peak frequency
+    Args:
+      spec: 2 dimensional spectra, dimensioned [time, freq, direction]
+      wavedirbin: directions associated with spectra (= third dimension)
+
+    Returns:
+      array
+      Peak direction at peak frequency
 
     """
     try:
@@ -741,11 +776,14 @@ def findDpAtTp( spec, wavedirbin):
 def findPeakDirs( spec, dirBin):
     """in single (or multiple) 2d spectra, this will find the peak direction for every frequency
 
-    :param spec: spectra in 3 dim (time, freq, dir)
-    :param freqBin: frequency bin associated with 2nd dimension of spec
-    :param dirBin: directions associated with 3rd dimension of spec
-    :returns: directions of len ([t], freqbin)
-        eg. for every frequency a direction is returned
+    Args:
+      spec: spectra in 3 dim (time, freq, dir)
+      freqBin: frequency bin associated with 2nd dimension of spec
+      dirBin: directions associated with 3rd dimension of spec
+
+    Returns:
+      directions of len ([t], freqbin)
+      eg. for every frequency a direction is returned
 
     """
     peakDirs = np.zeros((spec.shape[0], spec.shape[1]))
@@ -758,11 +796,14 @@ def findPeakDirs( spec, dirBin):
 def findPeakFreq2Dspec(spec, dirBin):
     """in single (or multiple) 2d spectra, this will find the peak frequency for every direction
 
-    :param spec: spectra in 3 dim (time, freq, dir)
-    :param freqBin: frequency bin associated with 2nd dimension of spec
-    :param dirBin: directions associated with 3rd dimension of spec
-    :returns: directions of len ([t], dirbin)
-        eg. for every direction  a frequency is returned
+    Args:
+      spec: spectra in 3 dim (time, freq, dir)
+      freqBin: frequency bin associated with 2nd dimension of spec
+      dirBin: directions associated with 3rd dimension of spec
+
+    Returns:
+      directions of len ([t], dirbin)
+      eg. for every direction  a frequency is returned
 
     """
     peakFreqs = np.zeros((spec.shape[0], spec.shape[2]))
@@ -777,11 +818,14 @@ def isThisWindSea(waveDirectionAtPeak, waveSpeedAtPeak, windDir, windSpeed):
         if the wind is within +/- 45 degrees of the wave direction, and the wind is faster than the wave speed,
         it will be returned True, for wind Sea
 
-    :param waveDirectionAtPeak: This is a wave direction in degrees (must be same coordinate sys as wind dir)
-    :param waveSpeedAtPeak: This is speed of wave at peak (speed must be same units as wind Dir)
-    :param windDir: this is wind Direction (time matched to Wave direction)
-    :param windSpeed: this is wind speed, Time matched to wave Direction
-    :returns: True or False value
+    Args:
+      waveDirectionAtPeak: This is a wave direction in degrees (must be same coordinate sys as wind dir)
+      waveSpeedAtPeak: This is speed of wave at peak (speed must be same units as wind Dir)
+      windDir: this is wind Direction (time matched to Wave direction)
+      windSpeed: this is wind speed, Time matched to wave Direction
+
+    Returns:
+      True or False value
 
     """
     windowAngle = 45
@@ -810,15 +854,18 @@ def isThisWindSea(waveDirectionAtPeak, waveSpeedAtPeak, windDir, windSpeed):
 def findidxSeaSwell(spec1d, dspec, wavefreqbin, windSpeed, windDir, depth, plotfname=None):
     """This function separates sea and swell starting with the 1d frequency spectra and the 1d directional spectra
 
-    :param spec1d: 1 d frequency spectrum
-    :param wavefreqbin: frequency spectrum associated with wave
-    :param dspec: 1d directional spectrum (arctan(b1,a1))
-    :param waveDirectionAtPeak: the direction of the wave from
-    :param plotfname: return: an index corresponding to (Default value = None)
-    :param windSpeed: 
-    :param windDir: 
-    :param depth: 
-    :returns: an index corresponding to
+    Args:
+      spec1d: 1 d frequency spectrum
+      wavefreqbin: frequency spectrum associated with wave
+      dspec: 1d directional spectrum (arctan(b1,a1))
+      waveDirectionAtPeak: the direction of the wave from
+      plotfname: return: an index corresponding to (Default value = None)
+      windSpeed: param windDir:
+      depth: returns: an index corresponding to
+      windDir: 
+
+    Returns:
+      an index corresponding to
 
     """
     # body of function
@@ -917,15 +964,18 @@ def seaAndSwell2D(specTime, spec, wavefreqbin, wavedirbin, windSpeed, windDirTn,
     coordinate system as the wave spectra (including wave direction bins)
     ... still under development
 
-    :param specTime: this is a time stamp for the data dimensioned by (time_
-    :param spec: this is the spectral wave energy data dimensioned by (time, wave direction, wave frequency)
-    :param wavefreqbin: this are the frequencies associated with the spectral wave data
-    :param wavedirbin: these are the direction bins associated with the spectra, same angle convention and
-    :param windSpeed: the speed of the wind
-    :param windDirTn: the wind direction of the
-    :param depth: depth is assumed to be 26 meter wave rider (Default value = 26)
-    :param plot:  (Default value = False)
-    :returns: sea, swell spectra the same size as the input spectra
+    Args:
+      specTime: this is a time stamp for the data dimensioned by (time_
+      spec: this is the spectral wave energy data dimensioned by (time, wave direction, wave frequency)
+      wavefreqbin: this are the frequencies associated with the spectral wave data
+      wavedirbin: these are the direction bins associated with the spectra, same angle convention and
+      windSpeed: the speed of the wind
+      windDirTn: the wind direction of the
+      depth: depth is assumed to be 26 meter wave rider (Default value = 26)
+      plot: Default value = False)
+
+    Returns:
+      sea, swell spectra the same size as the input spectra
 
     """
     assert specTime.shape[0] == spec.shape[0], " data doesn't line up, try using winds from model"
@@ -1034,12 +1084,15 @@ def seaAndSwell2D(specTime, spec, wavefreqbin, wavedirbin, windSpeed, windDirTn,
 def seaAndSwell1D(spec, wavefreqbin, truncate=0.1):
     """this function will take a 1 d spectra
 
-    :param spec: 1 d spectra, can be single or dimensioned [time, frequency
-    :param wavefreqbin: associated wave frequency with frequency
-    :param truncate: value used in truncating the spectra between sea/swell (the valley location) (Default value = 0.1)
-    :param windSea: the wind sea portion of the spectra
-    :param swellSea: low frequency portion of the spectra associate with swell
-    :returns: param windSea:  the wind sea portion of the spectra
+    Args:
+      spec: 1 d spectra, can be single or dimensioned [time, frequency
+      wavefreqbin: associated wave frequency with frequency
+      truncate: value used in truncating the spectra between sea/swell (the valley location) (Default value = 0.1)
+      windSea: the wind sea portion of the spectra
+      swellSea: low frequency portion of the spectra associate with swell
+
+    Returns:
+      param windSea:  the wind sea portion of the spectra
 
     """
     assert spec.shape[-1] == len(wavefreqbin), '1D stats need a 1 d spectra'
