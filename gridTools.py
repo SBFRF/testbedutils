@@ -17,36 +17,44 @@ def frf2ij(xfrf, yfrf, x0, y0, dx, dy, ni, nj):
     Matthew P. Geheran
     01 December 2017
 
-    :param xfrf: FRF x-coordinate to convert
-    :type xfrf: float
-    :param yfrf: FRF y-coordinate to convert
-    :type yfrf: float
-    :param x0: Grid origin x-coordinate (FRF)
-    :type x0: float
-    :param y0: Grid origin y-coordinate (FRF)
-    :type y0: float
-    :param dx: Grid resolution in x-direction.
-    :type dx: float
-    :param dy: Grid resolution in y-direction.
-    :type dy: float
-    :param ni: Number of grid cells in the i direction.
-    :type ni: int
-    :param nj: Number of grid cells in the j direction.
-    :type nj: int
+    Args:
+      xfrf(float): FRF x-coordinate to convert
+      yfrf(float): FRF y-coordinate to convert
+      x0(float): Grid origin x-coordinate (FRF)
+      y0(float): Grid origin y-coordinate (FRF)
+      dx(float): Grid resolution in x-direction.
+        can be array of variable spaced cells, if so will handle it as cell centric values
+      dy(float): Grid resolution in y-direction.
+      ni(int): Number of grid cells in the i direction.
+      nj(int): Number of grid cells in the j direction.
 
-    
+    Returns:
+        i and j locations in cell
+
     """
     dx_is_single_value = isinstance(dx, (float, int, long))
     dy_is_single_value = isinstance(dy, (float, int, long))
 
-    # This routine does not handle variable grid spacing.
+    # This routine assumes cell centric values (more cells than dx/dy values)
     if not dx_is_single_value or not dy_is_single_value:
-        raise NotImplementedError('This routine does not handle variable grid spacing')
+        assert ni-1 == dx.shape[0], 'cell number must be greater than cell size '
+        assert nj-1 == dy.shape[0], 'cell number must be greater than cell size '
+        varibleSpaced = True
 
-    xFRFgrid = x0 - np.arange(ni - 1)*dx - 0.5*dx
-    yFRFgrid = y0 - np.arange(nj - 1)*dy - 0.5*dy
-
-    i = np.abs(xfrf - xFRFgrid).argmin()
+    if varibleSpaced == True:
+        raise  NotImplementedError('See example in frontbackCMS')
+        # shift origin to cell center instead of cell vertex
+        x0N = x0 - dx[0]/2
+        y0N = y0 - dy[0]/2
+        # create new dx/dy array
+        #dxN = dx[:-1] + np.diff(dx)/2
+        # dyN = dy[:-1] + np.diff(dy)/2
+        xFRFgrid, yFRFgrid = createGridNodesinFRF(x0N, y0N, dx, dy, ni, nj)
+        xFRFgrid = x0 - np.arange(ni - 1) * dx
+    else:
+        xFRFgrid = x0 - np.arange(ni - 1) * dx - 0.5 * dx  # cell centric position of newly generated grid points in xFRF
+        yFRFgrid = y0 - np.arange(nj - 1) * dy - 0.5 * dy  # cell centric position of newly generated grid points in yFRF
+    i = np.abs(xfrf - xFRFgrid).argmin()  # find i and j values close to these locations
     j = np.abs(yfrf - yFRFgrid).argmin()
 
     # Convert from python base 0 indexing to STWAVE base 1.
@@ -64,46 +72,60 @@ def frf2ij(xfrf, yfrf, x0, y0, dx, dy, ni, nj):
     return i, j
 
 def makeCMSgridNodes(x0, y0, azi, dx, dy, z):
-    """
-    This interpolates from a node centric coordinate system defined by x0, y0
-    to a cell centered values
-    :param x0:  Grid origin in stateplane
-    :param y0:  grid origin in stateplane
-    :param azi: azimuth of the grid
-    :param dx: array of x cell spacings (from ReadCMS_dep)
-    :param dy: array of cell spacings (from ReadCMS_dep)
-    :param z: elevation for dx, dx
+    """This interpolates from a node centric coordinate system defined by x0, y0
+    to a cell centered values and returns
 
-    :return:   Dictionary with keys:
-                   'i': cell number for x direction
-                   'j': cell number for y direction
-                   'latitude': 2 d array  each cell location in latitude
-                   'longitude': 2 d array each cell location in longitude
-                   'easting': 2 d array each cell location in NC stateplane easting
-                   'northing': 2d array each cell location in NC stateplane northing
-                   'xFRF': FRF x coordinate values
-                   'yFRF': FRF y coordinate values
-                   'azimuth': grid azimuth
-                   'x0': grid origin x
-                   'y0': grid origin y
-                   'elevation': 2 d array of elevations ( positive down )
-                   'time': time of the grid in epoch time ( 0 is fill value) - currently set
+    Args:
+      x0: Grid origin in NC stateplane
+      y0: grid origin in NC stateplane
+      azi: azimuth of the grid
+      dx: array of x cell spacings (from ReadCMS_dep)
+      dy: array of cell spacings (from ReadCMS_dep)
+      z: elevation for dx, dx
+
+    Returns:
+      Dictionary with keys:
+          'i': cell number for x direction
+
+          'j': cell number for y direction
+
+          'latitude': 2 d array  each cell location in latitude
+
+          'longitude': 2 d array each cell location in longitude
+
+          'easting': 2 d array each cell location in NC stateplane easting
+
+          'northing': 2d array each cell location in NC stateplane northing
+
+          'xFRF': FRF x coordinate values
+
+          'yFRF': FRF y coordinate values
+
+          'azimuth': grid azimuth
+
+          'x0': grid origin x
+
+          'y0': grid origin y
+
+          'elevation': 2 d array of elevations
+
+          'time': time of the grid in epoch time (0 is fill value) - currently set
+
     """
     # convert from node calculation to centric calculation
     # first move origin from vertex of grid to center of first grid cell
 
     # first convert to FRF coordinates
-    FRF = gp.FRFcoord(x0, y0)
+    FRF = gp.FRFcoord(x0, y0, coordType='ncsp')
     # shift origin to cell center instead of cell vertex
     x0N = FRF['xFRF'] - dx[0]/2
     y0N = FRF['yFRF'] - dy[0]/2
-    # create new dx/dy array
+    # create new dx/dy array spaced with half of each of the 2 cells
     dxN = dx[:-1] + np.diff(dx)/2
     dyN = dy[:-1] + np.diff(dy)/2 # new nodes at the grid center - needed to fit into
     # create new nodes in FRF x and FRF Y using cell centric locations for accurate interpolation
     outXfrf, outYfrf = createGridNodesinFRF(x0N, y0N, dxN, dyN, dx.shape[0], dy.shape[0])
     xFRF, yFRF = np.meshgrid(outXfrf, sorted(outYfrf))
-
     # new work no need to loop as above
     convert2 = gp.FRFcoord(xFRF.flatten(), yFRF.flatten(), coordType='FRF')
     lat = convert2['Lat'].reshape(xFRF.shape)
@@ -113,10 +135,6 @@ def makeCMSgridNodes(x0, y0, azi, dx, dy, z):
     # making i's and j's for cell numbers
     ii = np.linspace(1, xFRF.shape[1], xFRF.shape[1])
     jj = np.linspace(1, yFRF.shape[0], yFRF.shape[0])
-
-    # flipping z so it matches x and y (increasing in x & y)
-    # it was read starting at i =0 and j=nj which is backwards from FRF coordinates
-    # this is taken care of in the bathy Load file
 
     BathyPacket = {'i': ii,
                    'j': jj,
@@ -134,7 +152,6 @@ def makeCMSgridNodes(x0, y0, azi, dx, dy, z):
                    'ni': len(ii),
                    'nj': len(jj),
                    'elevation': z,  # exported as [t, x,y] dimensions
-                   # 'bathy': -np.expand_dims(z, axis=0),
                    'gridFname': 'CMS GRid',
                    'time': 0}
 
@@ -143,9 +160,12 @@ def makeCMSgridNodes(x0, y0, azi, dx, dy, z):
 def convertGridNodesFromStatePlane(icoords, jcoords):
     """this function converts nodes of a grid coordinate in state plane to FRF coordinates using FRFcoord function
 
-    :param icoords: an array of the i coordinates of a grid (easting, northing)
-    :param jcoords: an array of the j coordinates of a grid (easting, northing)
-    :returns: array of frf coordinates for I and J of the grid
+    Args:
+      icoords: an array of the i coordinates of a grid (easting, northing)
+      jcoords: an array of the j coordinates of a grid (easting, northing)
+
+    Returns:
+      array of frf coordinates for I and J of the grid
 
     """
 
@@ -166,49 +186,40 @@ def makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=None, dSTR_e=None, scalecDict=No
         in areas where it is the only data point the other values are nan)
     This final grid is smoothed using the scale-C interpolation at the end then written to a netcdf file.
 
-    :param dSTR_s: string that determines the start date of the times of the surveys you want to use to update the DEM
-                    format is  dSTR_s = '2013-01-04T00:00:00Z'
-                    no matter what you put here, it will always round it down to the beginning of the month (Default value = None)
-    :param dSTR_e: string that determines the end date of the times of the surveys you want to use to update the DEM
-                    format is dSTR_e = '2014-12-22T23:59:59Z'
-                    no matter what you put here, it will always round it up to the end of the month (Default value = None)
-    :param dir_loc: place where you want to save the .nc files that get written
-                    the function will make the year directories inside of this location on its own.
-    :param scalecDict: keys are:
-                        x_smooth - x direction smoothing length for scalecInterp
-                        y_smooth - y direction smoothing length for scalecInterp
+    Args:
+      dSTR_s: string that determines the start date of the times of the surveys you want to use to update the DEM
+        format is  dSTR_s = '2013-01-04T00:00:00Z' no matter what you put here, it will always round it down to
+        the beginning of the month (Default value = None)
+      dSTR_e: string that determines the end date of the times of the surveys you want to use to update the DEM
+        format is dSTR_e = '2014-12-22T23:59:59Z' no matter what you put here, it will always round it up to the
+        end of the month (Default value = None)
+      dir_loc: place where you want to save the .nc files that get written
+        the function will make the year directories inside of this location on its own.
+      scalecDict(dict): keys are:
+        x_smooth - x direction smoothing length for scalecInterp (default = 100)
+        y_smooth - y direction smoothing length for scalecInterp (default = 200)
+        splinebctype - type of spline to use (default = 10)
+            2 - second derivative goes to zero at boundary
+            1 - first derivative goes to zero at boundary
+            0 - value is zero at boundary
+            10 - force value and derivative(first?!?) to zero at boundary
+
+        lc - spline smoothing constraint value (integer <= 1) (default = 4)
+        dxm -  coarsening of the grid for spline (e.g., 2 means calculate with a dx that is 2x input dx)
+            can be tuple if you want to do dx and dy separately (dxm, dym), otherwise dxm is used for both (default = 2)
+        dxi - fining of the grid for spline (e.g., 0.1 means return spline on a grid that is 10x input dx)
+            as with dxm, can be a tuple if you want separate values for dxi and dyi (default = 1)
+        targetvar - this is the target variance used in the spline function. (default = 0.45)
+        wbysmooth - y-edge smoothing length scale (default = 300)
+        wbxsmooth - x-edge smoothing length scale (default = 100
     
-                        if not specified it will default to:
-                        x_smooth = 100
-                        y_smooth = 200
-    :param splineDict: keys are:
-                        splinebctype
-                            options are....
-                            2 - second derivative goes to zero at boundary
-                            1 - first derivative goes to zero at boundary
-                            0 - value is zero at boundary
-                            10 - force value and derivative(first?!?) to zero at boundary
-                        lc - spline smoothing constraint value (integer <= 1)
-                        dxm -  coarsening of the grid for spline (e.g., 2 means calculate with a dx that is 2x input dx)
-                                can be tuple if you want to do dx and dy separately (dxm, dym), otherwise dxm is used for both
-                        dxi - fining of the grid for spline (e.g., 0.1 means return spline on a grid that is 10x input dx)
-                                as with dxm, can be a tuple if you want separate values for dxi and dyi
-                        targetvar - this is the target variance used in the spline function.
-                        wbysmooth - y-edge smoothing length scale
-                        wbxsmooth - x-edge smoothing length scale
-    
-                        if not specified it will default to:
-                        splinebctype = 10
-                        lc = 4
-                        dxm = 2
-                        dxi = 1
-                        targetvar = 0.45
-                        wbysmooth = 300
-                        wbxsmooth = 100
-    :param plot: do I want to plot this or not? 1 for yes, 0 for no (Default value = None)
-    :returns: netCDF file of the time mean bathymetry
+      plot (bool): turn plot on or off (Default value = None)
+
+    Returns:
+      netCDF file of the time mean bathymetry
 
     """
+    import MakeUpdatedBathyDEM as mbD
     # TODO add directions as to where to import these or how to get them, where they should be located ....
     from bsplineFunctions import bspline_pertgrid
     from scaleCinterp_python.DEM_generator import DEM_generator
@@ -217,18 +228,18 @@ def makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=None, dSTR_e=None, scalecDict=No
     filelist = ['http://134.164.129.55/thredds/dodsC/FRF/geomorphology/elevationTransects/survey/surveyTransects.ncml']
     # this is just the location of the ncml for the transects!!!!!
 
-    nc_b_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\TestNCfiles'
-    nc_b_name = 'backgroundDEMt0.nc'
+    nc_b_loc = '/home/david/BathyTroubleshooting/BackgroundFiles'
+    nc_b_name = 'backgroundDEMt0_tel.nc'
     # these together are the location of the standard background bathymetry that we started from.
 
     # Yaml files for my .nc files!!!!!
-    global_yaml = 'C:\Users\dyoung8\PycharmProjects\makebathyinterp\yamls\BATHY\FRFt0_global.yml'
-    var_yaml = 'C:\Users\dyoung8\PycharmProjects\makebathyinterp\yamls\BATHY\FRFt0_TimeMean_var.yml'
+    global_yaml = '/home/david/PycharmProjects/makebathyinterp/yamls/BATHY/FRFt0_global.yml'
+    var_yaml = '/home/david/PycharmProjects/makebathyinterp/yamls/BATHY/FRFt0_TimeMean_var.yml'
 
     # CS-array url - I just use this to get the position, not for any other data
     cs_array_url = 'http://134.164.129.55/thredds/dodsC/FRF/oceanography/waves/8m-array/2017/FRF-ocean_waves_8m-array_201707.nc'
     # where do I want to save any QA/QC figures
-    fig_loc = 'C:\Users\dyoung8\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\Test Figures\TimeWA_figs'
+    fig_loc = '/home/david/BathyTroubleshooting/BackgroundFiles/TestFigs'
 
     #check scalecDict
     if scalecDict is None:
@@ -241,14 +252,10 @@ def makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=None, dSTR_e=None, scalecDict=No
     #check dSTR_s
     if dSTR_s is None:
         dSTR_s = '1970-01-01T00:00:00Z' # set it to before the first survey
-    else:
-        pass
 
     #check dSTR_e
     if dSTR_e is None:
         dSTR_e = DT.datetime.strftime(DT.datetime.now(), '%Y-%m-%dT%H:%M:%SZ')  # set it to right now
-    else:
-        pass
 
     # force the survey to start at the first of the month and end at the last of the month!!!!
     dSTR_s = dSTR_s[0:7] + '-01T00:00:00Z'
@@ -297,6 +304,10 @@ def makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=None, dSTR_e=None, scalecDict=No
     Zi = old_bathy.variables['elevation'][:]
     xFRFi_vec = old_bathy.variables['xFRF'][:]
     yFRFi_vec = old_bathy.variables['yFRF'][:]
+
+    # if xFRF, yFRF are masked, remove?
+    xFRFi_vec = np.array(xFRFi_vec)
+    yFRFi_vec = np.array(yFRFi_vec)
 
     # read out the dx and dy of the background grid!!!
     # assume this is constant grid spacing!!!!!
@@ -349,7 +360,7 @@ def makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=None, dSTR_e=None, scalecDict=No
         gridDict['xFRFi_vec'] = xFRFi_vec
         gridDict['yFRFi_vec'] = yFRFi_vec
 
-        temp = subgridBounds2(surveyDict, gridDict, maxSpace=249)
+        temp = mbD.subgridBounds2(surveyDict, gridDict, maxSpace=249)
         x0 = temp['x0']
         x1 = temp['x1']
         y0 = temp['y0']
@@ -444,12 +455,15 @@ def makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=None, dSTR_e=None, scalecDict=No
     xFRF = xFRFi[0, :]
     yFRF = yFRFi[:, 1]
 
+
     cleaned_elevation = np.ma.masked_array(elevation, np.isnan(elevation))
     cleaned_weights = np.ma.masked_array(weights, np.isnan(weights))
 
     # do a nanmean on the elevation!!!!
     Z = np.ma.average(cleaned_elevation, axis=0, weights=cleaned_weights)
 
+
+    """
     # plot the mean to see if that is the problem?
     fig_name = 'backgroundDEM_' + 'TimeMean_NoScaleC' + '.png'
     plt.pcolor(xFRFi_vec, yFRFi_vec, Z[:, :], cmap=plt.cm.jet, vmin=-13, vmax=5)
@@ -460,6 +474,7 @@ def makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=None, dSTR_e=None, scalecDict=No
     plt.legend()
     plt.savefig(os.path.join(fig_loc, fig_name))
     plt.close()
+    """
 
 
     # run this through the DEM_generator function to smooth it....
@@ -530,7 +545,7 @@ def makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=None, dSTR_e=None, scalecDict=No
     nc_dict['xFRF'] = xFRF
     nc_dict['yFRF'] = yFRF
 
-    nc_name = 'backgroundDEMt0_TimeMean' + '.nc'
+    nc_name = 'backgroundDEMt0tel_TimeMean' + '.nc'
     makenc.makenc_t0BATHY(os.path.join(dir_loc, nc_name), nc_dict, globalYaml=global_yaml, varYaml=var_yaml)
 
     if plot is None:
@@ -576,13 +591,16 @@ def createGridNodesinFRF(x0, y0, dx, dy, ni, nj):
     """This function assumes azimuth of the grid is the same as that of the FRF coordinate system
     code developed for CMS wave and
 
-    :param x0: origin of x in FRF coords
-    :param y0: origin of grid in FRF coords
-    :param dx: Array of dx values
-    :param dy: Array of dy values
-    :param ni: number of cells in i
-    :param nj: number of cells in j
-    :returns: array of i coords, array of j coordinates
+    Args:
+      x0: origin of x in FRF coords
+      y0: origin of grid in FRF coords
+      dx: Array of dx values
+      dy: Array of dy values
+      ni: number of cells in i
+      nj: number of cells in j
+
+    Returns:
+      array of i coords, array of j coordinates
 
     """
     assert dx.shape[0] == ni-1, 'This function assumes that there are n-1 dx values'
@@ -602,21 +620,24 @@ def createGridNodesinFRF(x0, y0, dx, dy, ni, nj):
     return icoord, jcoord
 
 def makeBackgroundBathyAzimuth(origin, geo_ang, dx, dy, ni, nj, coord_system='FRF'):
-
     """This function makes the grid nodes using the origin and the azimuth
 
-    :param origin: this is the origin of your new grid in the form (xFRF, yFRF), (Lat, Lon), (easting, northing)
-    :param geo_ang: angle of the x-axis of your grid clockwise relative to true north
-    :param dx: x-direction spacing between your grid nodes in m
-    :param dy: y-direction spacing between your grid nodes in m
-    :param ni: number of nodes in the x-direction
-    :param nj: number of nodes in the y-direction
-    :param coord_system: FRF', 'utm', 'stateplane', 'LAT/LON' (Default value = 'FRF')
-    :returns: dictionary with keys containing
-            2D arrays of x & y grid nodes in the coordinate system you specify (easting/northing, lat/lon)
-            2D array of bottom elevation at those node locations from the background dem
+    Args:
+      origin: this is the origin of your new grid in the form (xFRF, yFRF), (Lat, Lon), (easting, northing)
+      geo_ang: angle of the x-axis of your grid clockwise relative to true north
+      dx: x-direction spacing between your grid nodes in m
+      dy: y-direction spacing between your grid nodes in m
+      ni: number of nodes in the x-direction
+      nj: number of nodes in the y-direction
+      coord_system: FRF', 'utm', 'stateplane', 'LAT/LON' (Default value = 'FRF')
+
+    Returns:
+      dictionary with keys containing
+      2D arrays of x & y grid nodes in the coordinate system you specify (easting/northing, lat/lon)
+      2D array of bottom elevation at those node locations from the background dem
 
     """
+    from getdatatestbed.getDataFRF import getObs
 
     assert len(origin) == 2, 'makeBackgroundBathy Error: invalid origin input.  origin input must be of form (xFRF, yFRF), (easting, northing), or (LAT, LON)'
 
@@ -772,18 +793,20 @@ def makeBackgroundBathyAzimuth(origin, geo_ang, dx, dy, ni, nj, coord_system='FR
     return out
 
 def makeBackgroundBathyCorners(LLHC, URHC, dx, dy, coord_system='FRF'):
-
     """This function makes grid nodes using the corners of the grid using different coordinate systems
 
-    :param LLHC: tuple: lower left hand corner of the desired domain (xFRF, yFRF) (easting, northing) or (Lat, Lon)
-    :param URHC: tuple: upper right hand corner of the desired domain (xFRF, yFRF) (easting, northing) or (Lat, Lon)
-    :param dx: x-direction grid spacing in m - lat/lon corners get converted to utm!!!
-    :param dy: y-direction grid spacing in m - lat/lon corners get converted to utm!!!
-    :param coord_system: string containing the coordinate system for your corners ('FRF' 'utm', 'stateplane', or 'LAT/LON') (Default value = 'FRF')
-    :returns: dictionary containing 2D arrays of:
-            xFRF (or easting or longitude)
-            yFRF (or northing or Latitude)
-            bottomElevation at those points interpolated from background DEM onto desired grid
+    Args:
+      LLHC: tuple: lower left hand corner of the desired domain (xFRF, yFRF) (easting, northing) or (Lat, Lon)
+      URHC: tuple: upper right hand corner of the desired domain (xFRF, yFRF) (easting, northing) or (Lat, Lon)
+      dx: x-direction grid spacing in m - lat/lon corners get converted to utm!!!
+      dy: y-direction grid spacing in m - lat/lon corners get converted to utm!!!
+      coord_system: string containing the coordinate system for your corners ('FRF' 'utm', 'stateplane', or 'LAT/LON') (Default value = 'FRF')
+
+    Returns:
+      dictionary containing 2D arrays of:
+      xFRF (or easting or longitude)
+      yFRF (or northing or Latitude)
+      bottomElevation at those points interpolated from background DEM onto desired grid
 
     """
 
@@ -949,14 +972,17 @@ def CreateGridNodesInStatePlane(x0, y0, azi, dx, dy, ni, nj):
     in state plane, can further be converted to lat/lon
     stateplane sp3200
 
-    :param x0: integer/float describing origin in x (easting)
-    :param y0: integer/float describing origin in y (northing)
-    :param azi: grid azimuth defining rotation of grid
-    :param dx: can be integer/float or numpy array/list describing cell width in x direction (i)
-    :param dy: can be integer/float or numpy array/list describing cell with in y direction (j)
-    :param ni: integer/float describing number of cells in i
-    :param nj: integer/float describing  number of cells in j
-    :returns: tuples of i/j coords, jStatePlane in stateplane sp3200
+    Args:
+      x0: integer/float describing origin in x (easting)
+      y0: integer/float describing origin in y (northing)
+      azi: grid azimuth defining rotation of grid
+      dx: can be integer/float or numpy array/list describing cell width in x direction (i)
+      dy: can be integer/float or numpy array/list describing cell with in y direction (j)
+      ni: integer/float describing number of cells in i
+      nj: integer/float describing  number of cells in j
+
+    Returns:
+      tuples of i/j coords, jStatePlane in stateplane sp3200
 
     """
     # calculating change in alongshore coordinate for northing and easting
@@ -997,7 +1023,6 @@ def CreateGridNodesInStatePlane(x0, y0, azi, dx, dy, ni, nj):
     return icoords, jcoords
 
 def interpIntegratedBathy4UnstructGrid(ugridDict, THREDDS='FRF', forcedSurveyDate=None, bathy=None):
-
     """
     This function basically takes scattered x & y points and returns elevations at those points interpolated from the
     most recent integrated bathy product.
@@ -1082,9 +1107,8 @@ def interpIntegratedBathy4UnstructGrid(ugridDict, THREDDS='FRF', forcedSurveyDat
         elif coordToken == 'FRF':
             x = ugridDict['x']
             y = ugridDict['y']
-        else:
-            pass
-    # okay, so I should have everything converted to FRF coordinates and meters.  Yay!
+
+    # okay, so I should have everything converted to FRF coordinates and meters.
     if bathy is None:
         # i don't already have an integrated bathy, so now I pull the integrated bathymetry
         if forcedSurveyDate is None:
@@ -1136,17 +1160,18 @@ def interpIntegratedBathy4UnstructGrid(ugridDict, THREDDS='FRF', forcedSurveyDat
     return out
 
 def convertGridNodes2ncsp(x0, y0, azi, xPos, yPos):
+    """this function is used to convert the cms grid nodes from the CMS convention in the .tel file to NCSP so
 
-    """
-    this function is used to convert the cms grid nodes from the CMS convention in the .tel file to NCSP so
     you can interpolate our gridded bathymetry onto it.
 
-    :param x0: integer/float describing origin in x (easting)
-    :param y0: integer/float describing origin in y (northing)
-    :param azi: grid azimuth defining rotation of grid
-    :param xPos: 1D np.array that contains the x-distance from the origin from the .tel file
-    :param yPos: 1D np.array that contains the y-distance from the origin from the .tel file
-    :return
+    Args:
+        x0: integer/float describing origin in x (easting)
+        y0: integer/float describing origin in y (northing)
+        azi: grid azimuth defining rotation of grid
+        xPos: 1D np.array that contains the x-distance from the origin from the .tel file
+        yPos: 1D np.array that contains the y-distance from the origin from the .tel file
+
+    Returns
             easting: 1D np.array of the NC stateplane easting of the grid nodes
             northing: 1D np.array of the NC stateplane northing of the grid nodes
 
@@ -1166,7 +1191,6 @@ def convertGridNodes2ncsp(x0, y0, azi, xPos, yPos):
     return easting, northing
 
 def findNearestUnstructNode(xFRF, yFRF, ugridDict):
-
     """
     This script will take in the xFRF and yFRF coordinates of an instrument (or any other location of interest)
     and then find the index of the closest node in an unstructured grid.  it also returns the distance between that the
@@ -1196,6 +1220,4 @@ def findNearestUnstructNode(xFRF, yFRF, ugridDict):
     dist, ind = kdt.query(qPt, 1)
 
     return ind, dist
-
-
 

@@ -7,9 +7,14 @@ import cPickle as pickle
 def extract_time(data,index):
     """This function takes a dictionary [data] and pulles out all of the keys at specific index [index]
         specific to cBathy dictionary keys
-    :param data: dictionary
-    :param index: index to be removed
-    :returns: new dictionary with only the indexs selected returned
+
+    Args:
+      data: dictionary
+      index: index to be removed
+
+    Returns:
+      new dictionary with only the indexs selected returned
+
     """
     vars = data.keys()
     new = {}
@@ -24,20 +29,31 @@ def cbathy_kalman_filter(new, prior, waveHs):
     """This function does a kalman filter designed for implmeneting wave height thresholds into the cbathy
     algorithm, this operates on a single time step only!!!
 
-    :param new: a dictionary with keys associated with get data
-        :key 'xm': frf x coords
-        :key 'ym': frf y coords
-        :key 'time': current time
-        :key 'depthfCError': curent estimate error
-        :key 'depthfC': current estimate
-    :param prior: a saved dictionary with bathys derived from times when wave heights were below the threshold of choice
-        :key 'time':
-        :key 'depthKF': previous filtered estimate
-        :key 'P':
-    :param waveHs:
+    Args:
+      new(dict): a dictionary with keys associated with get data
+         'xm': frf x coords
 
-    :return: new dictionary
-        :key 'P':
+         'ym': frf y coords
+
+         'time': current time
+
+         'depthfCError': curent estimate error
+
+         'depthfC': current estimate
+
+      prior (dict): a saved dictionary with bathys derived from times when wave heights were below the threshold of choice
+         'time':
+
+         'depthKF': previous filtered estimate
+
+         'P':
+      waveHs (float): single wave height value
+
+
+    Returns:
+      new dictionary
+         'P':
+
     """
     if type(prior['time']) == list and len(prior['time']) == 1:
         prior['time'] = prior['time'][0]
@@ -93,8 +109,10 @@ def cbathy_kalman_filter(new, prior, waveHs):
 #     new['depthKF'][idd] = prior['depthKF'][idd]
 #     new['P'][idd] = prior['P'][idd]
 #     new['depthKFError'] = np.sqrt(new['P'])
-
-    idx = np.argwhere(hk.mask).squeeze()       # find idx of missing points in new array
+    if isinstance(hk, np.ma.masked_array):
+        idx = np.argwhere(hk.mask).squeeze()       # find idx of missing points in new array
+    else:
+        idx = np.argwhere(np.isnan(hk)).squeeze()
     hk[idx] = prior['depthKF'].flatten()[idx]  # fill kalman filtered depth estimates with old values when missing
     Pk[idx] = prior['P'].flatten()[idx]        # fill error variance with old values when missing
     # package for departure
@@ -104,29 +122,51 @@ def cbathy_kalman_filter(new, prior, waveHs):
 
     return new
 
-def cBathy_ThresholdedLogic(cBathy, rawspec, waveHsThreshold=1.2):
-    """
-    Logic associated with creating the wave height thresholded kalman filtered cBathy representation
-    :param cBathy: dictionary from go.getcBathy data
-    :param rawspec: dictionary from go.getwavespec function
-    :param waveHsThreshold: a decimal value for which to compare when generating the new kalman filter
+def replacecBathyMasksWithNans(dictionary):
+    """function will replace dictionary keys that are masked arrays filled with numpy.nans
+    :param dictionary: an arbitrary dictionary with keys
 
-    :return: the original cBathy dictionary
-        :key 'ym': yfrf coords
-        :key 'yFRF': yfrf coords
-        :key 'epochtime': epoch time
-        :key 'xm': xfrf coords
-        :key 'xFRF': xfrf coords
-        :key 'depthKF': kalman filtered depth estimate (updated with only estimates below wave height threshold
-        :key 'depthfC': individual depth estimates
-        :key 'P': Process error
-        :key 'depthfCError: individual depth estimate error
-        :key 'surveyMeanTime': last time data was updated
-        :key 'elevation': negative depth KF values
-        :key 'k', Does not return
-        :key 'depth':, does not return
-        :key fB': , does not return
-        :key 'time': date time objects for each filtered estimate
+    :return: unmasked dictonary with nans in place of mask=True
+    """
+    for var in dictionary:
+        if isinstance(dictionary[var], np.ma.masked_array):
+            dictionary[var] = np.ma.filled(dictionary[var], fill_value=np.nan)
+    return dictionary
+
+def cBathy_ThresholdedLogic(cBathy, rawspec, waveHsThreshold=1.2):
+    """Logic associated with creating the wave height thresholded kalman filtered cBathy representation
+
+    Args:
+      cBathy: dictionary from go.getcBathy data
+      rawspec: dictionary from go.getwavespec function
+      waveHsThreshold: a decimal value for which to compare when generating the new kalman filter (Default value = 1.2)
+
+    Returns:
+      the original cBathy dictionary
+           'ym': yfrf coords
+
+           'yFRF': yfrf coords
+
+           'epochtime': epoch time
+
+           'xm': xfrf coords
+
+           'xFRF': xfrf coords
+
+           'depthKF': kalman filtered depth estimate (updated with only estimates below wave height threshold
+
+           'depthfC': individual depth estimates
+
+           'P': Process error
+
+           'depthfCError: individual depth estimate error
+
+           'surveyMeanTime': last time data was updated
+
+           'elevation': negative depth KF values
+
+           'time': date time objects for each filtered estimate
+
     """
     ##### define inital global variables for function
     version_prefix = 'cBKF-T' # assume only one version
@@ -156,6 +196,9 @@ def cBathy_ThresholdedLogic(cBathy, rawspec, waveHsThreshold=1.2):
         badIdx = np.argwhere(rawspec['Hs'][idxObs.astype(int)] > waveHsThreshold).squeeze()
     except TypeError:  # when cbath== None
         badIdx = np.array([])
+    if isinstance(cBathy['depthKF'], np.ma.masked_array):
+        cBathy = replacecBathyMasksWithNans(cBathy)
+
     ##########################################
     # Begin Thresholded kalman filtered logic
     #########################################
@@ -193,16 +236,32 @@ def cBathy_ThresholdedLogic(cBathy, rawspec, waveHsThreshold=1.2):
                     with open(loadPickleFname, 'rb') as handle:
                         cbathyold = pickle.load(handle)
                         print '     CBThresh: wave height good, Kalman filtering from %s' % loadPickleFname
+                    if cbathyold['elevation'].shape != cBathy['depthKF'].shape[1:] :# load from background
+                        print '  Loading from background, you changed your grid shape'
+                        from getdatatestbed import getDataFRF
+                        go = getDataFRF.getObs(cBathy['time'][0], cBathy['time'][-1])
+                        full = go.getBathyGridcBathy()
+                        cbathyold = sb.reduceDict(full,-1)
+                        xinds = np.where(np.in1d(cbathyold['xm'], cBathy['xm']))[0]
+                        yinds = np.where(np.in1d(cbathyold['ym'], cBathy['ym']))[0]
+                        for key in cbathyold.keys():
+                            if key is 'xm':
+                                cbathyold[key] = cbathyold[key][xinds]
+                            elif key is 'ym':
+                                cbathyold[key] = cbathyold[key][xinds]
+                            elif key not in ['epochtime', 'time', 'xm', 'ym']:
+                                cbathyold[key] = cbathyold[key][slice(yinds[0], yinds[-1]+1), slice(xinds[0], xinds[-1]+1)]
                 else:
                     raise ImportError('You need a cBathy to seed the first kalman filter step ')
+
                 cBathySingle = extract_time(cBathy, tt)
                 temp = cbathy_kalman_filter(cBathySingle, cbathyold, rawspec['Hs'])
                 # overwrite old kalman filtered results with new kalman filtered results
-                depthKF[rc] = temp['depthKF']
-                depthKFE[rc] = temp['depthKFError']
-                P[rc] = temp['P']
-                depthfCE[rc] = temp['depthfCError']
-                depthfC[rc] = temp['depthfC']
+                depthKF[rc] = np.ma.filled(temp['depthKF'], fill_value=np.nan) # temp['depthKF']
+                depthKFE[rc] = np.ma.filled(temp['depthKFError'], fill_value=np.nan)
+                P[rc] = np.ma.filled(temp['P'], fill_value=np.nan)
+                depthfCE[rc] = np.ma.filled(temp['depthfCError'], fill_value=np.nan)
+                depthfC[rc] = np.ma.filled(temp['depthfC'], fill_value=np.nan)
                 timeO[rc] = temp['time']
                 etimeO[rc] = temp['epochtime']
                 rc +=1

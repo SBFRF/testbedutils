@@ -6,6 +6,7 @@ import netCDF4 as nc
 import numpy as np
 
 def main():
+    """ """
     baseURL = 'http://134.164.129.55/thredds/dodsC/FRF/'
     baseURL = 'http://134.164.129.628080/thredds/dodsC/'
 
@@ -41,15 +42,15 @@ def main():
                     print '**' + var + '**'
                     print 'shape %s' % str(np.shape(ncfile[var]))
                     if np.size(ncfile[var]) == 1:
-                        print 'data:\n  var: %s\n  val: %d' % (var, ncfile[var][:])
+                        tmp = ncfile[var][:]
                     elif np.size(ncfile[var], axis = 0) >= 100:
                         for ii in np.arange(0, np.shape(ncfile[var])[0], 100):
                             print 'approximate time: %s\nfile: %s\nvariable %s' %( nc.num2date(ncfile['time'][ii] ,'seconds since 1970-01-01'), callURL, var)
                             if np.shape(ncfile[var])[0] > ii+100:
-                                print  ncfile[var][ii:ii+100]
+                                tmp = ncfile[var][ii:ii+100]
                             else:
                                 print 'less than 100 left'
-                                print ncfile[var][:]
+                                tmp = ncfile[var][:]
                     elif var=='station_name':
                         print 'station_Name %s' % var
 
