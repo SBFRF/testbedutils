@@ -365,7 +365,7 @@ def FRFcoord(p1, p2, coordType=None):
                      'StateplaneN': sp['StateplaneN'], 'Lat': ll['lat'], 'Lon': ll['lon'], 'utmE': utm['utmE'], 'utmN': utm['utmN']}
 
     else:
-        print '<<ERROR>> sblib Geoprocess FRF coord Cound not determine input type, returning NaNs'
+        print '<<ERROR>> testbedUtils Geoprocess FRF coord Cound not determine input type, returning NaNs'
         coordsOut = {'xFRF': float('NaN'), 'yFRF': float('NaN'), 'StateplaneE': float('NaN'),
              'StateplaneN': float('NaN'), 'Lat': float('NaN'), 'Lon':float('NaN')}
     return coordsOut
