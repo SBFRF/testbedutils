@@ -13,6 +13,7 @@ import datetime as DT
 import warnings
 import netCDF4 as nc
 import math
+from dateutil.relativedelta import relativedelta
 
 ########################################
 #  following functions deal with general things
@@ -547,6 +548,41 @@ def timeMatch_altimeter(altTime, altData, modTime, modData, window=30 * 60):
             modout.append(modData[tt])
 
     return np.array(timeout), np.array(dataout), np.array(modout)
+
+def date_range(start, end, intv=None):
+    """
+    This is a date range function similar to "createDateList".  It will do date ranges that are monthly and yearly
+    taking into account the variable number of days in the month and leap years etc...
+    We may want this to eventually replace createDateList?
+    :param start: string of the start date in format 20170101
+    :param end:  string of the end date in format 20180206
+    :param intv: what do you want the interval to be?
+    :return: a list of datetimes on the interval you specify
+    """
+
+    if intv is None:
+        intv = 'day'
+    atBins = ['day', 'week', 'month', 'year']
+    assert intv in atBins, 'Error: allowable intervals are day, week, month, or year.'
+
+    start = DT.datetime.strptime(start, "%Y%m%d")
+    end = DT.datetime.strptime(end, "%Y%m%d")
+
+    date_list = [start]
+    cnt = 1
+    while date_list[-1] < end:
+        if intv is 'day':
+            date_list.append(start + DT.datetime.timedelta(days=1 * cnt))
+        elif intv is 'week':
+            date_list.append(start + DT.datetime.timedelta(days=7 * cnt))
+        elif intv is 'month':
+            date_list.append(start + relativedelta(months=+1 * cnt))
+        elif intv is 'year':
+            date_list.append(start + relativedelta(years=+1 * cnt))
+
+        cnt = cnt + 1
+
+    return date_list
 
 ########################################
 #  following functions deal with finding things
