@@ -219,9 +219,9 @@ def makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=None, dSTR_e=None, scalecDict=No
       netCDF file of the time mean bathymetry
 
     """
-    import MakeUpdatedBathyDEM as mbD
+    # import MakeUpdatedBathyDEM as mbD
     # TODO add directions as to where to import these or how to get them, where they should be located ....
-    from bsplineFunctions import bspline_pertgrid
+    # from bsplineFunctions import bspline_pertgrid
     from scaleCinterp_python.DEM_generator import DEM_generator
 
     #HARD CODED VARIABLES!!!
