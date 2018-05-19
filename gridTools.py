@@ -32,6 +32,7 @@ def frf2ij(xfrf, yfrf, x0, y0, dx, dy, ni, nj):
         i and j locations in cell
 
     """
+    varibleSpaced = False  # default false
     dx_is_single_value = isinstance(dx, (float, int, long))
     dy_is_single_value = isinstance(dy, (float, int, long))
 
@@ -178,45 +179,54 @@ def convertGridNodesFromStatePlane(icoords, jcoords):
     return outIfrf, outJfrf
 
 def makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=None, dSTR_e=None, scalecDict=None, splineDict=None, plot=None):
-    """This function will create a time-averaged background surface.
-    It takes in a background netcdf file and adds in every survey between the start and end dates.
-    Each survey is converted to a grid using scaleCinterpolation.
-    These grids are all stacked on top of each other and averaged.
-    (note - the original background grid is only counted once;
+    """This function will create a time-averaged background surface. It takes in a background netcdf
+    file and adds in every survey between the start and end dates. Each survey is converted to a grid using
+    scaleCinterpolation.  These grids are all stacked on top of each other and averaged. This final grid is
+    smoothed using the scale-C interpolation at the end then written to a netcdf file.
+
+    Notes:
+        the original background grid is only counted once;
         in areas where it is the only data point the other values are nan)
-    This final grid is smoothed using the scale-C interpolation at the end then written to a netcdf file.
+
 
     Args:
       dSTR_s: string that determines the start date of the times of the surveys you want to use to update the DEM
-        format is  dSTR_s = '2013-01-04T00:00:00Z' no matter what you put here, it will always round it down to
-        the beginning of the month (Default value = None)
+          format is  dSTR_s = '2013-01-04T00:00:00Z' no matter what you put here, it will always round it down to
+          the beginning of the month (Default value = None)
       dSTR_e: string that determines the end date of the times of the surveys you want to use to update the DEM
-        format is dSTR_e = '2014-12-22T23:59:59Z' no matter what you put here, it will always round it up to the
-        end of the month (Default value = None)
+          format is dSTR_e = '2014-12-22T23:59:59Z' no matter what you put here, it will always round it up to the
+          end of the month (Default value = None)
       dir_loc: place where you want to save the .nc files that get written
-        the function will make the year directories inside of this location on its own.
+          the function will make the year directories inside of this location on its own.
       scalecDict(dict): keys are:
-        x_smooth - x direction smoothing length for scalecInterp (default = 100)
-        y_smooth - y direction smoothing length for scalecInterp (default = 200)
-        splinebctype - type of spline to use (default = 10)
+          x_smooth - x direction smoothing length for scalecInterp (default = 100)
+
+          y_smooth - y direction smoothing length for scalecInterp (default = 200)
+
+          splinebctype - type of spline to use (default = 10)
             2 - second derivative goes to zero at boundary
             1 - first derivative goes to zero at boundary
             0 - value is zero at boundary
             10 - force value and derivative(first?!?) to zero at boundary
 
-        lc - spline smoothing constraint value (integer <= 1) (default = 4)
-        dxm -  coarsening of the grid for spline (e.g., 2 means calculate with a dx that is 2x input dx)
-            can be tuple if you want to do dx and dy separately (dxm, dym), otherwise dxm is used for both (default = 2)
-        dxi - fining of the grid for spline (e.g., 0.1 means return spline on a grid that is 10x input dx)
-            as with dxm, can be a tuple if you want separate values for dxi and dyi (default = 1)
-        targetvar - this is the target variance used in the spline function. (default = 0.45)
-        wbysmooth - y-edge smoothing length scale (default = 300)
-        wbxsmooth - x-edge smoothing length scale (default = 100
+          lc: spline smoothing constraint value (integer <= 1) (default = 4)
+
+          dxm:  coarsening of the grid for spline (e.g., 2 means calculate with a dx that is 2x input dx)
+              can be tuple if you want to do dx and dy separately (dxm, dym), otherwise dxm is used for both (default = 2)
+
+          dxi: fining of the grid for spline (e.g., 0.1 means return spline on a grid that is 10x input dx)
+              as with dxm, can be a tuple if you want separate values for dxi and dyi (default = 1)
+
+          targetvar: this is the target variance used in the spline function. (default = 0.45)
+
+          wbysmooth: y-edge smoothing length scale (default = 300)
+
+          wbxsmooth: x-edge smoothing length scale (default = 100
     
       plot (bool): turn plot on or off (Default value = None)
 
     Returns:
-      netCDF file of the time mean bathymetry
+        netCDF file of the time mean bathymetry
 
     """
     import MakeUpdatedBathyDEM as mbD
@@ -1191,22 +1201,21 @@ def convertGridNodes2ncsp(x0, y0, azi, xPos, yPos):
     return easting, northing
 
 def findNearestUnstructNode(xFRF, yFRF, ugridDict):
-    """
-    This script will take in the xFRF and yFRF coordinates of an instrument (or any other location of interest)
+    """This script will take in the xFRF and yFRF coordinates of an instrument (or any other location of interest)
     and then find the index of the closest node in an unstructured grid.  it also returns the distance between that the
     position handed to the function and the closest grid node.
 
-    :param xFRF: xFRF location (of an instrument or other location of interest)
+    Args:
+        xFRF: xFRF location (of an instrument or other location of interest)
+        yFRF: yFRF location (of an instrument or other location of interest)
+        ugridDict: input dictionary
+            'xFRF': - xFRF of all the points in the unstructured grid
+            'yFRF': - yFRF of all the points in the unstructured grid
 
-    :param yFRF: yFRF location (of an instrument or other location of interest)
+    Returns:
+        ind:  index in the list of grid points that is closest to the input xFRF and yFRF position
+        dist: distance from the unstruct grid point to the xFRF and yFRF position.
 
-    :param ugridDict:
-        :key xFRF: - xFRF of all the points in the unstructured grid
-        :key yFRF: - yFRF of all the points in the unstructured grid
-
-    :return:
-    ind - index in the list of grid points that is closest to the input xFRF and yFRF position
-    dist - distance from the unstruct grid point to the xFRF and yFRF position.
     """
 
     assert 'xFRF' in ugridDict.keys(), 'Error: xFRF is a required key in ugridDict'
