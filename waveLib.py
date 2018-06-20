@@ -260,17 +260,16 @@ def makeMLMspecFromAsBs(a0, a1, b1, a2, b2, waterDepth, freqs, dirs):
     return spec
 
 def mlm(freqs, dirs, c11, c22, c33, c23, q12, q13):
-    """From kent hathaway's code translated from fortran, chuck long -> hanson
-        mlm.m
-    % c  --------------------------------------------------------------------
-    % c     Maxumum Likelihood Method (MLM) directional wave analysis
-    % c     Reference:
-    % c     ---------
-    % c     J. Oltman-Shay & R.T. Guza, A Data-Adaptive Ocean Wave Directional
-    % c     Spectrum Estimator for Pitch and Roll Type Measurements, Journal
-    % c     of Physical Oceanography, Vol. 14, pp. 1800-1810, 1984.
-    % c  --------------------------------------------------------------------
-    ccould be improved (verified)
+    """From kent hathaway's code translated from fortran, chuck long -> hanson mlm.m
+
+    Maxumum Likelihood Method (MLM) directional wave analysis
+
+    Reference:
+       J. Oltman-Shay & R.T. Guza, A Data-Adaptive Ocean Wave Directional
+       Spectrum Estimator for Pitch and Roll Type Measurements, Journal
+       of Physical Oceanography, Vol. 14, pp. 1800-1810, 1984.
+
+    TODO: could be improved (verified)
 
     Args:
       freq: frequencies
@@ -419,14 +418,20 @@ def stats1D(fspec, frqbins, lowFreq=0.05, highFreq=0.5):
 
     Returns:
       a dictionary with statistics
-         Hmo   Significant wave height
-         Tp   Period of the peak energy in the frequency spectra, (1/Fp).  AKA Tpd, not to be
-            confused with parabolic fit to spectral period
-         Tm  -- Tm02   Mean spectral period (Tm0,2, from moments 0 & 2), sqrt(m0/m2)
-         Tave -- Tm01   Average period, frequency sprectra weighted, from first moment (Tm0,1)
-         sprdF  Freq-spec spread (m0*m4 - m2^2)/(m0*m4)  (one definition)
-         Tm10 Mean Absolute wave Period from -1 moment
-         meta expanded variable name/descriptions
+         'Hmo':   Significant wave height
+
+         'Tp':   Period of the peak energy in the frequency spectra, (1/Fp).  AKA Tpd, not to be
+             confused with parabolic fit to spectral period
+
+         'Tm':    Tm02   Mean spectral period (Tm0,2, from moments 0 & 2), sqrt(m0/m2)
+
+         'Tave':  Tm01   Average period, frequency sprectra weighted, from first moment (Tm0,1)
+
+         'sprdF':  Freq-spec spread (m0*m4 - m2^2)/(m0*m4)  (one definition)
+
+         'Tm10': Mean Absolute wave Period from -1 moment
+
+         'meta': expanded variable name/descriptions
 
     """
     assert fspec.shape[-1] == len(frqbins), '1D stats need a 1 d spectra'
@@ -476,8 +481,7 @@ def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
         USACE Wave Information Study (WIS) website
 
     Args:
-      spec: array
-    this is a 2d spectral inputshaped by (time, freq, dir)
+      spec (array):  this is a 2d spectral inputshaped by [time, freq, dir]
       frqbins: Frequency vector (not assumed constant)
       dirbins: an array of direction bins associated with the 2d spec
       lowFreq: low frequency cutoff for the spectral stat's calculation (Default value = 0.05)
@@ -485,22 +489,33 @@ def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
 
     Returns:
       dictionary
-           Hmo   Significant wave height
-           Tp   Period of the peak energy in the frequency spectra, (1/Fp).  AKA Tpd, not to be
+           'Hmo':   Significant wave height
+
+           'Tp':   Period of the peak energy in the frequency spectra, (1/Fp).  AKA Tpd, not to be
                 confused with parabolic fit to spectral period
-           Tm   -- Tm02   Mean spectral period (Tm0,2, from moments 0 & 2), sqrt(m0/m2)
-           Tave  -- Tm01   Average period, frequency sprectra weighted, from first moment (Tm0,1)
-           Dmp   Mean direction at the peak frequency
-           Dp   Peak direction at the peak frequency
-           Dm   Mean wave direction
-           sprdF  Freq-spec spread (m0*m4 - m2^2)/(m0*m4)  (one definition)
-           sprdD  Directional spread (m0*m4 - m2^2)/(m0*m4)  (one definition, Kuik 1988, buoys),
-                 total sea-swell
-           sprdDhp  half-power direction width in direction spectra at peak freq (not currently incorporated)Input:
-           Tm10 Mean Absolute wave Period from -1 moment
-           vecAvgMeanDir - vector averaged mean direction (should be the same as Dm - could be checked and removed)
+
+           'Tm':   -- Tm02   Mean spectral period (Tm0,2, from moments 0 & 2), sqrt(m0/m2)
+
+           'Tave':  -- Tm01   Average period, frequency sprectra weighted, from first moment (Tm0,1)
+
+           'Dmp':   Mean direction at the peak frequency
+
+           'Dp':   Peak direction at the peak frequency
+
+           'Dm':   Mean wave direction
+
+           'sprdF':  Freq-spec spread (m0*m4 - m2^2)/(m0*m4)  (one definition)
+
+           'sprdD':  Directional spread (m0*m4 - m2^2)/(m0*m4)  (one definition, Kuik 1988, buoys), total sea-swell
+
+           'sprdDhp':  half-power direction width in direction spectra at peak freq (not currently incorporated)Input:
+
+           'Tm10': Mean Absolute wave Period from -1 moment
+
+           'vecAvgMeanDir': vector averaged mean direction (should be the same as Dm - could be checked and removed)
                 taken from wis website
-           meta expanded variable name/descriptions
+
+           'meta': expanded variable name/descriptions
 
     """
     assert type(frqbins) in [np.ndarray, np.ma.MaskedArray], 'the input frqeuency bins must be a numpy array'
@@ -949,7 +964,18 @@ def findidxSeaSwell(spec1d, dspec, wavefreqbin, windSpeed, windDir, depth, plotf
     return outidxs
 
 
-#def decompose2Dspec(spec, wavefreqbin):
+def decompose2Dspec(spec, wavefreqbin):
+    """
+    This function is still under development, its supposed to take input of a 2D spectra and decompose to fourier
+    coefficeints
+
+    Args:
+        spec:
+        wavefreqbin:
+
+    Returns:
+
+    """
 
     fspec = spec.sum(axis=-1)  # integrating across all directions
 
@@ -965,14 +991,14 @@ def seaAndSwell2D(specTime, spec, wavefreqbin, wavedirbin, windSpeed, windDirTn,
     ... still under development
 
     Args:
-      specTime: this is a time stamp for the data dimensioned by (time_
-      spec: this is the spectral wave energy data dimensioned by (time, wave direction, wave frequency)
+      specTime: this is a time stamp for the data dimensioned by [time]
+      spec: this is the spectral wave energy data dimensioned by [time, wave direction, wave frequency]
       wavefreqbin: this are the frequencies associated with the spectral wave data
       wavedirbin: these are the direction bins associated with the spectra, same angle convention and
       windSpeed: the speed of the wind
       windDirTn: the wind direction of the
       depth: depth is assumed to be 26 meter wave rider (Default value = 26)
-      plot: Default value = False)
+      plot (bool): Turn QA plots on or off (Default value = False)
 
     Returns:
       sea, swell spectra the same size as the input spectra

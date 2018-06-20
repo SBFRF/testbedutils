@@ -1,6 +1,4 @@
-import math
-import warnings
-
+import math, warnings
 import numpy as np
 
 

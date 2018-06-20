@@ -18,6 +18,27 @@ from dateutil.relativedelta import relativedelta
 ########################################
 #  following functions deal with general things
 ########################################
+def oMagnitude(x):
+    """Calculates the order of magnitude of a number, works only on single value not array or lists
+
+    Args:
+        x (float):  float - single
+
+    Returns:
+        integer of order of magnitude
+
+    Examples:
+        oMagnitude(99.23)
+            1
+        oMagnitude(9432)
+            3
+        oMagnitude(.002)
+            -3
+    """
+    if x is not 0:
+        return int(math.floor(math.log10(x)))
+    else:
+        return 0
 
 def reduceDict(dictIn, idxToKeep, exemptList=None):
     """This function will take a dictionary and  reduce it by given indicies, making a COPY of the array
@@ -123,19 +144,28 @@ def statsBryant(observations, models):
       models: array of model data
 
     Returns:
-      dictiornay
+      dictiornay with statistics calculated
             'bias' average of residuals
+
             'RMSEdemeaned': RMSEdemeaned,
+
             'RMSE': R oot mean square error
+
             'RMSEnorm': normalized root Mean square error also Percent RMSE
+
             'scatterIndex': ScatterIndex
+
             'symSlope': symetrical slope
+
             'corr': r
+
             'r2': coefficient of determination (corr squared)
+
             'PscoreWilmont': performance score developed by Wilmont
+
             'PscoreIMEDS':  see Hanson 2007 for description
+
             'residuals': model - observations
-      :
 
     """
     obsNaNs = np.argwhere(np.isnan(observations)).squeeze()
@@ -242,7 +272,7 @@ def makegif(flist, ofname, size=None, dt=0.5):
 #  following functions deal with averaging
 ########################################
 
-def baseRound(x, base=5):
+def baseRound(x, base=5, **kwargs):
     """This function will round any value to a multiple of the base,
 
     Args:
@@ -255,7 +285,12 @@ def baseRound(x, base=5):
 
     """
     x = np.array(x, dtype=float)
-    return base * np.round(x/base)
+    if 'floor' in kwargs and kwargs['floor'] == True:
+        return base * np.floor(x/base)
+    elif 'ceil' in kwargs and kwargs['ceil'] == True:
+        return base * np.ceil(x/base)
+    else:
+        return base * np.round(x/base)
 
 def weightedAvg(toBeAveraged, weights, avgAxis=0, inverseWeight=False):
     """This function does a weighted average on a multidimensional array
@@ -310,22 +345,18 @@ def mtime2epoch(timeIn):
 def roundtime(timeIn=None, roundTo=60):
     """"
     Round a datetime object to any time lapse in seconds
+    Author: Thierry Husson 2012 - Use it as you want but don't blame me.
+
+    modified by SB to include lists of datetime dataList, returned as a list if it came in as
+        a list, if it came in as a datetime object it is returned as such
+
 
     Args:
-      dt: datetime.datetime object, default now.
-      roundTo: Closest number of seconds to round to, default 1 minute.
+      timeIn: datetime.datetime object, default now.
+      roundTo: Closest number of seconds to round to, (Default 1 minute).
     
-    Author: Thierry Husson 2012 - Use it as you want but don't blame me.
-    
-    modified by SB to include lists of datetime dataList,
-    returned as a list if it came in as a list, if it came in as a datetime object
-    it is returned as such
-    :return
-    list/array of times rounded to 'round to value'
-      timeIn: Default value = None)
-
     Returns:
-        rounded datetime objects
+        rounded datetime objects rounded to 'round to value'
 
     """
     # making dt a list
@@ -489,22 +520,21 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
 
 def timeMatch_altimeter(altTime, altData, modTime, modData, window=30 * 60):
     """this function will loop though variable modTim and find the closest value
-    then look to see if it's within a window (default, 30 minutes),
-     return altimeter data, and matched time
+    then look to see if it's within a window (default, 30 minutes)
     
-     Note: this might be slower than imeds time match or time match,
-           which is based on the imeds time match
+    Notes:
+        this might be slower than imeds time match or time match, which is based on the imeds time match
 
     Args:
-      altTime: altimeter time - tested as epoch (might work in datetime)
-      altData: altimeter data, some/any floating (int?) value
-      modTime: base time to match
-      modData: data to be paired (could be indicies)
-      window: time in seconds (or time delta, if input as datetimes) (Default value = 30 * 60)
+        altTime: altimeter time - tested as epoch (might work in datetime)
+        altData: altimeter data, some/any floating (int?) value
+        modTime: base time to match
+        modData: data to be paired (could be indicies)
+        window: time in seconds (or time delta, if input as datetimes) (Default value = 30 * 60)
 
     Returns:
       timeout: matched time in same format put in
-      dataoutt: time matched altimeter data from variable altData
+      dataout: time matched altimeter data from variable altData
       modout: time matched model data
 
     """

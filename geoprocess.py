@@ -7,26 +7,17 @@ import pandas as pd
 def FRF2ncsp(xFRF, yFRF):
     """this function makes NC stateplane out of X and Y FRF coordinates,
     based on kent Hathaway's code, bill birkmeir's calculations .
-         #  15 Dec 2014
-         #  Kent Hathaway.
-    #  Translated from Matlab to python 2015-11-30 - Spicer Bak
-    #
-    #  Uses new fit (angles and scales) Bill Birkemeier determined in Nov 2014
-    #
-    #  This version will determine the input based on values, outputs FRF, lat/lon,
-    #  and state plane coordinates.  Uses NAD83-2011.
-    #
-    #  IO:
-    #  p1 = FRF X (m), or Longitude (deg + or -), or state plane Easting (m)
-    #  yFRF = FRF Y (m), or Latitude (deg), or state plane Northing (m)
-    #
-    #  X = FRF cross-shore (m)
-    #  Y = FRF longshore (m)
-    #  ALat = latitude (decimal degrees)
-    #  ALon = longitude (decimal degrees, positive, or W)
-    #  spN = state plane northing (m)
-    #  spE = state plane easting (m)
-    
+    written by Kent Hathaway.      15 Dec 2014
+    Translated from Matlab to python 2015-11-30 - Spicer Bak
+
+    Uses new fit (angles and scales) Bill Birkemeier determined in Nov 2014
+    This version will determine the input based on values, outputs FRF, lat/lon,
+    and state plane coordinates.  Uses NAD83-2011.
+
+
+
+    yFRF = FRF Y (m), or Latitude (deg), or state plane Northing (m)
+
     NAD83-86	2014
     Origin Latitude          36.1775975
     Origin Longitude         75.7496860
@@ -37,13 +28,13 @@ def FRF2ncsp(xFRF, yFRF):
     Angle FRF to State Grid  69.9747
     FRF Origin Northing  274093.1562
     Easting              901951.6805
-    
-    #  Debugging values
-    xFRF=566.93;  yFRF=515.11;  % south rail at 1860
-    ALat = 36.1836000
-    ALon = 75.7454804
-    p2= 36.18359977;  p1=-75.74548109;
-    SP:  p1 = 902307.92; 	p2 = 274771.22;
+
+    Test:
+
+        xFRF=566.93;
+        yFRF=515.11;  % south rail at 1860
+        p1 = 902307.92;
+        p2 = 274771.22;
 
     Args:
       xFRF: frf coordinate system cross-shore locatioin
@@ -131,8 +122,11 @@ def ncsp2FRF(p1, p2):
     Returns:
       dictionary
        'xFRF': cross shore location in FRF coordinates
+
        'yFRF': alongshore location in FRF coodrindate system
+
        'StateplaneE': north carolina state plane coordinate system - easting
+
        'StateplaneN': north carolina state plane coordinate system - northing
 
     """
