@@ -105,7 +105,7 @@ def vectorRotation(vector, theta=90, axis='z'):
       theta: angle in decimal degrees (Default value = 90)
 
     Returns:
-      vector rotated CCW theta degrees about axis, uses Euler-Rodrigues formula
+      vector rotated clockwise theta degrees about axis, uses Euler-Rodrigues formula
 
     """
 
