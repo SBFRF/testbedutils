@@ -1,9 +1,9 @@
 'documented SB 12/2/17'
 import numpy as np
 from matplotlib import pyplot as plt
-import sblib as sb
+from . import sblib as sb
 import warnings
-import anglesLib
+from . import anglesLib
 
 
 def timeseriesPUV(p, u, v, t, waterDepth, gaugeDepth):
@@ -199,17 +199,17 @@ def HPchop_spec(spec, dirbin, angadj=0, corrected=1):
 
     if zeroidx + nbins > len(dirbin):  # if the zero + nbins wraps
         mmidx = zeroidx + nbins - len(dirbin)  # how many wrapped (extra)
-        mlist = np.concatenate((range(zeroidx, len(dirbin)), range(0, mmidx + 1)))
+        mlist = np.concatenate((list(range(zeroidx, len(dirbin))), list(range(0, mmidx + 1))))
     else:
-        mlist = range(zeroidx, zeroidx + nbins + 1)  # indicies of new zero to the max on this side of zero
+        mlist = list(range(zeroidx, zeroidx + nbins + 1))  # indicies of new zero to the max on this side of zero
     if zeroidx == 0:
         zzidx = abs(zeroidx - nbins)  # how many wrap
-        zlist = range(np.size(dirbin) - zzidx, np.size(dirbin))
+        zlist = list(range(np.size(dirbin) - zzidx, np.size(dirbin)))
     elif zeroidx - nbins < 0:  # if the lower bound of the hp wraps
         zzidx = abs(zeroidx - nbins)  # extra (wrap points)
-        zlist = np.concatenate((range(np.size(dirbin) - zzidx, np.size(dirbin)), range(0, zeroidx)))
+        zlist = np.concatenate((list(range(np.size(dirbin) - zzidx, np.size(dirbin))), list(range(0, zeroidx))))
     else:
-        zlist = range(zeroidx - nbins, zeroidx)
+        zlist = list(range(zeroidx - nbins, zeroidx))
     # create newly halfed direction bands and new spectra
     newdirband = np.concatenate([dirbin[zlist], dirbin[mlist]],
                                 axis=0)  # pulling proper angle bins together (with shore perp centered
@@ -363,7 +363,7 @@ def prFunc( L, d, z):
     prf = arg1 / arg2
     # limit the amount
     if (prf <= 1 / maxCorrectionFactor).any():
-        print 'correcting extreme attenuation'
+        print('correcting extreme attenuation')
         prf[np.argwhere(prf <= 1 / maxCorrectionFactor)] = 1
 
     return prf
@@ -928,7 +928,7 @@ def findidxSeaSwell(spec1d, dspec, wavefreqbin, windSpeed, windDir, depth, plotf
             elif waveSpeedAtPeak <= windSpeed[i]:
                 title = 'waveSpeed <= windSpeed - MaybeSea %s' % plotfname[i].split('/')[-1][5:-1]
 
-            print plotfname[i].split('/')[-1][5:-1]
+            print(plotfname[i].split('/')[-1][5:-1])
             plt.figure()
             plt.suptitle(title)
             plt.subplot(211)
