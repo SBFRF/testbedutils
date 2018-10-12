@@ -359,7 +359,7 @@ def FRFcoord(p1, p2, coordType=None):
                      'StateplaneN': sp['StateplaneN'], 'Lat': ll['lat'], 'Lon': ll['lon'], 'utmE': utm['utmE'], 'utmN': utm['utmN']}
 
     else:
-        print '<<ERROR>> testbedUtils Geoprocess FRF coord Cound not determine input type, returning NaNs'
+        print('<<ERROR>> testbedUtils Geoprocess FRF coord Cound not determine input type, returning NaNs')
         coordsOut = {'xFRF': float('NaN'), 'yFRF': float('NaN'), 'StateplaneE': float('NaN'),
              'StateplaneN': float('NaN'), 'Lat': float('NaN'), 'Lon':float('NaN')}
     return coordsOut
@@ -391,7 +391,7 @@ def utm2LatLon(utmE, utmN, zn, zl):
 
     columns = ['utmE', 'utmN', 'zn', 'zl']
 
-    df = pd.DataFrame(index=range(0, np.size(utmE)), columns=columns)
+    df = pd.DataFrame(index=list(range(0, np.size(utmE))), columns=columns)
 
     if np.size(utmE) > len(utmE):
         utmE = utmE[0]
@@ -404,7 +404,7 @@ def utm2LatLon(utmE, utmN, zn, zl):
 
     df['ll'] = df.apply(lambda x: utm.to_latlon(x.utmE, x.utmN, x.zn, x.zl), axis=1)
 
-    L1, L2 = zip(*np.asarray(df['ll']))
+    L1, L2 = list(zip(*np.asarray(df['ll'])))
 
     return_dict = {}
     return_dict['lat'] = np.asarray(L1)
@@ -433,14 +433,14 @@ def LatLon2utm(lat, lon):
 
     columns = ['lat', 'lon']
 
-    df = pd.DataFrame(index=range(0, np.size(lat)), columns=columns)
+    df = pd.DataFrame(index=list(range(0, np.size(lat))), columns=columns)
 
     df['lat'] = lat
     df['lon'] = lon
 
     df['utm'] = df.apply(lambda x: utm.from_latlon(x.lat, x.lon), axis=1)
 
-    utmE, utmN, zn, zl = zip(*np.asarray(df['utm']))
+    utmE, utmN, zn, zl = list(zip(*np.asarray(df['utm'])))
 
     return_dict = {}
     return_dict['utmE'] = np.asarray(utmE)
@@ -479,7 +479,7 @@ def utm2ncsp(utmE, utmN, zn, zl):
 
     columns = ['utmE', 'utmN', 'zn', 'zl']
 
-    df = pd.DataFrame(index=range(0, np.size(utmE)), columns=columns)
+    df = pd.DataFrame(index=list(range(0, np.size(utmE))), columns=columns)
 
     df['utmE'] = utmE
     df['utmN'] = utmN
@@ -488,7 +488,7 @@ def utm2ncsp(utmE, utmN, zn, zl):
 
     df['ll'] = df.apply(lambda x: utm.to_latlon(x.utmE, x.utmN, x.zn, x.zl), axis=1)
 
-    L1, L2 = zip(*np.asarray(df['ll']))
+    L1, L2 = list(zip(*np.asarray(df['ll'])))
 
     ncsp_dict = LatLon2ncsp(np.asarray(L2), np.asarray(L1))
 

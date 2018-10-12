@@ -32,7 +32,7 @@ def pol2cart(r, theta):
 
     """
     if (np.max(theta) > 2 * np.pi).any():
-        print 'Warning polar2cart assumes radian direction in, angles found above 2pi'
+        print('Warning polar2cart assumes radian direction in, angles found above 2pi')
     x = r * np.cos(theta)
     y = r * np.sin(theta)
     return x, y
@@ -248,7 +248,7 @@ def angle_correct(angle_in, rad=False):
                     angle_in_3[ii, :] = angle_in_2
                 angle_in[:, yy, :] = angle_in_3
     else:
-        print '<<ERROR>> this function only takes angles in as degrees right now'
+        print('<<ERROR>> this function only takes angles in as degrees right now')
 
     assert (angle_in < 360).all() and (angle_in >= 0).all(), 'The angle correction function didn''t work properly'
     return angle_in

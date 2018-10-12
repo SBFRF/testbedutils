@@ -5,9 +5,9 @@ import numpy as np
 from matplotlib import pyplot as plt
 from scipy.interpolate import griddata
 import makenc
-import geoprocess as gp
-import sblib as sb
-from anglesLib import geo2STWangle
+from . import geoprocess as gp
+from . import sblib as sb
+from .anglesLib import geo2STWangle
 from getdatatestbed.getDataFRF import getObs, getDataTestBed
 import scipy.spatial
 
@@ -33,8 +33,8 @@ def frf2ij(xfrf, yfrf, x0, y0, dx, dy, ni, nj):
 
     """
     varibleSpaced = False  # default false
-    dx_is_single_value = isinstance(dx, (float, int, long))
-    dy_is_single_value = isinstance(dy, (float, int, long))
+    dx_is_single_value = isinstance(dx, (float, int))
+    dy_is_single_value = isinstance(dy, (float, int))
 
     # This routine assumes cell centric values (more cells than dx/dy values)
     if not dx_is_single_value or not dy_is_single_value:
@@ -382,7 +382,7 @@ def makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=None, dSTR_e=None, scalecDict=No
             newZi = np.nan * np.zeros(np.shape(Zi))
 
         else:
-            print np.unique(survNum)
+            print(np.unique(survNum))
             dict = {'x0': x0,  # gp.FRFcoord(x0, y0)['Lon'],  # -75.47218285,
                     'y0': y0,  # gp.FRFcoord(x0, y0)['Lat'],  #  36.17560399,
                     'x1': x1,  # gp.FRFcoord(x1, y1)['Lon'],  # -75.75004989,
@@ -657,7 +657,7 @@ def makeBackgroundBathyAzimuth(origin, geo_ang, dx, dy, ni, nj, coord_system='FR
     import string
     exclude = set(string.punctuation)
     columns = ['coord', 'user']
-    df = pd.DataFrame(index=range(0, np.size(coord_list)), columns=columns)
+    df = pd.DataFrame(index=list(range(0, np.size(coord_list))), columns=columns)
     df['coord'] = coord_list
     df['user'] = coord_system
     df['coordToken'] = df.coord.apply(lambda x: ''.join(ch for ch in str(x) if ch not in exclude).strip().upper())
@@ -826,7 +826,7 @@ def makeBackgroundBathyCorners(LLHC, URHC, dx, dy, coord_system='FRF'):
     import string
     exclude = set(string.punctuation)
     columns = ['coord', 'user']
-    df = pd.DataFrame(index=range(0, np.size(coord_list)), columns=columns)
+    df = pd.DataFrame(index=list(range(0, np.size(coord_list))), columns=columns)
     df['coord'] = coord_list
     df['user'] = coord_system
     df['coordToken'] = df.coord.apply(lambda x: ''.join(ch for ch in str(x) if ch not in exclude).strip().upper())
@@ -912,7 +912,7 @@ def makeBackgroundBathyCorners(LLHC, URHC, dx, dy, coord_system='FRF'):
     # check to see if this actually worked...
     import matplotlib.pyplot as plt
     fig_name = 'DEMsubgrid.png'
-    fig_loc = 'C:\Users\RDCHLDLY\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\Test Figures'
+    fig_loc = 'C:\\Users\RDCHLDLY\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\Test Figures'
     plt.contourf(bathyDEM['utmEasting'], bathyDEM['utmNorthing'], bathyDEM['bottomElevation'])
     plt.axis('equal')
     plt.savefig(os.path.join(fig_loc, fig_name))
@@ -935,7 +935,7 @@ def makeBackgroundBathyCorners(LLHC, URHC, dx, dy, coord_system='FRF'):
     # check to see if this actually worked...
     import matplotlib.pyplot as plt
     fig_name = 'newGrid.png'
-    fig_loc = 'C:\Users\RDCHLDLY\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\Test Figures'
+    fig_loc = 'C:\\Users\RDCHLDLY\Desktop\David Stuff\Projects\CSHORE\Bathy Interpolation\Test Figures'
     plt.contourf(xv, yv, bottomElevation)
     plt.axis('equal')
     plt.xlabel('xFRF')
@@ -1063,7 +1063,7 @@ def interpIntegratedBathy4UnstructGrid(ugridDict, THREDDS='FRF', forcedSurveyDat
     import string
     exclude = set(string.punctuation)
     columns = ['coord', 'user']
-    df = pd.DataFrame(index=range(0, np.size(coord_list)), columns=columns)
+    df = pd.DataFrame(index=list(range(0, np.size(coord_list))), columns=columns)
     df['coord'] = coord_list
     df['user'] = ugridDict['coord_system']
     df['coordToken'] = df.coord.apply(lambda x: ''.join(ch for ch in str(x) if ch not in exclude).strip().upper())
@@ -1086,7 +1086,7 @@ def interpIntegratedBathy4UnstructGrid(ugridDict, THREDDS='FRF', forcedSurveyDat
         del df
         units_list = ['meters', 'm', 'feet', 'ft']
         columns = ['coord', 'user']
-        df = pd.DataFrame(index=range(0, np.size(units_list)), columns=columns)
+        df = pd.DataFrame(index=list(range(0, np.size(units_list))), columns=columns)
         df['units'] = units_list
         df['user'] = ugridDict['units']
         df['unitToken'] = df.units.apply(lambda x: ''.join(ch for ch in str(x) if ch not in exclude).strip().upper())
@@ -1218,8 +1218,8 @@ def findNearestUnstructNode(xFRF, yFRF, ugridDict):
 
     """
 
-    assert 'xFRF' in ugridDict.keys(), 'Error: xFRF is a required key in ugridDict'
-    assert 'yFRF' in ugridDict.keys(), 'Error: yFRF is a required key in ugridDict'
+    assert 'xFRF' in list(ugridDict.keys()), 'Error: xFRF is a required key in ugridDict'
+    assert 'yFRF' in list(ugridDict.keys()), 'Error: yFRF is a required key in ugridDict'
 
     points = np.column_stack((ugridDict['xFRF'], ugridDict['yFRF']))
     qPt = np.column_stack((xFRF, yFRF))

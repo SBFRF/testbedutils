@@ -33,30 +33,30 @@ def main():
 
             for gauge in gaugeList:
                 # create the url
-                print gauge
+                print(gauge)
                 callURL = baseURL + science + discipline + gauge + '/' + gauge + '.ncml'
                 # open the ncml dataset
                 ncfile = nc.Dataset(callURL)
                 # now loop through check variables
-                for var in ncfile.variables.keys():
-                    print '**' + var + '**'
-                    print 'shape %s' % str(np.shape(ncfile[var]))
+                for var in list(ncfile.variables.keys()):
+                    print('**' + var + '**')
+                    print('shape %s' % str(np.shape(ncfile[var])))
                     if np.size(ncfile[var]) == 1:
                         tmp = ncfile[var][:]
                     elif np.size(ncfile[var], axis = 0) >= 100:
                         for ii in np.arange(0, np.shape(ncfile[var])[0], 100):
-                            print 'approximate time: %s\nfile: %s\nvariable %s' %( nc.num2date(ncfile['time'][ii] ,'seconds since 1970-01-01'), callURL, var)
+                            print('approximate time: %s\nfile: %s\nvariable %s' %( nc.num2date(ncfile['time'][ii] ,'seconds since 1970-01-01'), callURL, var))
                             if np.shape(ncfile[var])[0] > ii+100:
                                 tmp = ncfile[var][ii:ii+100]
                             else:
-                                print 'less than 100 left'
+                                print('less than 100 left')
                                 tmp = ncfile[var][:]
                     elif var=='station_name':
-                        print 'station_Name %s' % var
+                        print('station_Name %s' % var)
 
 
                     elif np.size(ncfile[var], axis=0) < 100:
-                        print ncfile[var][:]
+                        print(ncfile[var][:])
 
 if __name__ == '__main__':
-    print("This only executes when %s is executed rather than imported" % __file__)
+    print(("This only executes when %s is executed rather than imported" % __file__))

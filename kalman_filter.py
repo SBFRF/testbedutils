@@ -1,8 +1,8 @@
 import numpy as np
 import datetime as DT
-import sblib as sb
+from . import sblib as sb
 import os, glob
-import cPickle as pickle
+import pickle as pickle
 
 def extract_time(data,index):
     """This function takes a dictionary [data] and pulles out all of the keys at specific index [index]
@@ -16,7 +16,7 @@ def extract_time(data,index):
       new dictionary with only the indexs selected returned
 
     """
-    vars = data.keys()
+    vars = list(data.keys())
     new = {}
     for vv in vars:
         if vv is 'xm' or vv is 'ym':
@@ -190,8 +190,8 @@ def cBathy_ThresholdedLogic(cBathy, rawspec, waveHsThreshold=1.2):
         rawspec['Hs'] = np.interp(cBathy['epochtime'], xp=rawspec['epochtime'], fp=rawspec['Hs'])
         rawspec['epochtime'] = cBathy['epochtime']
     try:
-        time, idxObs, idxcBathy = sb.timeMatch(rawspec['epochtime'][:], range(rawspec['epochtime'][:].shape[0]),
-                                               cBathy['epochtime'], range(len(cBathy['time'])))
+        time, idxObs, idxcBathy = sb.timeMatch(rawspec['epochtime'][:], list(range(rawspec['epochtime'][:].shape[0])),
+                                               cBathy['epochtime'], list(range(len(cBathy['time']))))
         # find idx of waves below this value
         badIdx = np.argwhere(rawspec['Hs'][idxObs.astype(int)] > waveHsThreshold).squeeze()
     except TypeError:  # when cbath== None
@@ -235,16 +235,16 @@ def cBathy_ThresholdedLogic(cBathy, rawspec, waveHsThreshold=1.2):
                 elif loadPickleFname is not None and os.path.isfile(loadPickleFname):
                     with open(loadPickleFname, 'rb') as handle:
                         cbathyold = pickle.load(handle)
-                        print '     CBThresh: wave height good, Kalman filtering from %s' % loadPickleFname
+                        print('     CBThresh: wave height good, Kalman filtering from %s' % loadPickleFname)
                     if cbathyold['elevation'].shape != cBathy['depthKF'].shape[1:] :# load from background
-                        print '  Loading from background, you changed your grid shape'
+                        print('  Loading from background, you changed your grid shape')
                         from getdatatestbed import getDataFRF
                         go = getDataFRF.getObs(cBathy['time'][0], cBathy['time'][-1])
                         full = go.getBathyGridcBathy()
                         cbathyold = sb.reduceDict(full,-1)
                         xinds = np.where(np.in1d(cbathyold['xm'], cBathy['xm']))[0]
                         yinds = np.where(np.in1d(cbathyold['ym'], cBathy['ym']))[0]
-                        for key in cbathyold.keys():
+                        for key in list(cbathyold.keys()):
                             if key is 'xm':
                                 cbathyold[key] = cbathyold[key][xinds]
                             elif key is 'ym':
@@ -273,7 +273,7 @@ def cBathy_ThresholdedLogic(cBathy, rawspec, waveHsThreshold=1.2):
             # save last file
             savePickleFname = '/home/number/cmtb/cBathy_Study/pickles/%s_%s_TimeAvgcBathy.pickle' % (
                 version_prefix, timeO[-1].strftime('%Y%m%dT%H%M%SZ'))
-            print '      CBThresh: Kalman filtered, now saving pickle {}'.format(savePickleFname)
+            print('      CBThresh: Kalman filtered, now saving pickle {}'.format(savePickleFname))
             cBathyOut = {'ym': cBathy['ym'],
                          'yFRF': cBathy['ym'],
                          'epochtime': etimeO,
