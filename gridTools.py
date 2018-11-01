@@ -4,7 +4,6 @@ import netCDF4 as nc
 import numpy as np
 from matplotlib import pyplot as plt
 from scipy.interpolate import griddata
-import makenc
 from . import geoprocess as gp
 from . import sblib as sb
 from .anglesLib import geo2STWangle
@@ -556,6 +555,7 @@ def makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=None, dSTR_e=None, scalecDict=No
     nc_dict['yFRF'] = yFRF
 
     nc_name = 'backgroundDEMt0tel_TimeMean' + '.nc'
+    import makenc
     makenc.makenc_t0BATHY(os.path.join(dir_loc, nc_name), nc_dict, globalYaml=global_yaml, varYaml=var_yaml)
 
     if plot is None:
