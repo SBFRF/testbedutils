@@ -441,8 +441,8 @@ def stats1D(fspec, frqbins, lowFreq=0.05, highFreq=0.5):
     df = np.diff(np.append(frqbins[0], frqbins), n=1)
 
     # truncating spectra to sea/swell band
-    # [idx, _] = sb.findbtw(frqbins, lowFreq, highFreq, type=3)
-    idx = np.argwhere((frqbins >= lowFreq) & (frqbins <= highFreq)).squeeze()
+    [idx, _] = sb.findbtw(frqbins, lowFreq, highFreq, type=3)
+
     m0 = np.sum(fspec[:, idx] * df[idx], axis=1)  # 0th momment
     m1 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx], axis=1)  # 1st moment
     m2 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx] ** 2, axis=1)  # 2nd moment

@@ -72,7 +72,8 @@ def reduceDict(dictIn, idxToKeep, exemptList=None):
         # print 'key %s size %d' %(key, np.size(dictIn[key], axis=0))
         try:
             if key not in exemptList and dictIn[key].dtype.kind not in ['U', 'S'] and np.size(dictIn[key],
-                                                                       axis=0) == len(dictIn['time']):
+                                                                                              axis=0) == len(
+                    dictIn['time']):
                 # then reduce
                 dictOut[key] = dictIn[key][idxToKeep]  # reduce variable
                 # print 'key %s Made it past test and new size %d' %(key, len(dictIn[key]))
@@ -169,7 +170,7 @@ def statsBryant(observations, models):
     """
     obsNaNs = np.argwhere(np.isnan(observations)).squeeze()
     modNaNs = np.argwhere(np.isnan(models)).squeeze()
-    if isinstance(observations, np.ma.masked_array) or isinstance(models, np.ma.masked_array):
+    if type(observations) == np.ma.masked_array or type(models) == np.ma.masked_array:
         raise NotImplementedError('this handles masked arrays poorly, fix or remove before use')
     if len(obsNaNs) > 0:
         warnings.warn('warning found nans in bryant stats')
