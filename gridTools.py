@@ -4,7 +4,6 @@ import netCDF4 as nc
 import numpy as np
 from matplotlib import pyplot as plt
 from scipy.interpolate import griddata
-import makenc
 from . import geoprocess as gp
 from . import sblib as sb
 from .anglesLib import geo2STWangle
@@ -243,8 +242,8 @@ def makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=None, dSTR_e=None, scalecDict=No
     # these together are the location of the standard background bathymetry that we started from.
 
     # Yaml files for my .nc files!!!!!
-    global_yaml = '/home/david/PycharmProjects/makebathyinterp/yamls/BATHY/FRFt0_global.yml'
-    var_yaml = '/home/david/PycharmProjects/makebathyinterp/yamls/BATHY/FRFt0_TimeMean_var.yml'
+    # global_yaml = '/home/david/PycharmProjects/makebathyinterp/yamls/BATHY/FRFt0_global.yml'
+    # var_yaml = '/home/david/PycharmProjects/makebathyinterp/yamls/BATHY/FRFt0_TimeMean_var.yml'
 
     # CS-array url - I just use this to get the position, not for any other data
     cs_array_url = 'http://134.164.129.55/thredds/dodsC/FRF/oceanography/waves/8m-array/2017/FRF-ocean_waves_8m-array_201707.nc'
@@ -555,9 +554,6 @@ def makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=None, dSTR_e=None, scalecDict=No
     nc_dict['xFRF'] = xFRF
     nc_dict['yFRF'] = yFRF
 
-    nc_name = 'backgroundDEMt0tel_TimeMean' + '.nc'
-    makenc.makenc_t0BATHY(os.path.join(dir_loc, nc_name), nc_dict, globalYaml=global_yaml, varYaml=var_yaml)
-
     if plot is None:
         pass
     else:
@@ -596,6 +592,10 @@ def makeTimeMeanBackgroundBathy(dir_loc, dSTR_s=None, dSTR_e=None, scalecDict=No
         plt.legend()
         plt.savefig(os.path.join(fig_loc, fig_name))
         plt.close()
+
+    nc_name = 'backgroundDEMt0tel_TimeMean' + '.nc'
+    # makenc.makenc_t0BATHY(os.path.join(dir_loc, nc_name), nc_dict, globalYaml=global_yaml, varYaml=var_yaml)
+    return nc_dict
 
 def createGridNodesinFRF(x0, y0, dx, dy, ni, nj):
     """This function assumes azimuth of the grid is the same as that of the FRF coordinate system

@@ -170,7 +170,7 @@ def statsBryant(observations, models):
     """
     obsNaNs = np.argwhere(np.isnan(observations)).squeeze()
     modNaNs = np.argwhere(np.isnan(models)).squeeze()
-    if type(observations) == np.ma.masked_array or type(models) == np.ma.masked_array:
+    if isinstance(observations, np.ma.masked_array) or isinstance(models, np.ma.masked_array):
         raise NotImplementedError('this handles masked arrays poorly, fix or remove before use')
     if len(obsNaNs) > 0:
         warnings.warn('warning found nans in bryant stats')
