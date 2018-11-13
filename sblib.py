@@ -81,6 +81,40 @@ def reduceDict(dictIn, idxToKeep, exemptList=None):
     dictOut['time'] = dictIn['time'][idxToKeep]  # # once the rest are done finally reduce 'time'
     return dictOut
 
+def removeMaskedDataFromDictionary(dictIn):
+    """
+
+
+    """
+
+    if isinstance(dictIn, np.ma.MaskedArray):   # then operate on it
+        # first loop through find everything that has same dimension
+        dictOut = {}
+        for key, value in dictIn.items():
+            if isinstance(value, np.ndarray):
+                shapes = np.array([x.shape for x in dictIn.values()])
+                maxDimension = shapes.max()
+
+
+                # if wBinObsLocal[key].mask.any():  # if the masks are true
+                #     print('    Found Masked data in observations... Removing')
+                #     # last remove from where found
+                #     for key2 in wBinObsLocal.keys():
+                #         if key is not 'time' and key2 in set(wBinObsLocal.keys()).intersection(
+                #                 wBinHP):  # ['name', 'wavefreqbin', 'xFRF', 'yFRF', 'lat', 'lon', 'depth', 'wavedirbin', 'qcFlagE', 'qcFlagD', 'a1', 'b1', 'a2', 'b2']:
+                #             try:  # to do it for multidimensions eg dWED
+                #                 wBinObsLocal[key2] = np.array(
+                #                     wBinObsLocal[key2][~wBinObsLocal[key].mask.any(axis=(1, 2))])
+                #             except(np.core._internal.AxisError):
+                #                 wBinObsLocal[key2] = np.array(wBinObsLocal[key2][~wBinObsLocal[key].mask.any()])
+                #     # then remove time from wBinObsLocal
+                #     # wBinObsLocal['time'] = wBinObsLocal['time'][~wBinObsLocal[key].mask.any(axis=(1, 2))]
+                # wBinObsLocal[key] = np.array(wBinObsLocal[key])
+                #
+
+        return dictOut
+    else:
+        return dictIn
 class Bunch(object):
     """allows user to access dictionary data from 'object'
     instead of object['key']
@@ -171,23 +205,23 @@ def statsBryant(observations, models):
     modNaNs = np.argwhere(np.isnan(models)).squeeze()
     if isinstance(observations, np.ma.masked_array) or isinstance(models, np.ma.masked_array):
         raise NotImplementedError('this handles masked arrays poorly, fix or remove before use')
-    if len(obsNaNs) > 0:
-        warnings.warn('warning found nans in bryant stats')
+    if np.size(obsNaNs) > 0:
+        warnings.warn('warning found nans in bryant stats, removing compared data')
         observations = np.delete(observations, obsNaNs)
         models = np.delete(models, obsNaNs)  # removing corresponding model data, that cannot be compared
         modNaNs = np.argwhere(np.isnan(models))
-        if len(modNaNs) > 0:
+        if np.size(modNaNs) > 0:
             observations = np.delete(observations, modNaNs)
             models = np.delete(models, modNaNs)  # removing c
-    elif len(modNaNs) > 0:
-        warnings.warn('warning found nans in bryant stats')
+    elif np.size(modNaNs) > 0:
+        warnings.warn('warning found nans in bryant stats, removing compared data')
         models = np.delete(models, modNaNs)
         observations = np.delete(observations, modNaNs, 0)
         obsNaNs = np.argwhere(np.isnan(observations))
-        if len(obsNaNs) > 0:
+        if np.size(obsNaNs) > 0:
             observations = np.delete(observations, obsNaNs)
             models = np.delete(models, obsNaNs)  # removing cor
-    assert len(observations) == len(models), 'these data must be the same length'
+    assert np.size(observations) == np.size(models), 'these data must be the same length'
 
     residuals = models - observations
     bias = np.nansum(residuals) / len(residuals)
@@ -437,9 +471,9 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
 
     Args:
       obs_time: observation times, in
-      obs_data: matching observation data, any shape
+      obs_data: matching observation data, any shape, can be None: will create indicies corresponding to obs_time
       model_time: modeling time
-      model_data: modeling data (any shape)
+      model_data: modeling data (any shape) can be None: will create indicies corresponding to obs_time
 
     Returns:
       time, (as float)
@@ -447,19 +481,22 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
       model_data_s: data as input
 
     """
+    if obs_data == None:
+        obs_data = np.arange(len(obs_time), dtype=int)
+    if model_data == None:
+        model_data = np.arange(len(model_time), dtype=int)
 
-    # try to convert it from datetime to epochtime
-    # this will fail if it already is in epochtime, so it wont do anything.
     dt_check = False
-    try:
+    try:  # try to convert from datetime units (if fails, assume it's already numeric)
         timeunits = 'seconds since 1970-01-01 00:00:00'
         obs_time_n = nc.date2num(obs_time, timeunits)
         del obs_time
         obs_time = obs_time_n
         del obs_time_n
+        dt_check = True
     except:
         pass
-    try:
+    try:  # try to convert from datetime units (if fails, assume it's already numeric)
         timeunits = 'seconds since 1970-01-01 00:00:00'
         model_time_n = nc.date2num(model_time, timeunits)
         del model_time
@@ -472,9 +509,7 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
     assert type(obs_time[0]) != DT.datetime, 'time in must be numeric, try epoch!'
     assert type(model_time[0]) != DT.datetime, 'time in must be numeric, try epoch!'
 
-    time = np.array([])
-    obs_data_s = np.array([])
-    model_data_s = np.array([])
+    time, obs_data_s, model_data_s = [], [], []  # working as lists (faster than numpy append)
     # 43 seconds here makes it 43 seconds less than 1/2 of smallest increment
     threshold = min(np.median(np.diff(obs_time)) / 2.0 - 43,
                     np.median(np.diff(model_time)) / 2.0 - 43)
@@ -502,9 +537,9 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
         if (np.isnan(obs_data[indx]).all() or np.isnan(data).all()):
             continue
 
-        time = np.append(time, record)
-        obs_data_s = np.append(obs_data_s, obs_data[indx])
-        model_data_s = np.append(model_data_s, data)
+        time.append(record)  # (faster than numpy append)
+        obs_data_s.append(obs_data[indx])
+        model_data_s.append(data)
 
     # if I was handed a datetime, convert back to datetime
     if dt_check:
@@ -515,7 +550,7 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
         time = time_n
         del time_n
 
-    return time, obs_data_s, model_data_s
+    return np.array(time), np.array(obs_data_s), np.array(model_data_s)
 
 def timeMatch_altimeter(altTime, altData, modTime, modData, window=30 * 60):
     """this function will loop though variable modTim and find the closest value
