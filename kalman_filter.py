@@ -134,8 +134,9 @@ def replacecBathyMasksWithNans(dictionary):
             dictionary[var] = np.ma.filled(dictionary[var], fill_value=np.nan)
     return dictionary
 
-def cBathy_VarianceLogic(cBathy, variancePacket, rawspec, varianceThreshold=0.14, percentThreshold=0.35):
+def cBathy_VarianceLogic(cBathy, variancePacket, rawspec, varianceThreshold=0.13, percentThreshold=0.35):
     """Logic associated with creating the variance thresholded kalman filtered cBathy representation
+        removes times that start before 1300 UTC and after 2100 UTC
 
     Args:
       cBathy: dictionary from go.getcBathy data
@@ -169,6 +170,8 @@ def cBathy_VarianceLogic(cBathy, variancePacket, rawspec, varianceThreshold=0.14
            'time': date time objects for each filtered estimate
 
     """
+    startTimeofDay = 13  # 0800 in EST (winter)
+    endTimeofDay = 21    # 1600 in EST (winter)
     import getpass
     user = getpass.getuser()  #
     ##### define inital global variables for function
@@ -186,13 +189,26 @@ def cBathy_VarianceLogic(cBathy, variancePacket, rawspec, varianceThreshold=0.14
             # change the current load name to the current best
             loadPickleFname = file  # 'cBathy_Study/pickles/%s_%s_%s_TimeAvgcBathy.pickle' %(version_prefix, timerun, file.split('/')[-1].split('_')[2])
 
-    ##### begin Running logic
+    ####################  begin Running logic  #########################################3
     # first ensure that the wave data and cbathy have same time step,
+    # first remove cbathy's produced
     # if they don't interpolate the wavedata to the cbathy time stamp
+    if ~np.in1d(rawspec['time'], cBathy['time']).all():
+        # interpolate the rawspec to the cbathy time frame
+        rawspec['Hs'] = np.interp(cBathy['epochtime'], xp=rawspec['epochtime'], fp=rawspec['Hs'])
+        rawspec['epochtime'] = cBathy['epochtime']
+    if ~np.in1d(variancePacket['time'], cBathy['time']).all():
+        idxVar = np.argwhere(np.in1d(variancePacket['time'], cBathy['time']))
+        variancePacket = sb.reduceDict(variancePacket, idxVar.squeeze()) # make sure variance matches cBathy
+        idxCB = np.argwhere(np.in1d(cBathy['time'], variancePacket['time']))
+        cBathy = sb.reduceDict(cBathy, idxCB.squeeze()) # make sure cBathy matches variance
+    assert (cBathy['time'] == variancePacket['time']).all(), 'time check'
+
     try:
         badIdx = []
         for i in range(len(variancePacket['time'])):
-            if (variancePacket['bw'][i] > varianceThreshold).sum()/variancePacket['bw'][i].size > percentThreshold:
+            if (((variancePacket['bw'][i] > varianceThreshold).sum()/float(variancePacket['bw'][i].size)) > percentThreshold) \
+                    or (variancePacket['time'][i].hour <= startTimeofDay) or (variancePacket['time'][i].hour >= endTimeofDay):
                 badIdx.append(i) # find idx of variances waves below this value
         badIdx = np.array(badIdx, dtype=int)
     except TypeError:  # when cbath== None
@@ -208,13 +224,14 @@ def cBathy_VarianceLogic(cBathy, variancePacket, rawspec, varianceThreshold=0.14
     depthKFE, P, depthfC, depthfCE = np.zeros_like(depthKF), np.zeros_like(depthKF), np.zeros_like(
         depthKF), np.zeros_like(depthKF)
     timeO, etimeO, rc = np.zeros((ttO), dtype=object), np.zeros((ttO)), 0
+    # badIdx -= 1 # reset the identified idx's to those that will be iterated through
     if cBathy == None and loadPickleFname != None and os.path.isfile(loadPickleFname):
         pass  # don't make if its not new cBathy estimate
     else:
         for tt in range(len(cBathy['time'])):  # this may need to be changed for not implmented error above
             # -- may need this for more time steps np.size(badIdx) < np.size(idxObs) and
             # figure out if we have good waves (createing good cbathy) then if so do the new kalman filter logic here
-            if tt not in badIdx:  # if there's at least 1 good value,
+            if tt not in badIdx:  # if there's at least 1 good value,  -1 sets index starting at 1 as identified in badIdx
                 # cbathy at time tt is considered good!
                 if rc >= 1:
                     cbathyold = {'ym': cBathy['ym'],
@@ -252,14 +269,14 @@ def cBathy_VarianceLogic(cBathy, variancePacket, rawspec, varianceThreshold=0.14
                 cBathySingle = extract_time(cBathy, tt)
                 temp = cbathy_kalman_filter(cBathySingle, cbathyold, rawspec['Hs'])
                 # overwrite old kalman filtered results with new kalman filtered results
-                depthKF[rc] = np.ma.filled(temp['depthKF'], fill_value=np.nan)  # temp['depthKF']
+                depthKF[rc] = np.ma.filled(temp['depthKF'], fill_value=np.nan)
                 depthKFE[rc] = np.ma.filled(temp['depthKFError'], fill_value=np.nan)
                 P[rc] = np.ma.filled(temp['P'], fill_value=np.nan)
                 depthfCE[rc] = np.ma.filled(temp['depthfCError'], fill_value=np.nan)
                 depthfC[rc] = np.ma.filled(temp['depthfC'], fill_value=np.nan)
                 timeO[rc] = temp['time']
                 etimeO[rc] = temp['epochtime']
-                rc += 1
+                rc += 1  # add to the record counter
             else:  # cbathy @ time tt is considered bad!
                 pass
         if np.size(timeO) > 0:
@@ -372,7 +389,7 @@ def cBathy_ThresholdedLogic(cBathy, rawspec, waveHsThreshold=1.2):
         for tt in range(len(cBathy['time'])):  # this may need to be changed for not implmented error above
             # -- may need this for more time steps np.size(badIdx) < np.size(idxObs) and
             # figure out if we have good waves (createing good cbathy) then if so do the new kalman filter logic here
-            if tt not in badIdx:  # if there's at least 1 good value,
+            if tt not in (badIdx-1):  # if there's at least 1 good value, -1 sets index starting at 1 as identified in badIdx
                 # cbathy at time tt is considered good!
                 if rc >= 1:
                     cbathyold = {'ym': cBathy['ym'],
