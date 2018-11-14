@@ -72,7 +72,8 @@ def reduceDict(dictIn, idxToKeep, exemptList=None):
         # print 'key %s size %d' %(key, np.size(dictIn[key], axis=0))
         try:
             if key not in exemptList and dictIn[key].dtype.kind not in ['U', 'S'] and np.size(dictIn[key],
-                                                                       axis=0) == len(dictIn['time']):
+                                                                                              axis=0) == len(
+                    dictIn['time']):
                 # then reduce
                 dictOut[key] = dictIn[key][idxToKeep]  # reduce variable
                 # print 'key %s Made it past test and new size %d' %(key, len(dictIn[key]))
