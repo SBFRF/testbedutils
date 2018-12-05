@@ -1,4 +1,3 @@
-'documented SB 12/2/17'
 import numpy as np
 from matplotlib import pyplot as plt
 from . import sblib as sb
@@ -117,6 +116,11 @@ def timeseriesPUV(p, u, v, t, waterDepth, gaugeDepth):
     # mlmSpec = mlm(freqs=freq, dirs=np.arange(0,360,5), c11=SpAve, c22=SuAve, c33=SvAve, c23=np.real(CrossUVave), q12=np.imag(CrossPUave), q13=np.imag(CrossPVave))
 
     return fspec, a1interp, b1interp, a2interp, b2interp
+
+def UrsellNumber(Tp, Hs, depth):
+    """calculates ursell number """
+    L, _, _ = dispersion(depth, Tp)
+    return Hs*L**2/(depth**3)
 
 def qkhfs(w, h):
     """Quick iterative calculation of kh in gravity-wave dispersion relationship
@@ -527,6 +531,12 @@ def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
         return 0
     assert spec.shape[1] == frqbins.shape[0], 'The spectra must be dimensioned [t,freq, direciton]'
     assert spec.shape[2] == dirbins.shape[0], 'The spectra must be dimensioned [t,freq, direciton]'
+    assert (spec > 0).all(), "spectra have fill values in place, correct spectra before proceeding"
+    ####################################################################################################################
+
+    ## bug for non-directional wave spectra
+    if dirbins.size == 4:
+        raise  NotImplementedError ("there's a bug in here for non-directional 2d spectra calculations")
     frqbins = np.array(frqbins)
     dirbins = np.array(dirbins)
 
@@ -571,15 +581,15 @@ def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
     # mean wave direction (e.g. Kuik 1988, USACE WIS)
     Xcomp = np.sum(np.sin(Drad) * Ds, axis=1) / np.sum(Ds * dirbins, axis=1)
     Ycomp = np.sum(np.cos(Drad) * Ds, axis=1) / np.sum(Ds * dirbins, axis=1)
-    # Dm = np.rad2deg(np.arctan2(np.sum(np.sin(Drad) * Ds * dirbins, axis=1),
-    #                           np.sum(np.cos(Drad) * Ds * dirbins, axis=1)))  # converting back to degrees
+    # converting back to degrees
     Dm = np.rad2deg(np.arctan2(Xcomp, Ycomp))
-    for ii in range(0, np.size(Dm, axis=0)):
-        if Dm[ii] >= 360:
-            Dm[ii] = 360 - Dm[ii]
-        elif Dm[ii] < 0:
-            Dm[ii] = 360 + Dm[ii]
-            # Vector Dm (Hesser)
+    Dm = anglesLib.angle_correct(Dm)
+    # for ii in range(0, np.size(Dm, axis=0)):
+    #     if Dm[ii] >= 360:
+    #         Dm[ii] = 360 - Dm[ii]
+    #     elif Dm[ii] < 0:
+    #         Dm[ii] = 360 + Dm[ii]
+    # Vector Dm (Hesser)
     sint = np.sin(Drad)  # sine of dirbins
     cost = np.cos(Drad)  # cosine of dirbins
 
@@ -601,18 +611,19 @@ def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
     # Mean direction at the peak frequency
     Dmp = np.rad2deg(np.arctan2(np.sum(np.sin(Drad) * Dsp * dirbins, axis=1),
                                 np.sum(np.cos(Drad) * Dsp * dirbins, axis=1)))  # converting back to degrees
-    for ii in range(0, np.size(Dmp, axis=0)):
-        if Dmp[ii] >= 360:
-            Dmp[ii] = 360 - Dmp[ii]
-        elif Dmp[ii] < 0:
-            Dmp[ii] = 360 + Dmp[ii]
+    Dmp = anglesLib.angle_correct(Dmp)
+    # for ii in range(0, np.size(Dmp, axis=0)):
+    #     if Dmp[ii] >= 360:
+    #         Dmp[ii] = 360 - Dmp[ii]
+    #     elif Dmp[ii] < 0:
+    #         Dmp[ii] = 360 + Dmp[ii]
     # f-spec spread
-    sprdF = (m0 * m4 - m2 ** 2) / (m0 * m4)
+    sprdF = np.sqrt((m0 * m4 - m2 ** 2) / (m0 * m4))
 
     # fd-spec spread
     sprdD = np.rad2deg(np.sqrt(2.0 * (1.0 - np.sqrt(Xcomp ** 2 + Ycomp ** 2))))
 
-    ##### Exceprt from Kent's code for spreading - not sure how to handle
+    ##### Exceprt from Kent's code for directional spreading - not sure how to handle
     # fd-spec spread, do a linear interp to get closer to half-power
     # % from the delta-deg increments
     # hp = np.max(Dsp)/2;
@@ -962,7 +973,6 @@ def findidxSeaSwell(spec1d, dspec, wavefreqbin, windSpeed, windDir, depth, plotf
         # Swell.append(swellfspec)
         outidxs.append(idx2separate)
     return outidxs
-
 
 def decompose2Dspec(spec, wavefreqbin):
     """
