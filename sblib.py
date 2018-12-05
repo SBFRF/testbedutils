@@ -73,8 +73,7 @@ def reduceDict(dictIn, idxToKeep, exemptList=None):
         # if things are longer than the indices of interest and not 'time'
         # print 'key %s size %d' %(key, np.size(dictIn[key], axis=0))
         try:
-            if key not in exemptList and dictIn[key].dtype.kind not in ['U', 'S'] and np.size(dictIn[key],
-                                                                       axis=0) == np.size(dictIn['time']):
+            if key not in exemptList and dictIn[key].dtype.kind not in ['U', 'S'] and np.size(dictIn[key], axis=0) == np.size(dictIn['time']):
                 # then reduce
                 dictOut[key] = dictIn[key][idxToKeep]  # reduce variable
                 #

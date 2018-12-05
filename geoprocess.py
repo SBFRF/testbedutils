@@ -1,7 +1,6 @@
 'documented SB 12/2/17/'
 import numpy as np
 import pyproj
-import utm
 import pandas as pd
 
 def FRF2ncsp(xFRF, yFRF):
@@ -427,6 +426,7 @@ def LatLon2utm(lat, lon):
          zl - zone letter of each point
 
     """
+    import utm
 
     # check to see if points are...
     assert np.size(lat) == np.size(lon), 'LatLon2utm error: lat lon coordinate vectors must be equal lengths'
@@ -466,6 +466,8 @@ def utm2ncsp(utmE, utmN, zn, zl):
           northing - ncsp northing
 
     """
+    import utm
+
     # so, all this does it go through Lat/Lon to get to ncsp..
 
     # check to see if points are...
