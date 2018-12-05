@@ -63,22 +63,27 @@ def reduceDict(dictIn, idxToKeep, exemptList=None):
 
     """
     assert 'time' in dictIn, 'This function must have a variable "time"'
+    if np.size(idxToKeep) == 0:
+        return None
     if exemptList == None:
         exemptList = ['time', 'name', 'xFRF', 'yFRF', 'xm', 'ym']
     idxToKeep = np.array(idxToKeep, dtype=int) # force data to integer type
     dictOut = dictIn.copy()
     for key in dictIn:
-        # if things are longer than the indicies of interest and not 'time'
+        # if things are longer than the indices of interest and not 'time'
         # print 'key %s size %d' %(key, np.size(dictIn[key], axis=0))
         try:
             if key not in exemptList and dictIn[key].dtype.kind not in ['U', 'S'] and np.size(dictIn[key],
-                                                                       axis=0) == len(dictIn['time']):
+                                                                       axis=0) == np.size(dictIn['time']):
                 # then reduce
                 dictOut[key] = dictIn[key][idxToKeep]  # reduce variable
-                # print 'key %s Made it past test and new size %d' %(key, len(dictIn[key]))
+                #
         except (IndexError, AttributeError):
             pass  # this passes for single number (not arrays), and attribute error passes for single datetime objects
-    dictOut['time'] = dictIn['time'][idxToKeep]  # # once the rest are done finally reduce 'time'
+    if np.size(dictIn['time']) == 1 and np.size(idxToKeep) == 1:
+        dictOut['time'] == dictIn['time']
+    else:
+        dictOut['time'] = dictIn['time'][idxToKeep]  # # once the rest are done finally reduce 'time'
     return dictOut
 
 def removeMaskedDataFromDictionary(dictIn):
@@ -462,12 +467,15 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
     This has been removed from the IMEDS package to simplify use.
     This method returns the matching model data to the closest obs point.
     
+
     similar to time match imeds
     
     Time Matching is done by creating a threshold by taking the median of the difference of each time
        then taking the minimum of the difference between the two input times divided by 2.
        a small, arbitrary (as far as I know) factor is then subtracted from that minimum to remove the possiblity
        of matching a time that is exactly half of the sampling interval.
+
+    TODO: This could be improved in speed, long lists take a while. see references below for ideas
 
     Args:
       obs_time: observation times, in
@@ -480,6 +488,10 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
       obs_data_s: data as input
       model_data_s: data as input
 
+    Refrences:
+        https://stackoverflow.com/questions/1388818/how-can-i-compare-two-lists-in-python-and-return-matches
+        https://stackoverflow.com/questions/10367020/compare-two-lists-in-python-and-return-indices-of-matched-values
+        https://stackoverflow.com/questions/16685384/finding-the-indices-of-matching-elements-in-list-in-python
     """
     if obs_data == None:
         obs_data = np.arange(len(obs_time), dtype=int)
