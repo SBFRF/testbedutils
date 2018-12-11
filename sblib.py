@@ -205,6 +205,12 @@ def statsBryant(observations, models):
             'residuals': model - observations
 
     """
+
+    # convert masked values to nans! # this way you can use
+    # the logic for nans and you won't hit the issues with masked arrays..
+    observations = np.ma.filled(observations, np.nan)
+    models = np.ma.filled(models, np.nan)
+
     obsNaNs = np.argwhere(np.isnan(observations)).squeeze()
     modNaNs = np.argwhere(np.isnan(models)).squeeze()
     if isinstance(observations, np.ma.masked_array) or isinstance(models, np.ma.masked_array):
