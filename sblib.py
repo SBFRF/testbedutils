@@ -633,6 +633,15 @@ def timeMatch_altimeter(altTime, altData, modTime, modData, window=30 * 60):
             timeout.append(modTime[tt])
             modout.append(modData[tt])
 
+    # if I was handed a datetime, convert back to datetime
+    if dt_check:
+        timeunits = 'seconds since 1970-01-01 00:00:00'
+        calendar = 'gregorian'
+        timeout_n = nc.num2date(timeout, timeunits, calendar)
+        del timeout
+        timeout = timeout_n
+        del timeout_n
+
     return np.array(timeout), np.array(dataout), np.array(modout)
 
 def date_range(start, end, intv=None):
