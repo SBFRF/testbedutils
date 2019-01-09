@@ -487,9 +487,13 @@ def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
 
     Args:
       spec (array):  this is a 2d spectral inputshaped by [time, freq, dir]
+
       frqbins: Frequency vector (not assumed constant)
+
       dirbins: an array of direction bins associated with the 2d spec
+
       lowFreq: low frequency cutoff for the spectral stat's calculation (Default value = 0.05)
+
       highFreq: high frequency cutoff for the spectral stat's calculation (Default value = 0.5)
 
     Returns:
@@ -524,11 +528,22 @@ def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
 
            'spreadD_kuik_m2': directional spread from circular moments (eq 27)
 
-           'meta': expanded variable name/descriptions
+            "spreadD_f":  [t x Freq] array of spread at each frequency (eq 4b orielly/24 kuik)
+
+            "skewnessD_f: [t x freq] array of skewness at each frequency (eq 4c orielly/25 kuik)
+
+            "kurtosisD_f: [t x freq] array of kurtosis at each frequency (eq 4d orielly/26 kuik)
+
+           'meta': directions to see this help
 
     References:
-        Kuik 1988, "A method for the Routine Analysis of Pitch-and-Roll Buoy Wave Data" Journal of Physical Oceanography.
-            Volume 18, p 1020 - 1034. https://journals.ametsoc.org/doi/pdf/10.1175/1520-0485%281988%29018%3C1020%3AAMFTRA%3E2.0.CO%3B2
+        Kuik 1988, "A method for the Routine Analysis of Pitch-and-Roll Buoy Wave Data" Journal of
+            Physical Oceanography. Volume 18, p 1020 - 1034.
+            https://journals.ametsoc.org/doi/pdf/10.1175/1520-0485%281988%29018%3C1020%3AAMFTRA%3E2.0.CO%3B2
+
+        O'Reilley, W. C, T.H.C Herbers, R. J. Seymour, R. T. Guza, 1996 "A comparison of Directional Buoy and Fixed
+            Platform Measurements of Pacific Swell", Journal of Atmospheric and Oceanic Technology. Vol 13, p231 - 238;
+            https://journals.ametsoc.org/doi/pdf/10.1175/1520-0426%281996%29013%3C0231%3AACODBA%3E2.0.CO%3B2
 
         USACE Wave Information Study (WIS) website: http://wis.usace.army.mil/pdf/WIS_OneLine_format_20170406.pdf
 
@@ -583,7 +598,7 @@ def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
     ############### directional REDO ######### #    #  ####################################
     angMat = np.tile(Drad, (len(frqbins), 1))   # angle array, directions for each frequency
     # normalized direction spectra (per deg)
-    Ds_, DmrArr = np.ones_like(spec) * 1e-6, np.ones_like(spec) * 1e-6
+    Ds_, DmrArr = np.ones_like(spec) * 1e-6, np.ones_like(spec) *1e-6
     a1_, a2_, b1_, b2_ = np.ma.empty_like(fspec), np.ma.empty_like(fspec), np.ma.empty_like(fspec), np.ma.empty_like(fspec)   # initialize
     for i in range(spec.shape[0]):  # loop through, there's probably a faster way to do this
         Ds_[i] = spec[i]/np.tile(fspec[i], [len(dirbins), 1]).T
@@ -600,8 +615,11 @@ def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
     #circular Moments Kuik '88
     for r in range(Dspec.shape[0]):                             # looping, but should be faster way to do it with tile
         DmrArr[r] = np.tile(np.deg2rad(Dspec[r]), (len(dirbins) , 1)).T
-        m1_circ = np.sum( np.cos(angMat - DmrArr[r])* Ds_[r], axis=1) * dd           # used to calculate spread @ peak
-        m2_circ = np.sum(np.cos(2 * (angMat - DmrArr[r])) * Ds_[r], axis=1) * dd     # used to calculate spread @ peak
+    # model free directional parameters (o'reiley 1996)/circular moments kuik 88
+    m1_c = np.sqrt(a1_ **2 + b1_**2)
+    m2_c = a2_*np.cos(2*np.deg2rad(Dspec)) + b2_*np.sin(2*np.deg2rad(Dspec))
+    n2_c = b2_*np.cos(2*np.rad2deg(Dspec)) - a2_*np.sin(2*np.rad2deg(Dspec))
+
 
     # Frequency integrated a/bs
     a1b = (a1_[:, idx] * fspec[:, idx] * df[idx]).sum(axis=1)/m0
@@ -610,17 +628,24 @@ def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
     b2b = (b2_[:, idx] * fspec[:, idx] * df[idx]).sum(axis=1)/m0
 
     # mean wave angle, energy integrated, calculated from a's and b's
-    Dm_ = np.mod(np.rad2deg( np.arctan2(b1b, a1b)), 360)  # off by about 5 cm from matlab
+    Dm_ = np.mod(np.rad2deg( np.arctan2(b1b, a1b)), 360)               # off by about 5 cm from matlab
     Dm2_ = np.mod(0.5 * np.rad2deg(np.arctan2(b2b, a2b)), 360)
+    Dp = dirbins[np.argmax(spec.sum(axis=1), axis=1)]
+
     # Dm_ = anglesLib.angle_correct(Dm_)
     # Dm2_ = anglesLib.angle_correct(Dm2_)
 
     # Directional Spreads
-    sprdD =        np.rad2deg(np.sqrt(2 * (1-np.sqrt(a1b**2 + b1b**2))))       # integrated spread
-    sprdD_kuikm1 = np.rad2deg(np.sqrt(2 * (1-m1_circ[ipf])   ))                # eq 24 kuik '88
-    sprdD_kuikm2 = np.rad2deg(np.sqrt(    (1-m2_circ[ipf])/2 ))                # eq 27 kuik '88
+    sprdD =        np.rad2deg(np.sqrt(2 * (1-np.sqrt(a1b**2 + b1b**2))))       # integrated spread across all freqs
+    sprdD_kuikm1 = np.rad2deg(np.sqrt(2 * (1-m1[ipf])   ))                # spread at peak eq 24 kuik '88
+    sprdD_kuikm2 = np.rad2deg(np.sqrt(    (1-m2[ipf])/2 ))                # spread at peak eq 27 kuik '88
 
-    meta = 'Tp - peak period, Tm - mean period, Tave - average period, comparable to Time series mean period, Dp - peak direction, Dm - mean direction, Dmp - mean direction at peak frequency, vavgdir - Vector Averaged Mean Direction,sprdF - frequency spread, sprdD - directional spread'
+    # frequency dependant spread, skewness, asymetry characteristics
+    spreadD_f = np.rad2deg(np.sqrt(2*(1-m1_c)))
+    skewnessD_f = -n2_c/ ((1-m2_c/2)**(3/2))
+    kurtosisD_f = 6 - 8*m1_c + 2*m2_c/(2(1-m1))*2
+
+    meta = 'See help on this function for explanation of output'
     stats = {'Hm0': Hm0,
              'Tp': Tp,
              'Tm': Tm02,
@@ -630,13 +655,15 @@ def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
              'Dm': Dm_,
              'Dm2': Dm2_,
              'Dspec1': Dspec,
-             'Dspec2': Dspec2
-             'sprdF': sprdF,
-             'sprdD': sprdD,
-             'spreadD_kuik_m1': sprdD_kuikm1,
-             'spreadD_kuik_m2': sprdD_kuikm2,
-             'meta': meta
-             }
+             'Dspec2': Dspec2,
+             'spreadF': sprdF,
+             'spreadD': sprdD,
+             'spreadDP_m1': sprdD_kuikm1,
+             'spreadDP_m2': sprdD_kuikm2,
+             "spreadD_f": spreadD_f,
+             "skewnessD_f": skewnessD_f,
+             "kurtosisD_f": kurtosisD_f,
+             'meta': meta}
 
     return stats
 
