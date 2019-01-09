@@ -205,6 +205,12 @@ def statsBryant(observations, models):
             'residuals': model - observations
 
     """
+
+    # convert masked values to nans! # this way you can use
+    # the logic for nans and you won't hit the issues with masked arrays..
+    observations = np.ma.filled(observations, np.nan)
+    models = np.ma.filled(models, np.nan)
+
     obsNaNs = np.argwhere(np.isnan(observations)).squeeze()
     modNaNs = np.argwhere(np.isnan(models)).squeeze()
     if isinstance(observations, np.ma.masked_array) or isinstance(models, np.ma.masked_array):
@@ -492,10 +498,15 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
         https://stackoverflow.com/questions/10367020/compare-two-lists-in-python-and-return-indices-of-matched-values
         https://stackoverflow.com/questions/16685384/finding-the-indices-of-matching-elements-in-list-in-python
     """
+
+    # why are these lines here?
+    # DLY commented out on 12/11/2018 because it throws an error if obs_data and model_data are filled as intended...
+    """
     if obs_data == None:
         obs_data = np.arange(len(obs_time), dtype=int)
     if model_data == None:
         model_data = np.arange(len(model_time), dtype=int)
+    """
 
     dt_check = False
     try:  # try to convert from datetime units (if fails, assume it's already numeric)
@@ -621,6 +632,15 @@ def timeMatch_altimeter(altTime, altData, modTime, modData, window=30 * 60):
             dataout.append(altData[idx])
             timeout.append(modTime[tt])
             modout.append(modData[tt])
+
+    # if I was handed a datetime, convert back to datetime
+    if dt_check:
+        timeunits = 'seconds since 1970-01-01 00:00:00'
+        calendar = 'gregorian'
+        timeout_n = nc.num2date(timeout, timeunits, calendar)
+        del timeout
+        timeout = timeout_n
+        del timeout_n
 
     return np.array(timeout), np.array(dataout), np.array(modout)
 
