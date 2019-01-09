@@ -517,7 +517,7 @@ def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
            'Dspec1': mean direction as function of frequency, from arctan(b1/a1)
 
            'Dspec2': mean direction as function of frequency, from arctan(b2/a2)
-wavewav
+
            'sprdD':  Directional spread  (one definition, Kuik 1988, buoys), total sea-swell
 
            'spreadD_kuik_m1': directional spread from circular moments (eq 24)
