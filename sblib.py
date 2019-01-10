@@ -564,7 +564,7 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
         model_data_s.append(data)
 
     # if I was handed a datetime, convert back to datetime
-    if dt_check:
+    if dt_check and len(time) > 0:
         timeunits = 'seconds since 1970-01-01 00:00:00'
         calendar = 'gregorian'
         time_n = nc.num2date(time, timeunits, calendar)
