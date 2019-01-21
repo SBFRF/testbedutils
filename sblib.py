@@ -499,14 +499,11 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
         https://stackoverflow.com/questions/16685384/finding-the-indices-of-matching-elements-in-list-in-python
     """
 
-    # why are these lines here?
-    # DLY commented out on 12/11/2018 because it throws an error if obs_data and model_data are filled as intended...
-    """
     if obs_data == None:
         obs_data = np.arange(len(obs_time), dtype=int)
     if model_data == None:
         model_data = np.arange(len(model_time), dtype=int)
-    """
+
 
     dt_check = False
     try:  # try to convert from datetime units (if fails, assume it's already numeric)
