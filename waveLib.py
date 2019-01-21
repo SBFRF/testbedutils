@@ -608,17 +608,17 @@ def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
         a2_[i] = (np.cos(2 * angMat) * Ds_[i]).sum(axis=1) * dd  # a2(f)
         b2_[i] = (np.sin(2 * angMat) * Ds_[i]).sum(axis=1) * dd  # a2(f)
 
-    # mean directions as a function of frequency
+    # mean directions as a function of frequency  (in Degrees)
     Dspec = np.mod(np.rad2deg(np.arctan2(b1_, a1_)), 360)
     Dspec2 = np.mod(np.rad2deg(np.arctan2(b2_, a2_))/2, 180)
 
     #circular Moments Kuik '88
-    for r in range(Dspec.shape[0]):                             # looping, but should be faster way to do it with tile
-        DmrArr[r] = np.tile(np.deg2rad(Dspec[r]), (len(dirbins) , 1)).T
+    # for r in range(Dspec.shape[0]):                             # looping, but should be faster way to do it with tile
+    #     DmrArr[r] = np.tile(np.deg2rad(Dspec[r]), (len(dirbins) , 1)).T
     # model free directional parameters (o'reiley 1996)/circular moments kuik 88
     m1_c = np.sqrt(a1_ **2 + b1_**2)
     m2_c = a2_*np.cos(2*np.deg2rad(Dspec)) + b2_*np.sin(2*np.deg2rad(Dspec))
-    n2_c = b2_*np.cos(2*np.rad2deg(Dspec)) - a2_*np.sin(2*np.rad2deg(Dspec))
+    n2_c = b2_*np.cos(2*np.deg2rad(Dspec)) - a2_*np.sin(2*np.deg2rad(Dspec))
 
 
     # Frequency integrated a/bs
@@ -628,12 +628,16 @@ def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
     b2b = (b2_[:, idx] * fspec[:, idx] * df[idx]).sum(axis=1)/m0
 
     # mean wave angle, energy integrated, calculated from a's and b's
-    Dm_ = np.mod(np.rad2deg( np.arctan2(b1b, a1b)), 360)               # off by about 5 cm from matlab
+    Dm_ = np.mod(np.rad2deg( np.arctan2(b1b, a1b)), 360)                # off by about 5 from kent's matlab scripts
     Dm2_ = np.mod(0.5 * np.rad2deg(np.arctan2(b2b, a2b)), 360)
-    Dp = dirbins[np.argmax(spec.sum(axis=1), axis=1)]
+    Dp = dirbinse[np.argmax(spec.sum(axis=1), axis=1)]
+    # calculate mean direction from only a/b info (no moments)
+    # weights = fspec.T/fspec.max(axis=1).T
+    # dm_rad = np.arctan2(b1_*weights, a1_*weights).sum(axis=1)
+    # dm_deg = np.mod(np.rad2deg(dm_rad), 360)
+    # np.mod(np.rad2deg(np.arctan2((b1_ * fspec), (a1_ * fspec))), 360)
+    # Dm_ab = (Dspec * fspec).sum(axis=1)/dd
 
-    # Dm_ = anglesLib.angle_correct(Dm_)
-    # Dm2_ = anglesLib.angle_correct(Dm2_)
 
     # Directional Spreads
     sprdD =        np.rad2deg(np.sqrt(2 * (1-np.sqrt(a1b**2 + b1b**2))))       # integrated spread across all freqs
@@ -643,7 +647,7 @@ def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
     # frequency dependant spread, skewness, asymetry characteristics
     spreadD_f = np.rad2deg(np.sqrt(2*(1-m1_c)))
     skewnessD_f = -n2_c/ ((1-m2_c/2)**(3/2))
-    kurtosisD_f = 6 - 8*m1_c + 2*m2_c/(2(1-m1))*2
+    # kurtosisD_f = 6 - 8*m1_c + 2*m2_c/(2*(1-m1))*2
 
     meta = 'See help on this function for explanation of output'
     stats = {'Hm0': Hm0,
@@ -662,7 +666,7 @@ def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
              'spreadDP_m2': sprdD_kuikm2,
              "spreadD_f": spreadD_f,
              "skewnessD_f": skewnessD_f,
-             "kurtosisD_f": kurtosisD_f,
+             # "kurtosisD_f": kurtosisD_f,
              'meta': meta}
 
     return stats
