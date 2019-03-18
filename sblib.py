@@ -499,9 +499,9 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
         https://stackoverflow.com/questions/16685384/finding-the-indices-of-matching-elements-in-list-in-python
     """
 
-    if obs_data == None:
+    if obs_data is None:
         obs_data = np.arange(len(obs_time), dtype=int)
-    if model_data == None:
+    if model_data is None:
         model_data = np.arange(len(model_time), dtype=int)
 
 
