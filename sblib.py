@@ -311,6 +311,24 @@ def makegif(flist, ofname, size=None, dt=0.5):
         images.append(imageio.imread(filename))
     imageio.mimwrite(ofname, images, duration=dt)
 
+def myTarMaker(tarOutFile, fileList, **kwargs):
+    """
+
+    Args:
+        tarOutFile (str): file output name/location
+        fileList (list): list of files to put into tarbball
+
+    Keyword Args:
+          'compressionString': denotes type of compression to write with (default='w:gz', write with gzip)
+
+    Returns:
+        a tarball written to tarOutFile location
+    """
+    import tarfile
+    compressionString = kwargs.get('compressionString',  "w:gz" )
+    with tarfile.open(tarOutFile, compressionString) as tar:
+        for fileName in fileList:
+            tar.add(fileName)
 ########################################
 #  following functions deal with averaging
 ########################################
