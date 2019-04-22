@@ -582,7 +582,7 @@ def timeMatch_altimeter(altTime, altData, modTime, modData, window=30 * 60):
         altTime: altimeter time - tested as epoch (might work in datetime)
         altData: altimeter data, some/any floating (int?) value
         modTime: base time to match
-        modData: data to be paired (could be indicies)
+        modData: data to be paired (could be indices)
         window: time in seconds (or time delta, if input as datetimes) (Default value = 30 * 60)
 
     Returns:
