@@ -10,9 +10,8 @@ documented 12/2/17
 """
 import numpy as np
 import datetime as DT
-import warnings
 import netCDF4 as nc
-import math
+import math, warnings, os
 from dateutil.relativedelta import relativedelta
 
 ########################################
@@ -86,11 +85,11 @@ def reduceDict(dictIn, idxToKeep, exemptList=None):
     return dictOut
 
 def removeMaskedDataFromDictionary(dictIn):
+    """ removes masked data from dictionary
+    in development
+
     """
-
-
-    """
-
+    warnings.warn('check that this is ready for use')
     if isinstance(dictIn, np.ma.MaskedArray):   # then operate on it
         # first loop through find everything that has same dimension
         dictOut = {}
@@ -119,6 +118,7 @@ def removeMaskedDataFromDictionary(dictIn):
         return dictOut
     else:
         return dictIn
+
 class Bunch(object):
     """allows user to access dictionary data from 'object'
     instead of object['key']
@@ -312,7 +312,7 @@ def makegif(flist, ofname, size=None, dt=0.5):
     imageio.mimwrite(ofname, images, duration=dt)
 
 def myTarMaker(tarOutFile, fileList, **kwargs):
-    """
+    """ makes a tarball file with a file name and list of files
 
     Args:
         tarOutFile (str): file output name/location
@@ -320,15 +320,22 @@ def myTarMaker(tarOutFile, fileList, **kwargs):
 
     Keyword Args:
           'compressionString': denotes type of compression to write with (default='w:gz', write with gzip)
+          'removeFiles' (bool): Denotes whether to remove files or not after taring
 
     Returns:
         a tarball written to tarOutFile location
+
     """
     import tarfile
-    compressionString = kwargs.get('compressionString',  "w:gz" )
+    compressionString = kwargs.get('compressionString',  "w:gz")
+    removeFiles = kwargs.get('removeFiles', True)
     with tarfile.open(tarOutFile, compressionString) as tar:
         for fileName in fileList:
             tar.add(fileName)
+    if removeFiles:
+        [os.remove(ff) for ff in fileList]
+
+
 ########################################
 #  following functions deal with averaging
 ########################################
