@@ -335,7 +335,6 @@ def myTarMaker(tarOutFile, fileList, **kwargs):
     if removeFiles:
         [os.remove(ff) for ff in fileList]
 
-
 ########################################
 #  following functions deal with averaging
 ########################################

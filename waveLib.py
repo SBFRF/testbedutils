@@ -424,7 +424,8 @@ def timeSeriesAnalysis1D(time, eta, **kwargs):
             'windowLength': window length for FFT, units are minutes (Default = 10 min)
             'overlap': overlap of windows for FFT, units are percentage of window length (Default=0.75)
             'bandAvg': number of bands to average over
-            'timeAx (int): a number defining which axis in eta is time (Default = 0)
+            'timeAx' (int): a number defining which axis in eta is time (Default = 0)
+            'returnSetup' (bool): will calculate and return setup (last postion)  (Default = False)
 
     Returns:
         fspec (array): array of power spectra, dimensioned by [space, frequency]
@@ -446,11 +447,14 @@ def timeSeriesAnalysis1D(time, eta, **kwargs):
     bandAvg = kwargs.get('bandAvg', 6)  # average 6 bands
     myAx = kwargs.get('timeAx', 0)  # time dimension of eta
     overlap = nPerSeg * overlapPercentage
+    returnSetup = kwargs.get('returnSetup', False)
     ## preprocessing steps
     etaDemeaned = np.nan_to_num(eta - np.mean(eta, axis=0))
+    if returnSetup is True:
+        setup = eta - etaDemeaned
     # etaDemeaned = np.ma.masked_array(etaD, mask=np.isnan(eta).data, fill_value=-999)   # demean surface time series
     assert eta.shape[myAx] == time.shape[0], "axis selected for eta doesn't match time"
-    freqSample = np.median(np.diff(time)).total_seconds()
+    freqSample = 1/np.median(np.diff(time)).total_seconds()
 
     freqsW, fspecW = welch(x=etaDemeaned, window='hanning', fs=freqSample, nperseg=nPerSeg, noverlap=overlap,
                            nfft=None, return_onesided=True, detrend='linear', axis=myAx)
@@ -473,107 +477,10 @@ def timeSeriesAnalysis1D(time, eta, **kwargs):
     fspec = np.array(fspec).T
     # output as
     fspec = np.ma.masked_array(fspec, mask=np.tile((fspec == 0).all(axis=1), (frqOut.size, 1)).T)
-    return fspec, frqOut
-
-    def myDataloadfunction(data):
-        """ Load SWASH output from
-
-        Args:
-            data:
-
-        Returns:
-
-        """
-        dataOUT, dataTemp, runMeta = {}, {}, {}
-        # initalize outDict with empty arrays
-        times, nonTimeDependant = [], []
-        # first load all vars and parse as time dependent array
-        for dictInKey, dataValues in data.items():  ## should i sort these?
-            origVarName = dictInKey.split('_')
-            saveKey = ''.join(origVarName[:-2])
-            # print('Looking through var {} will save as {} or {}'.format(origVarName, saveKey, dictInKey))
-            try:
-                timeString = origVarName[-2] + '_' + origVarName[-1]
-                try:
-                    d = DT.datetime.strptime(timeString, "%H%M%S_%f")
-                    times.append(DT.timedelta(hours=d.hour, minutes=d.minute, seconds=d.second, microseconds=d.microsecond))
-                    # print('saved as time step {}'.format(timeString))
-                except ValueError:  # this will be things like __header__, __global__... etc, erros out on d = ...
-                    runMeta[origVarName[2]] = dataValues
-                    continue
-
-                ######## now write data to temp dictionary
-                # save data as 1D arrays, to reshape later
-                # print('Original key {} put {} values into key {}'.format(origVarName, dataValues.shape, saveKey))
-                if saveKey not in dataTemp:  # then haven't parsed it before, just add it
-                    dataTemp[saveKey] = [dataValues]
-                else:  # just add the data !
-                    dataTemp[saveKey].append(dataValues)
-
-            except IndexError:  # for not time dependant variables
-                # print('Original key {} put {} values into key {}'.format(origVarName, dataValues.shape, dictInKey))
-                # just save them as is  (variables like Xp, because save key turns into gibberish)
-                nonTimeDependant.append(dictInKey)
-                dataTemp[dictInKey] = [dataValues]
-                # pass
-
-        ################### reshape list structure to 3 d array
-        # parsed quickly to a single dictionary, now reshape to [t, y, x]
-        # assume that we're always outputing eta and use this to get number of timesteps
-        # turn nan's to masks for output
-        tSteps, nY, nX = np.shape(dataTemp['Watlev'])
-        t = DT.datetime.now()
-        # for var in dataTemp.keys():
-        #     if var not in nonTimeDependant:
-        #         dataOUT[var] = np.reshape(dataTemp[saveKey], (tSteps, nY, nX))
-        # print('reshape took {}'.format(DT.datetime.now() - t))
-        t = DT.datetime.now()
-        for var in dataTemp.keys():
-            if var not in nonTimeDependant:
-                dataOUT[var] = np.ma.MaskedArray(dataTemp[var], mask=np.isnan(dataTemp[var]))
-        print('masked array took {}'.format(DT.datetime.now() - t))
-       ##############################################################################
-        # now restructure dictionary with a bunch of keys to a single
-        # dictionary with multi dimensional output (concatenate the layered values)
-        ##############################################################################
-        for var in list(dataOUT.keys()):
-            # if var in meshVars: # then variables have same number as layers
-            saveKey = var.translate(var.maketrans('', '', '0123456789'))
-            if saveKey != var:  # then there's not associated with it
-                if saveKey in dataOUT:
-                    dataOUT[saveKey] = np.append(dataOUT[saveKey], np.expand_dims(dataOUT[var], axis=-1), axis=-1)
-                else:
-                    dataOUT[saveKey] = np.expand_dims(dataOUT[var], axis=-1)
-                del dataOUT[var]
-
-
-        # d1 = DT.datetime.strptime(self.ofileNameBase, '%Y-%m-%dT%H%M%SZ')
-        # wrap up into output dictionary named data
-        dataDict = {'time': np.unique(times),  # convert each time step to date time from time delta object
-                    'elevation': data['Botlev'].squeeze(),
-                    'xFRF': data['Xp'].squeeze(),
-                    'yFRF': data['Yp'].squeeze(),
-                    'eta': dataOUT['Watlev'],
-                    'Ustar': dataOUT['Ustar'],
-                    'velocityU': dataOUT['velx'],
-                    'velocityUprofile': dataOUT['velkx'],
-                    'velocityV': dataOUT['vely'],
-                    'velocityVprofile': dataOUT['velky'],
-                    'velocityZprofile': dataOUT['w'],
-                    'NormPresProfile': dataOUT['Nprsk'], }
-        #
-        # metaDict = {'runMeta': runMeta,
-        #             'waveDm': self.Dm,
-        #             'waveHs': self.Hs,
-        #             'waveTp': self.Tp,
-        #             'WL': self.WL,
-        #             'nLayers': self.nLayers,
-        #             'nprocess': self.nprocess,
-        #             'equlibTime': self.equlibTime,
-        #             'simWallTime': DT.timedelta(seconds=self.simulationWallTime),
-        #             'spreadD': self.spreadD,
-        #             'versionPrefix': self.version_prefix}
-        return dataDict
+    if returnSetup is True:
+        return fspec, frqOut, setup
+    else:
+        return fspec, frqOut
 
 def stats1D(fspec, frqbins, lowFreq=0.05, highFreq=0.5):
     """Calculates bulk statistics from a 1 dimentional spectra, calculated as inclusive with
@@ -612,8 +519,7 @@ def stats1D(fspec, frqbins, lowFreq=0.05, highFreq=0.5):
 
     df = np.diff(np.append(frqbins[0], frqbins), n=1)
 
-    # truncating spectra to sea/swell band
-    # [idx, _] = sb.findbtw(frqbins, lowFreq, highFreq, type=3)
+    # truncating spectra as useful
     idx = np.argwhere((frqbins >= lowFreq) & (frqbins <= highFreq)).squeeze()
 
     m0 = np.sum(fspec[:, idx] * df[idx], axis=1)  # 0th momment
@@ -639,8 +545,7 @@ def stats1D(fspec, frqbins, lowFreq=0.05, highFreq=0.5):
              'Tave': Tm01,
              'sprdF': sprdF,
              'Tm10': Tm10,
-             'meta': meta
-             }
+             'meta': meta}
 
     return stats
 
