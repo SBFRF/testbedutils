@@ -279,6 +279,28 @@ def statsBryant(observations, models):
 
     return stats
 
+def makeMovie(ofname, images, fps=5):
+    """make movies from list of images
+    
+    Args:
+        ofname:  output file name
+        images: list of images
+
+    Returns:
+        None, will make a movie in types
+
+    needs openCV, can install with pip install opencv-python
+    """
+        import cv2
+        video_name = ofname
+        frame = cv2.imread(images[0])
+        height, width, layers = frame.shape
+        video = cv2.VideoWriter(video_name, 0, fps, (width, height))
+        for image in images:
+            video.write(cv2.imread(image))
+        cv2.destroyAllWindows()
+        video.release()
+
 def makegif(flist, ofname, size=None, dt=0.5):
     """This function uses imageio to create gifs from a list of images
         requires imageio library
