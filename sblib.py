@@ -545,9 +545,9 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
         https://stackoverflow.com/questions/16685384/finding-the-indices-of-matching-elements-in-list-in-python
     """
 
-    if obs_data == None:
+    if obs_data is None:
         obs_data = np.arange(len(obs_time), dtype=int)
-    if model_data == None:
+    if model_data is None:
         model_data = np.arange(len(model_time), dtype=int)
 
 
@@ -628,7 +628,7 @@ def timeMatch_altimeter(altTime, altData, modTime, modData, window=30 * 60):
         altTime: altimeter time - tested as epoch (might work in datetime)
         altData: altimeter data, some/any floating (int?) value
         modTime: base time to match
-        modData: data to be paired (could be indicies)
+        modData: data to be paired (could be indices)
         window: time in seconds (or time delta, if input as datetimes) (Default value = 30 * 60)
 
     Returns:
