@@ -447,11 +447,9 @@ def timeSeriesAnalysis1D(time, eta, **kwargs):
     bandAvg = kwargs.get('bandAvg', 6)  # average 6 bands
     myAx = kwargs.get('timeAx', 0)  # time dimension of eta
     overlap = nPerSeg * overlapPercentage
-    returnSetup = kwargs.get('returnSetup', False)
     ## preprocessing steps
     etaDemeaned = np.nan_to_num(eta - np.mean(eta, axis=0))
-    if returnSetup is True:
-        setup = eta - etaDemeaned
+
     # etaDemeaned = np.ma.masked_array(etaD, mask=np.isnan(eta).data, fill_value=-999)   # demean surface time series
     assert eta.shape[myAx] == time.shape[0], "axis selected for eta doesn't match time"
     freqSample = 1/np.median(np.diff(time)).total_seconds()
@@ -477,10 +475,7 @@ def timeSeriesAnalysis1D(time, eta, **kwargs):
     fspec = np.array(fspec).T
     # output as
     fspec = np.ma.masked_array(fspec, mask=np.tile((fspec == 0).all(axis=1), (frqOut.size, 1)).T)
-    if returnSetup is True:
-        return fspec, frqOut, setup
-    else:
-        return fspec, frqOut
+    return fspec, frqOut
 
 def stats1D(fspec, frqbins, lowFreq=0.05, highFreq=0.5):
     """Calculates bulk statistics from a 1 dimentional spectra, calculated as inclusive with
