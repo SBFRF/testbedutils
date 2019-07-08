@@ -441,8 +441,11 @@ def timeSeriesAnalysis1D(time, eta, **kwargs):
     """
     from scipy.signal import welch
     import warnings
+    import datetime as DT
+    assert isinstance(time, np.ndarray), 'Must be input as an array'
+    assert isinstance(time[0], DT.datetime), 'time must be in datetime'
     ## kwargs below
-    nPerSeg = kwargs.get('WindowLength', 10 * 60)  # window length (10 minutes in seconds)
+    nPerSeg = kwargs.get('WindowLength', 10)  # window length (10 minutes in seconds)
     overlapPercentage = kwargs.get('overlap', 3 / 4)  # 75% overlap per segment
     bandAvg = kwargs.get('bandAvg', 6)  # average 6 bands
     myAx = kwargs.get('timeAx', 0)  # time dimension of eta
@@ -454,9 +457,9 @@ def timeSeriesAnalysis1D(time, eta, **kwargs):
     assert eta.shape[myAx] == time.shape[0], "axis selected for eta doesn't match time"
     freqSample = 1/np.median(np.diff(time)).total_seconds()
 
-    freqsW, fspecW = welch(x=etaDemeaned, window='hanning', fs=freqSample, nperseg=nPerSeg, noverlap=overlap,
+    freqsW, fspecW = welch(x=etaDemeaned, window='hanning', fs=freqSample, nperseg=nPerSeg*60, noverlap=overlap,
                            nfft=None, return_onesided=True, detrend='linear', axis=myAx)
-    # remove first index of array (DC componanats)
+    # remove first index of array (DC components)
     freqW = freqsW[1:]
     fspecW = fspecW[1:]
     ## TODO: add surface correction here
@@ -468,8 +471,8 @@ def timeSeriesAnalysis1D(time, eta, **kwargs):
         avgIdxs = np.linspace(kk, kk + bandAvg - 1, num=bandAvg).astype(int)
         frqOut.append(freqW[avgIdxs].sum(axis=myAx) / bandAvg)  # taking average of freq for label (band centered label)
         fspec.append(fspecW[avgIdxs].sum(axis=myAx) / bandAvg)
-    if max(avgIdxs) < len(freqW):
-        warnings.warn('neglected {} freq bands'.format(len(freqW) - max(avgIdxs)))
+    if max(avgIdxs) < len(freqW):  # provide warning that we're not capturing all energy
+        warnings.warn('neglected {} freq bands (at highest frequency)'.format(len(freqW) - max(avgIdxs)))
 
     frqOut = np.array(frqOut).T
     fspec = np.array(fspec).T
