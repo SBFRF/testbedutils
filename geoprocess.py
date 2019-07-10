@@ -227,8 +227,9 @@ def LatLon2ncsp(lon, lat):
     spNC = pyproj.Proj(init="epsg:%s" %EPSG)
     epsgLL =  4269 # 4326
     LL = pyproj.Proj(init='epsg:{}'.format(epsgLL))  # epsg for NAD83 projection
-
-    spE, spN = pyproj.transform(LL, spNC, lon, lat)
+    spE, spN = spNC(lon,lat)
+#   replaced transform with direct conversion
+#    spE, spN = pyproj.transform(LL, spNC, lon, lat)
     ans = {'lon': lon, 'lat': lat, 'StateplaneE': spE, 'StateplaneN': spN}
     return ans
 
