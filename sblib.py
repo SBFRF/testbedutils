@@ -357,6 +357,7 @@ def myTarMaker(tarOutFile, fileList, **kwargs):
                 tar.add(fileName)
             except FileNotFoundError:
                 tar.add(os.path.split(fileName)[-1])
+
     if removeFiles:
         [os.remove(ff) for ff in fileList]
 
