@@ -290,12 +290,20 @@ def makeMovie(ofname, images, fps=5):
         None, will make a movie in types
 
     needs openCV, can install with pip install opencv-python
+
+    Refrences:
+        https://stackoverflow.com/questions/30509573/writing-an-mp4-video-using-python-opencv
+
     """
     import cv2
     video_name = ofname
+    if ofname.split('.')[-1].lower() in ['mp4']:
+        forcc = cv2.VideoWriter_fourcc(*'mp4v')
+    else:
+        forcc = 0
     frame = cv2.imread(images[0])
     height, width, layers = frame.shape
-    video = cv2.VideoWriter(video_name, 0, fps, (width, height))
+    video = cv2.VideoWriter(video_name, forcc, fps, (width, height))
     for image in images:
         video.write(cv2.imread(image))
     cv2.destroyAllWindows()
