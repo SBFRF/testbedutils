@@ -806,17 +806,19 @@ def makeBackgroundBathyCorners(LLHC, URHC, dx, dy, coord_system='FRF'):
     """This function makes grid nodes using the corners of the grid using different coordinate systems
 
     Args:
-      LLHC: tuple: lower left hand corner of the desired domain (xFRF, yFRF) (easting, northing) or (Lat, Lon)
-      URHC: tuple: upper right hand corner of the desired domain (xFRF, yFRF) (easting, northing) or (Lat, Lon)
-      dx: x-direction grid spacing in m - lat/lon corners get converted to utm!!!
-      dy: y-direction grid spacing in m - lat/lon corners get converted to utm!!!
-      coord_system: string containing the coordinate system for your corners ('FRF' 'utm', 'stateplane', or 'LAT/LON') (Default value = 'FRF')
+        LLHC: tuple: lower left hand corner of the desired domain (xFRF, yFRF) (easting, northing) or (Lat, Lon)
+        URHC: tuple: upper right hand corner of the desired domain (xFRF, yFRF) (easting, northing) or (Lat, Lon)
+        dx: x-direction grid spacing in m - lat/lon corners get converted to utm!!!
+        dy: y-direction grid spacing in m - lat/lon corners get converted to utm!!!
+        coord_system(str): string containing the coordinate system for your corners ('FRF' 'utm', 'stateplane', or 'LAT/LON') (Default value = 'FRF')
 
     Returns:
-      dictionary containing 2D arrays of:
-      xFRF (or easting or longitude)
-      yFRF (or northing or Latitude)
-      bottomElevation at those points interpolated from background DEM onto desired grid
+        dictionary containing 2D arrays of:
+           xFRF (or easting or longitude)
+
+           yFRF (or northing or Latitude)
+
+           bottomElevation at those points interpolated from background DEM onto desired grid
 
     """
 
@@ -889,8 +891,6 @@ def makeBackgroundBathyCorners(LLHC, URHC, dx, dy, coord_system='FRF'):
         utmE = temp['utmE']
         utmN = temp['utmN']
 
-    else:
-        pass
 
 
     # these are just some random times I made up because the getObs class requires it.  They have no effect on the
