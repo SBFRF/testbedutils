@@ -24,8 +24,6 @@ def logFileLogic(outDataBase, version_prefix, startTime, endTime, log=True):
     Returns:
 
     """
-
-
     LOG_FILENAME = outDataBase + 'logs/cmtb_BatchRun_Log_%s_%s_%s.log' % (version_prefix, startTime, endTime)
     if log is True:
         try:
@@ -37,6 +35,7 @@ def logFileLogic(outDataBase, version_prefix, startTime, endTime, log=True):
                   % (DT.datetime.now()))
     # ____________________________________________________________
     return LOG_FILENAME
+
 def displayStartInfo(projectStart, projectEnd, version_prefix, LOG_FILENAME, model):
     print('\n-\n-\nMASTER WorkFLOW for {} SIMULATIONS\n-\n-\n'.format(model))
     print('Batch Process Start: %s     Finish: %s '% (projectStart, projectEnd))
@@ -67,6 +66,6 @@ def checkVersionPrefix(model, version_prefix):
     elif model.lower() in ['stwave']:
         modelList = stwaveStrings
     else:
-        raise NotImplementedError, 'Check model is programmed'
+        raise NotImplementedError('Check model is programmed')
     checkString = 'Your model is not in version Prefix list {}'.format(modelList)
     assert version_prefix.lower() in cmsStrings, checkString
