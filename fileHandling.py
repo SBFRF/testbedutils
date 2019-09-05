@@ -41,7 +41,6 @@ def displayStartInfo(projectStart, projectEnd, version_prefix, LOG_FILENAME, mod
     print('Batch Process Start: %s     Finish: %s '% (projectStart, projectEnd))
     print('The batch simulation is Run in %s Version' % version_prefix)
     print('Check for simulation errors here %s' % LOG_FILENAME)
-
     print('------------------------------------\n\n************************************\n\n------------------------------------\n\n')
 
 def checkVersionPrefix(model, version_prefix):
