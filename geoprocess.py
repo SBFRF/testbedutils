@@ -236,52 +236,15 @@ def LatLon2ncsp(lon, lat):
 def FRFcoord(p1, p2, coordType=None):
     """updated FRF coord in python, using kent's original code as guide but converting pyproj for all
     conversions between state plane and Lat Lon,  Then all conversions between stateplane and
-    FRF coordinates are done using kents original geometry.
-    coordType argument will force an input type eg 'FRF'
-    #
-    #  15 Dec 2014
-    #  Kent Hathaway.
-    #  Translated from Matlab to python 2015-11-30 - Spicer Bak
-    #
-    #  Uses new fit (angles and scales) Bill Birkemeier determined in Nov 2014
-    #
-    #  This version will determine the input based on values, outputs FRF, lat/lon,
-    #  and state plane coordinates.  Uses NAD83-2011.
-    #
-    #  IO:
-    #  p1 = FRF X (m), or Longitude (deg + or -), or state plane Easting (m)
-    #  p2 = FRF Y (m), or Latitude (deg), or state plane Northing (m)
-    #
-    #  X = FRF cross-shore (m)
-    #  Y = FRF longshore (m)
-    #  ALat = latitude (decimal degrees)
-    #  ALon = longitude (decimal degrees, positive, or W)
-    #  spN = state plane northing (m)
-    #  spE = state plane easting (m)
-    
-    NAD83-86	2014
-    Origin Latitude          36.1775975
-    Origin Longitude         75.7496860
-    m/degLat             110963.357
-    m/degLon              89953.364
-    GridAngle (deg)          18.1465
-    Angle FRF to Lat/Lon     71.8535
-    Angle FRF to State Grid  69.9747
-    FRF Origin Northing  274093.1562
-    Easting              901951.6805
-    
-    #  Debugging values
-    p1=566.93;  p2=515.11;  % south rail at 1860
-    ALat = 36.1836000
-    ALon = 75.7454804
-    p2= 36.18359977;  p1=-75.74548109;
-    SP:  p1 = 902307.92; 	p2 = 274771.22;
+    FRF coordinates are done using kents original geometry.  Can force input to specfic coordinate type using coordType
+    argument. Default will guess
 
     Args:
       p1: input any of the following to convert [lon, easting, xFRF]
-      p2: input any of the following to convert [lat, northing, yfrf]
 
-      coordType: Default value = None)
+      p2: input any of the following to convert [lat, northing, yFRF]
+
+      coordType: valid values are ['LL', 'geographic', 'LatLon', 'spnc', 'ncsp', 'FRF'] (Default value = None)
 
     Returns:
         dictionary with appropriate data in it
@@ -300,6 +263,46 @@ def FRFcoord(p1, p2, coordType=None):
             'utmE': UTM easting
 
             'utmN': UTM northing
+
+    Notes:
+        From original code:
+            #  15 Dec 2014
+            #  Kent Hathaway.
+            #  Translated from Matlab to python 2015-11-30 - Spicer Bak
+            #
+            #  Uses new fit (angles and scales) Bill Birkemeier determined in Nov 2014
+            #
+            #  This version will determine the input based on values, outputs FRF, lat/lon,
+            #  and state plane coordinates.  Uses NAD83-2011.
+            #
+            #  IO:
+            #  p1 = FRF X (m), or Longitude (deg + or -), or state plane Easting (m)
+            #  p2 = FRF Y (m), or Latitude (deg), or state plane Northing (m)
+            #
+            #  X = FRF cross-shore (m)
+            #  Y = FRF longshore (m)
+            #  ALat = latitude (decimal degrees)
+            #  ALon = longitude (decimal degrees, positive, or W)
+            #  spN = state plane northing (m)
+            #  spE = state plane easting (m)
+
+            NAD83-86	2014
+            Origin Latitude          36.1775975
+            Origin Longitude         75.7496860
+            m/degLat             110963.357
+            m/degLon              89953.364
+            GridAngle (deg)          18.1465
+            Angle FRF to Lat/Lon     71.8535
+            Angle FRF to State Grid  69.9747
+            FRF Origin Northing  274093.1562
+            Easting              901951.6805
+
+            #  Debugging values
+            p1=566.93;  p2=515.11;  % south rail at 1860
+            ALat = 36.1836000
+            ALon = 75.7454804
+            p2= 36.18359977;  p1=-75.74548109;
+            SP:  p1 = 902307.92; 	p2 = 274771.22;
 
     """
 
