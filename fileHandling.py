@@ -1,15 +1,35 @@
 import os, logging
 import datetime as DT
 
-
 def makeCMTBfileStructure(path_prefix, date_str):
     """checks and makes sure there is a folder structure that can beused for file storage"""
     if not os.path.exists(os.path.join(path_prefix, date_str)):  # if it doesn't exist
         os.makedirs(os.path.join(path_prefix, date_str))  # make the directory
     if not os.path.exists(os.path.join(path_prefix, date_str, 'figures')):
         os.makedirs(os.path.join(path_prefix, date_str, "figures"))
-    print('use function for making files ')
-    print("OPERATIONAL files will be place in {0} folder".format(os.path.join(path_prefix, date_str)))
+    print("simulation input/output files and plots will be place in {0} folder".format(os.path.join(path_prefix, date_str)))
+
+def makeTDSfileStructure(Thredds_Base, fldrArch, datestring, field):
+    """ makes the thredds folder architecture and returns file name for particular file to be generated
+
+    Args:
+        Thredds_Base: the root directory where all TDS files lives
+        fldrArch: local architecture from that location
+        datestring: names specific simulation file (eg 20190905T000000Z)
+        field: what type of file is this, a save point, spatial data, etc
+
+    Returns:
+        file name for writing netCDF file (eg '/thredds_data/cmsf/base/field/field20190905T000000Z.nc')
+    """
+    from prepdata import inputOutput
+    TdsFldrBase = os.path.join(Thredds_Base, fldrArch, field)
+    netCDFfileOutput = os.path.join(TdsFldrBase, field + '_%s.nc' % datestring)
+    if not os.path.exists(TdsFldrBase):
+        os.makedirs(TdsFldrBase)  # make the directory for the thredds data output
+    if not os.path.exists(os.path.join(TdsFldrBase, field+'.ncml')):
+        inputOutput.makencml(os.path.join(TdsFldrBase, field+'.ncml'))  # remake the ncml if its not there
+
+    return netCDFfileOutput
 
 def logFileLogic(outDataBase, version_prefix, startTime, endTime, log=True):
     """Checks and makes log file
@@ -54,7 +74,7 @@ def checkVersionPrefix(model, version_prefix):
         None
 
     """
-    cmsStrings = ['base']
+    cmsStrings = ['base', ]
     ww3Strings = ['base']
     stwaveStrings= ['HP', 'FP', 'CB', 'CBKF']
 
