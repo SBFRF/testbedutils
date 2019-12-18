@@ -182,14 +182,21 @@ def ncsp2LatLon(spE, spN):
         'StateplaneN': NC stateplane
 
     """
+    #      from pyproj import CRS
+    # >>> c1 = CRS(proj='latlong',datum='WGS84')
+    # >>> x1 = -111.5; y1 = 45.25919444444
+    # >>> c2 = CRS(proj="utm",zone=10,datum='NAD27')
+    # >>> x2, y2 = transform(c1, c2, x1, y1)
+    # >>> "%s  %s" % (str(x2)[:9],str(y2)[:9])
+    # '1402291.0  5076289.5'
+
     EPSG = 3358  # taken from spatialreference.org/ref/epsg/3358
     # NC stateplane NAD83
-    spNC = pyproj.Proj(init="epsg:%s" %EPSG)
-    epsgLL =  4269 # 4326
-    LL = pyproj.Proj(init='epsg:{}'.format(epsgLL))  # epsg for NAD83 projection
+    spNC = pyproj.Proj("epsg:{}".format(EPSG))
+    LL = pyproj.CRS(proj='latlon', datum='WGS84')#pyproj.Proj('epsg:{}'.format(epsgLL))  # epsg for NAD83 projection
     lon, lat = pyproj.transform(spNC, LL, spE, spN)
-    ans = {'lon': lon, 'lat': lat, 'StateplaneE': spE, 'StateplaneN': spN}
-    return ans
+
+    return  {'lon': lon, 'lat': lat, 'StateplaneE': spE, 'StateplaneN': spN}
 
 def LatLon2ncsp(lon, lat):
     """This function uses pyproj to convert longitude and latitude to stateplane
@@ -224,12 +231,13 @@ def LatLon2ncsp(lon, lat):
     """
     EPSG = 3358  # taken from spatialreference.org/ref/epsg/3358
     # NC stateplane NAD83
-    spNC = pyproj.Proj(init="epsg:%s" %EPSG)
-    epsgLL =  4269 # 4326
-    LL = pyproj.Proj(init='epsg:{}'.format(epsgLL))  # epsg for NAD83 projection
+    spNC = pyproj.Proj("epsg:{}".format(EPSG))
     spE, spN = spNC(lon,lat)
-#   replaced transform with direct conversion
-#    spE, spN = pyproj.transform(LL, spNC, lon, lat)
+
+    # epsgLL =  4269 # 4326
+    # LL = pyproj.Proj('epsg:{}'.format(epsgLL))  # epsg for NAD83 projection
+    # replaced below transform with direct conversion above
+    # spE, spN = pyproj.transform(LL, spNC, lon, lat)
     ans = {'lon': lon, 'lat': lat, 'StateplaneE': spE, 'StateplaneN': spN}
     return ans
 
@@ -365,6 +373,7 @@ def FRFcoord(p1, p2, coordType=None):
         print('<<ERROR>> testbedUtils Geoprocess FRF coord Cound not determine input type, returning NaNs')
         coordsOut = {'xFRF': float('NaN'), 'yFRF': float('NaN'), 'StateplaneE': float('NaN'),
              'StateplaneN': float('NaN'), 'Lat': float('NaN'), 'Lon':float('NaN')}
+
     return coordsOut
 
 def utm2LatLon(utmE, utmN, zn, zl):
@@ -441,8 +450,10 @@ def LatLon2utm(lat, lon):
 
     df['lat'] = lat
     df['lon'] = lon
-
-    df['utm'] = df.apply(lambda x: utm.from_latlon(x.lat, x.lon), axis=1)
+    try:
+        df['utm'] = df.apply(lambda x: utm.from_latlon(x.lat, x.lon), axis=1)
+    except:
+        df['utm'] = utm.from_latlon(df.lat.values, df.lon.values)
 
     utmE, utmN, zn, zl = list(zip(*np.asarray(df['utm'])))
 

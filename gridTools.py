@@ -152,7 +152,7 @@ def makeCMSgridNodes(x0, y0, azi, dx, dy, z):
                    'ni': len(ii),
                    'nj': len(jj),
                    'elevation': z,  # exported as [t, x,y] dimensions
-                   'gridFname': 'CMS GRid',
+                   'gridFname': 'CMS Grid',
                    'time': 0}
 
     return BathyPacket

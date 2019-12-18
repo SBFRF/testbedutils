@@ -378,14 +378,20 @@ def baseRound(x, base=5, **kwargs):
       base: this is the value by which x is rounded to a multiple of
     ie base = 10  x = [4, 8, 2, 12]  returns [0,10,0,10] (Default value = 5)
 
+    Keyword Args:
+        'floor': will force a round down
+        'ceil': will force a  round up
+
     Returns:
       np.array of floating point numbers rounded to a multiple of base
 
     """
     x = np.array(x, dtype=float)
-    if 'floor' in kwargs and kwargs['floor'] == True:
+    floor=kwargs.get('floor', False)
+    ceil = kwargs.get('ceil', False)
+    if floor is True:
         return base * np.floor(x/base)
-    elif 'ceil' in kwargs and kwargs['ceil'] == True:
+    elif ceil is True:
         return base * np.ceil(x/base)
     else:
         return base * np.round(x/base)
