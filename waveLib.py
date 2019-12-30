@@ -436,7 +436,7 @@ def timeSeriesAnalysis1D(time, eta, **kwargs):
             and band averaging chosen, function will neglect last few (high frequency) bands
 
     TODO:
-        can add surface correction for
+        can add surface correction for pressure data
 
     """
     from scipy.signal import welch
@@ -459,7 +459,7 @@ def timeSeriesAnalysis1D(time, eta, **kwargs):
 
     freqsW, fspecW = welch(x=etaDemeaned, window='hanning', fs=freqSample, nperseg=nPerSeg*60, noverlap=overlap,
                            nfft=None, return_onesided=True, detrend='linear', axis=myAx)
-    # remove first index of array (DC components)
+    # remove first index of array (DC components)--?
     freqW = freqsW[1:]
     fspecW = fspecW[1:]
     ## TODO: add surface correction here
