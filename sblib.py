@@ -362,9 +362,9 @@ def myTarMaker(tarOutFile, fileList, **kwargs):
     with tarfile.open(tarOutFile, compressionString) as tar:
         for fileName in fileList:
             try:
-                tar.add(fileName)
-            except FileNotFoundError:
                 tar.add(os.path.split(fileName)[-1])
+            except FileNotFoundError:
+                tar.add(fileName)
 
     if removeFiles:
         [os.remove(ff) for ff in fileList]
