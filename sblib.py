@@ -361,10 +361,7 @@ def myTarMaker(tarOutFile, fileList, **kwargs):
     removeFiles = kwargs.get('removeFiles', True)
     with tarfile.open(tarOutFile, compressionString) as tar:
         for fileName in fileList:
-            try:
-                tar.add(os.path.split(fileName)[-1])
-            except FileNotFoundError:
-                tar.add(fileName)
+            tar.add(fileName, arcname=os.path.split(fileName)[-1])
 
     if removeFiles:
         [os.remove(ff) for ff in fileList]
@@ -381,14 +378,20 @@ def baseRound(x, base=5, **kwargs):
       base: this is the value by which x is rounded to a multiple of
     ie base = 10  x = [4, 8, 2, 12]  returns [0,10,0,10] (Default value = 5)
 
+    Keyword Args:
+        'floor': will force a round down
+        'ceil': will force a  round up
+
     Returns:
       np.array of floating point numbers rounded to a multiple of base
 
     """
     x = np.array(x, dtype=float)
-    if 'floor' in kwargs and kwargs['floor'] == True:
+    floor=kwargs.get('floor', False)
+    ceil = kwargs.get('ceil', False)
+    if floor is True:
         return base * np.floor(x/base)
-    elif 'ceil' in kwargs and kwargs['ceil'] == True:
+    elif ceil is True:
         return base * np.ceil(x/base)
     else:
         return base * np.round(x/base)
@@ -505,13 +508,13 @@ def createDateList(start, end, delta):
         yield curr
         curr += delta
 
-def whatIsYesterday(now=DT.date.today(), stringOut=True, days=1):
+def whatIsYesterday(now=DT.date.today(), stringOut=False, days=1):
     """this function finds what yesterday's date string is in the format
     of yyyy-mm-dd
 
     Args:
         now: the date to start counting backwards from (default = right now)
-        stringOut (bool): calls for string output (default = True) false returns Datetime object
+        stringOut (bool): a format to convert the string as output (default=False returns datetime)
         days (int): how many days to count backwards from (Default = 1)
 
     Returns:
@@ -521,8 +524,8 @@ def whatIsYesterday(now=DT.date.today(), stringOut=True, days=1):
     """
 
     yesterday = now - DT.timedelta(days)
-    if stringOut == True:
-        yesterday = DT.date.strftime(yesterday, '%Y-%m-%d')
+    if stringOut is not False:
+        yesterday = DT.date.strftime(yesterday, stringOut)
     return yesterday
 
 def timeMatch(obs_time, obs_data, model_time, model_data):

@@ -182,14 +182,21 @@ def ncsp2LatLon(spE, spN):
         'StateplaneN': NC stateplane
 
     """
+    #      from pyproj import CRS
+    # >>> c1 = CRS(proj='latlong',datum='WGS84')
+    # >>> x1 = -111.5; y1 = 45.25919444444
+    # >>> c2 = CRS(proj="utm",zone=10,datum='NAD27')
+    # >>> x2, y2 = transform(c1, c2, x1, y1)
+    # >>> "%s  %s" % (str(x2)[:9],str(y2)[:9])
+    # '1402291.0  5076289.5'
+
     EPSG = 3358  # taken from spatialreference.org/ref/epsg/3358
     # NC stateplane NAD83
-    spNC = pyproj.Proj(init="epsg:%s" %EPSG)
-    epsgLL =  4269 # 4326
-    LL = pyproj.Proj(init='epsg:{}'.format(epsgLL))  # epsg for NAD83 projection
+    spNC = pyproj.Proj("epsg:{}".format(EPSG))
+    LL = pyproj.CRS(proj='latlon', datum='WGS84')#pyproj.Proj('epsg:{}'.format(epsgLL))  # epsg for NAD83 projection
     lon, lat = pyproj.transform(spNC, LL, spE, spN)
-    ans = {'lon': lon, 'lat': lat, 'StateplaneE': spE, 'StateplaneN': spN}
-    return ans
+
+    return  {'lon': lon, 'lat': lat, 'StateplaneE': spE, 'StateplaneN': spN}
 
 def LatLon2ncsp(lon, lat):
     """This function uses pyproj to convert longitude and latitude to stateplane
@@ -224,64 +231,28 @@ def LatLon2ncsp(lon, lat):
     """
     EPSG = 3358  # taken from spatialreference.org/ref/epsg/3358
     # NC stateplane NAD83
-    spNC = pyproj.Proj(init="epsg:%s" %EPSG)
-    epsgLL =  4269 # 4326
-    LL = pyproj.Proj(init='epsg:{}'.format(epsgLL))  # epsg for NAD83 projection
+    spNC = pyproj.Proj("epsg:{}".format(EPSG))
     spE, spN = spNC(lon,lat)
-#   replaced transform with direct conversion
-#    spE, spN = pyproj.transform(LL, spNC, lon, lat)
+
+    # epsgLL =  4269 # 4326
+    # LL = pyproj.Proj('epsg:{}'.format(epsgLL))  # epsg for NAD83 projection
+    # replaced below transform with direct conversion above
+    # spE, spN = pyproj.transform(LL, spNC, lon, lat)
     ans = {'lon': lon, 'lat': lat, 'StateplaneE': spE, 'StateplaneN': spN}
     return ans
 
 def FRFcoord(p1, p2, coordType=None):
     """updated FRF coord in python, using kent's original code as guide but converting pyproj for all
     conversions between state plane and Lat Lon,  Then all conversions between stateplane and
-    FRF coordinates are done using kents original geometry.
-    coordType argument will force an input type eg 'FRF'
-    #
-    #  15 Dec 2014
-    #  Kent Hathaway.
-    #  Translated from Matlab to python 2015-11-30 - Spicer Bak
-    #
-    #  Uses new fit (angles and scales) Bill Birkemeier determined in Nov 2014
-    #
-    #  This version will determine the input based on values, outputs FRF, lat/lon,
-    #  and state plane coordinates.  Uses NAD83-2011.
-    #
-    #  IO:
-    #  p1 = FRF X (m), or Longitude (deg + or -), or state plane Easting (m)
-    #  p2 = FRF Y (m), or Latitude (deg), or state plane Northing (m)
-    #
-    #  X = FRF cross-shore (m)
-    #  Y = FRF longshore (m)
-    #  ALat = latitude (decimal degrees)
-    #  ALon = longitude (decimal degrees, positive, or W)
-    #  spN = state plane northing (m)
-    #  spE = state plane easting (m)
-    
-    NAD83-86	2014
-    Origin Latitude          36.1775975
-    Origin Longitude         75.7496860
-    m/degLat             110963.357
-    m/degLon              89953.364
-    GridAngle (deg)          18.1465
-    Angle FRF to Lat/Lon     71.8535
-    Angle FRF to State Grid  69.9747
-    FRF Origin Northing  274093.1562
-    Easting              901951.6805
-    
-    #  Debugging values
-    p1=566.93;  p2=515.11;  % south rail at 1860
-    ALat = 36.1836000
-    ALon = 75.7454804
-    p2= 36.18359977;  p1=-75.74548109;
-    SP:  p1 = 902307.92; 	p2 = 274771.22;
+    FRF coordinates are done using kents original geometry.  Can force input to specfic coordinate type using coordType
+    argument. Default will guess
 
     Args:
       p1: input any of the following to convert [lon, easting, xFRF]
-      p2: input any of the following to convert [lat, northing, yfrf]
 
-      coordType: Default value = None)
+      p2: input any of the following to convert [lat, northing, yFRF]
+
+      coordType: valid values are ['LL', 'geographic', 'LatLon', 'spnc', 'ncsp', 'FRF'] (Default value = None)
 
     Returns:
         dictionary with appropriate data in it
@@ -300,6 +271,46 @@ def FRFcoord(p1, p2, coordType=None):
             'utmE': UTM easting
 
             'utmN': UTM northing
+
+    Notes:
+        From original code:
+            #  15 Dec 2014
+            #  Kent Hathaway.
+            #  Translated from Matlab to python 2015-11-30 - Spicer Bak
+            #
+            #  Uses new fit (angles and scales) Bill Birkemeier determined in Nov 2014
+            #
+            #  This version will determine the input based on values, outputs FRF, lat/lon,
+            #  and state plane coordinates.  Uses NAD83-2011.
+            #
+            #  IO:
+            #  p1 = FRF X (m), or Longitude (deg + or -), or state plane Easting (m)
+            #  p2 = FRF Y (m), or Latitude (deg), or state plane Northing (m)
+            #
+            #  X = FRF cross-shore (m)
+            #  Y = FRF longshore (m)
+            #  ALat = latitude (decimal degrees)
+            #  ALon = longitude (decimal degrees, positive, or W)
+            #  spN = state plane northing (m)
+            #  spE = state plane easting (m)
+
+            NAD83-86	2014
+            Origin Latitude          36.1775975
+            Origin Longitude         75.7496860
+            m/degLat             110963.357
+            m/degLon              89953.364
+            GridAngle (deg)          18.1465
+            Angle FRF to Lat/Lon     71.8535
+            Angle FRF to State Grid  69.9747
+            FRF Origin Northing  274093.1562
+            Easting              901951.6805
+
+            #  Debugging values
+            p1=566.93;  p2=515.11;  % south rail at 1860
+            ALat = 36.1836000
+            ALon = 75.7454804
+            p2= 36.18359977;  p1=-75.74548109;
+            SP:  p1 = 902307.92; 	p2 = 274771.22;
 
     """
 
@@ -362,6 +373,7 @@ def FRFcoord(p1, p2, coordType=None):
         print('<<ERROR>> testbedUtils Geoprocess FRF coord Cound not determine input type, returning NaNs')
         coordsOut = {'xFRF': float('NaN'), 'yFRF': float('NaN'), 'StateplaneE': float('NaN'),
              'StateplaneN': float('NaN'), 'Lat': float('NaN'), 'Lon':float('NaN')}
+
     return coordsOut
 
 def utm2LatLon(utmE, utmN, zn, zl):
@@ -438,8 +450,10 @@ def LatLon2utm(lat, lon):
 
     df['lat'] = lat
     df['lon'] = lon
-
-    df['utm'] = df.apply(lambda x: utm.from_latlon(x.lat, x.lon), axis=1)
+    try:
+        df['utm'] = df.apply(lambda x: utm.from_latlon(x.lat, x.lon), axis=1)
+    except:
+        df['utm'] = utm.from_latlon(df.lat.values, df.lon.values)
 
     utmE, utmN, zn, zl = list(zip(*np.asarray(df['utm'])))
 

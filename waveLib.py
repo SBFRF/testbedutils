@@ -701,7 +701,7 @@ def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
     # mean wave angle, energy integrated, calculated from a's and b's
     Dm_ = np.mod(np.rad2deg( np.arctan2(b1b, a1b)), 360)                # off by about 5 from kent's matlab scripts
     Dm2_ = np.mod(0.5 * np.rad2deg(np.arctan2(b2b, a2b)), 360)
-    Dp = dirbinse[np.argmax(spec.sum(axis=1), axis=1)]
+    Dp = dirbins[np.argmax(spec.sum(axis=1), axis=1)]
     # calculate mean direction from only a/b info (no moments)
     # weights = fspec.T/fspec.max(axis=1).T
     # dm_rad = np.arctan2(b1_*weights, a1_*weights).sum(axis=1)
@@ -712,8 +712,8 @@ def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
 
     # Directional Spreads
     sprdD =        np.rad2deg(np.sqrt(2 * (1-np.sqrt(a1b**2 + b1b**2))))       # integrated spread across all freqs
-    sprdD_kuikm1 = np.rad2deg(np.sqrt(2 * (1-m1[ipf])   ))                # spread at peak eq 24 kuik '88
-    sprdD_kuikm2 = np.rad2deg(np.sqrt(    (1-m2[ipf])/2 ))                # spread at peak eq 27 kuik '88
+    sprdD_kuikm1 = np.rad2deg(np.sqrt(2 * (1-m1)   ))                # spread at peak eq 24 kuik '88
+    sprdD_kuikm2 = np.rad2deg(np.sqrt(    (1-m2)/2 ))                # spread at peak eq 27 kuik '88
 
     # frequency dependant spread, skewness, asymetry characteristics
     spreadD_f = np.rad2deg(np.sqrt(2*(1-m1_c)))
