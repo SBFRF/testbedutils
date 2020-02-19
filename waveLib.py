@@ -47,9 +47,9 @@ def timeseriesPUV(p, u, v, t, waterDepth, gaugeDepth):
     [f1, Sv] = welch(x=v, window='hanning', fs=Fsamp, nperseg=nseg, noverlap=overlap, nfft=None, return_onesided=True,
                      detrend='linear')
     # create cross spectral power across the 3
-    [f1, CrossPU] = csd(y=pDemeaned, x=u, fs=Fsamp, nperseg=nseg, noverlap=overlap, return_onesided=True,
+    [_, CrossPU] = csd(y=pDemeaned, x=u, fs=Fsamp, nperseg=nseg, noverlap=overlap, return_onesided=True,
                         window='hann')
-    [f1, CrossPV] = csd(y=pDemeaned, x=v, fs=Fsamp, nperseg=nseg, noverlap=overlap, return_onesided=True,
+    [_, CrossPV] = csd(y=pDemeaned, x=v, fs=Fsamp, nperseg=nseg, noverlap=overlap, return_onesided=True,
                         window='hann')
     [f1, CrossUV] = csd(y=v, x=u, fs=Fsamp, nperseg=nseg, noverlap=overlap, return_onesided=True,
                         window='hann')
@@ -70,19 +70,19 @@ def timeseriesPUV(p, u, v, t, waterDepth, gaugeDepth):
     #  Beginning to Setup For Band Averaging
     dk = int(np.floor(bave / 2))
 
-    ki = 0
+    # band averaging
     freq, SpAve, SuAve, SvAve, CrossPUave, CrossPVave, CrossUVave = [], [], [], [], [], [], []
     for kk in range(dk + 1, len(Sp) - dk, bave):
         avgIdxs = np.linspace(kk - dk, kk + dk, num=int((kk + dk) - (kk - dk) + 1), endpoint=True, dtype=int)
-        freq = np.append(freq, f1[int(kk)])  # taking the first frequency for the bin label
+        freq.append(f1[int(kk)])                            # taking the first frequency for the bin label
         # bin averaging frequency spectra across bave frequency bins
-        SpAve.append(np.sum(Sp[avgIdxs]) / bave)
-        SuAve.append(np.sum(Su[avgIdxs]) / bave)
-        SvAve.append(np.sum(Sv[avgIdxs]) / bave)
+        SpAve.append(np.sum(Sp[avgIdxs]) / (bave+1))
+        SuAve.append(np.sum(Su[avgIdxs]) / (bave+1))
+        SvAve.append(np.sum(Sv[avgIdxs]) / (bave+1))
         # bin averaging cross correlations
-        CrossPUave.append(np.sum(CrossPU[avgIdxs]) / bave)  # Press - FRF X
-        CrossPVave.append(np.sum(CrossPV[avgIdxs]) / bave)  # Press - FRF Y
-        CrossUVave.append(np.sum(CrossUV[avgIdxs]) / bave)  # FRF X - FRF Y
+        CrossPUave.append(np.sum(CrossPU[avgIdxs]) / (bave+1))  # Press - FRF X
+        CrossPVave.append(np.sum(CrossPV[avgIdxs]) / (bave+1))  # Press - FRF Y
+        CrossUVave.append(np.sum(CrossUV[avgIdxs]) / (bave+1))  # FRF X - FRF Y
     # convert back to Numpy array
     freq = np.array(freq)
     SpAve = np.array(SpAve)
@@ -977,7 +977,7 @@ def findidxSeaSwell(spec1d, dspec, wavefreqbin, windSpeed, windDir, depth, plotf
       plotfname: return: an index corresponding to (Default value = None)
       windSpeed: param windDir:
       depth: returns: an index corresponding to
-      windDir: 
+      windDir:
 
     Returns:
       an index corresponding to
