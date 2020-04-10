@@ -63,21 +63,34 @@ def displayStartInfo(projectStart, projectEnd, version_prefix, LOG_FILENAME, mod
     print('Check for simulation errors here %s' % LOG_FILENAME)
     print('------------------------------------\n\n************************************\n\n------------------------------------\n\n')
 
-def checkVersionPrefix(model, version_prefix):
-    """ a function to check if model prefix is already programmed into structure
-
+def checkVersionPrefix(model, inputDict):
+    """ a function to check if model prefix is already programmed into structure, this is to protect from ill
+    described downstream errors.  This will also create a combined version prefix for coupled modeling systems of the format
+    [waveprevix]_f[flowprefix]_m[morphprefix]
+    
     Args:
         model: a model name string
+        inputDict (dict):
         version_prefix: version prefix string
-
+        
     Returns:
-        None
+        version_prefix
 
     """
-    cmsStrings = ['base', ]
+    # first check Flow Flags, and morph flags, otherwise set version prefix with just wave
+    flowFlag = inputDict['flowSettings'].get('flowFlag', False)
+    morphFlag = inputDict['morphSettings'].get('morphFlag', False)
+    version_prefix = inputDict['modelSettings'].get('version_prefix', 'base').lower()
+    
+    if flowFlag:
+        version_prefix = version_prefix + '_f' + inputDict['flowSettings'].get('flow_version_prefix', 'base').lower()
+    if morphFlag and flowFlag:
+        version_prefix = version_prefix + '_m' + inputDict.get('morph_version_prefix', 'base').lower()
+    # now do model specific checks
+    cmsStrings = ['base', 'base_fbase', 'base_fbase_mbase']
     ww3Strings = ['base']
     stwaveStrings= ['HP', 'FP', 'CB', 'CBKF']
-
+    ######### now do model specific Checks
     if model.lower() in ['cms']:
         modelList = cmsStrings
     elif model.lower() in ['ww3']:
@@ -87,4 +100,7 @@ def checkVersionPrefix(model, version_prefix):
     else:
         raise NotImplementedError('Check model is programmed')
     checkString = 'Your model is not in version Prefix list {}'.format(modelList)
-    assert version_prefix.lower() in cmsStrings, checkString
+    # run assertion check
+    assert version_prefix.lower() in modelList, checkString
+
+    return version_prefix
