@@ -78,14 +78,15 @@ def checkVersionPrefix(model, inputDict):
 
     """
     # first check Flow Flags, and morph flags, otherwise set version prefix with just wave
-    flowFlag = inputDict['flowSettings'].get('flowFlag', False)
-    morphFlag = inputDict['morphSettings'].get('morphFlag', False)
+
     version_prefix = inputDict['modelSettings'].get('version_prefix', 'base').lower()
-    
-    if flowFlag:
-        version_prefix = version_prefix + '_f' + inputDict['flowSettings'].get('flow_version_prefix', 'base').lower()
-    if morphFlag and flowFlag:
-        version_prefix = version_prefix + '_m' + inputDict.get('morph_version_prefix', 'base').lower()
+    if 'flowSettings' in inputDict.keys():
+        flowFlag = inputDict['flowSettings'].get('flowFlag', False)
+        morphFlag = inputDict['morphSettings'].get('morphFlag', False)
+        if flowFlag:
+            version_prefix = version_prefix + '_f' + inputDict['flowSettings'].get('flow_version_prefix', 'base').lower()
+        if morphFlag and flowFlag:
+            version_prefix = version_prefix + '_m' + inputDict.get('morph_version_prefix', 'base').lower()
     # now do model specific checks
     cmsStrings = ['base', 'base_fbase', 'base_fbase_mbase']
     ww3Strings = ['base']
