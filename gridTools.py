@@ -1033,30 +1033,39 @@ def CreateGridNodesInStatePlane(x0, y0, azi, dx, dy, ni, nj):
     return icoords, jcoords
 
 def interpIntegratedBathy4UnstructGrid(ugridDict, THREDDS='FRF', forcedSurveyDate=None, bathy=None):
-    """
-    This function basically takes scattered x & y points and returns elevations at those points interpolated from the
-    most recent integrated bathy product.
-
+    """This function takes scattered x & y points and returns elevations at those points interpolated used for grid.
+    
+    
     DLY Note - 3/27/2018: this function has only been verified to work for NCSP meters!!!!
                           other coordinate systems and english units have not been checked!!!
-
-    :param ugridDict:
-        :key x: - xFRF, NCSP Easting, UTM Easting, or Lat
-        :key y:  - yFRF, NCSP Northing, UTM Easting, or Lon
-        :key coord_system: - string containing the coordinate system for your corners ('FRF' 'utm', 'stateplane', or 'LAT/LON') (Default value = 'FRF')
-        :key units: ('meters', 'm') or ('feet', 'ft')
+    Arg:
+        ugridDict: dictionary containing unstructured gridded data
+            'x': xFRF, NCSP Easting, UTM Easting, or Lat
+            
+            'y': yFRF, NCSP Northing, UTM Easting, or Lon
+            
+            'coord_system': string containing the coordinate system for your corners ('FRF' 'utm', 'stateplane',
+                or 'LAT/LON') (Default value = 'FRF')
+            
+            'units': ('meters', 'm') or ('feet', 'ft')
 
         # note: if coord_system is 'UTM' this code assumes you are in zone number 18 and zone letter S!  This is the
         # zone number/letter in the vicinity of the FRF property!!!!
 
-    :param THREDDS: 'FRF' or 'CHL', will default to 'FRF'
-    :param forcedSurveyDate: datestring in the format of '2017-10-10T00:00:00Z' or datetime. will use most recent survey if not specified.
-    :param bathy: this is blank unless you want to directly hand it a bathy dictionary.  the dictionary needs to be in the same format as the output of cmtb_data.getBathyIntegratedTransect()
-    :returns: out:
-        :key z: - elevation at each of those points interpolated from the integrated bathymetry product - units will be same as input.  will return nans where extrapolated.
-        :key surveyDate:  - datestring or datetime of the survey that these values came from.
+        THREDDS: 'FRF' or 'CHL'(default='FRF')
+        forcedSurveyDate: datestring in the format of '2017-10-10T00:00:00Z' or datetime. will use most recent survey if
+            not specified.
+        bathy: this is blank unless you want to directly hand it a bathy dictionary.  the dictionary needs to be in the
+            same format as the output of cmtb_data.getBathyIntegratedTransect()
+    
+    Returns:
+         out: output dictionary
+            'z': elevation at each of those points interpolated from the integrated bathymetry product - units will be
+                same as input.  will return nans where extrapolated.
+                
+            'surveyDate': datestring or datetime of the survey that these values came from.
+            
     """
-
     # first check the coord_system string to see if it matches!
     coord_list = ['FRF', 'LAT/LON', 'utm', 'stateplane', 'ncsp']
     import pandas as pd
@@ -1081,7 +1090,6 @@ def interpIntegratedBathy4UnstructGrid(ugridDict, THREDDS='FRF', forcedSurveyDat
         x = temp2['xFRF']  # these should be in m
         y = temp2['yFRF']  # these should be in m
     else:
-
         # check to see if we are in m or feet
         del df
         units_list = ['meters', 'm', 'feet', 'ft']
@@ -1101,8 +1109,6 @@ def interpIntegratedBathy4UnstructGrid(ugridDict, THREDDS='FRF', forcedSurveyDat
             feetFlag = True
             ugridDict['x'] = 0.3048*ugridDict['x']
             ugridDict['y'] = 0.3048*ugridDict['y']
-        else:
-            pass
 
         # convert to FRF coords.
         if coordToken in ['STATEPLANE', 'NCSP']:
@@ -1119,33 +1125,29 @@ def interpIntegratedBathy4UnstructGrid(ugridDict, THREDDS='FRF', forcedSurveyDat
             y = ugridDict['y']
 
     # okay, so I should have everything converted to FRF coordinates and meters.
-    if bathy is None:
-        # i don't already have an integrated bathy, so now I pull the integrated bathymetry
-        if forcedSurveyDate is None:
-            forcedSurveyDate = DT.datetime.strftime(DT.datetime.now(), '%Y-%m-%dT%H:%M:%SZ')
-        elif isinstance(forcedSurveyDate, DT.datetime):
-            forcedSurveyDate = DT.datetime.strftime(forcedSurveyDate, '%Y-%m-%dT%H:%M:%SZ')
-        else:
-            pass
+    # if bathy is None:
+    #     # i don't already have an integrated bathy, so now I pull the integrated bathymetry
+    #     if forcedSurveyDate is None:
+    #         forcedSurveyDate = DT.datetime.strftime(DT.datetime.now(), '%Y-%m-%dT%H:%M:%SZ')
+    #     elif isinstance(forcedSurveyDate, DT.datetime):
+    #         forcedSurveyDate = DT.datetime.strftime(forcedSurveyDate, '%Y-%m-%dT%H:%M:%SZ')
+    #
+    #     start_time = DT.datetime.strptime(forcedSurveyDate, '%Y-%m-%dT%H:%M:%SZ')
+    #
+    #     # pull that bathymetry down.
+    #     cmtb_data = getDataTestBed(start_time, start_time + DT.timedelta(days=0, hours=0, minutes=1), THREDDS)
+    #     bathy_data = cmtb_data.getBathyIntegratedTransect()
+    # else:
+    #     # i already have pulled it so there is no reason to get it again
+    bathy_data = bathy
 
-        start_time = DT.datetime.strptime(forcedSurveyDate, '%Y-%m-%dT%H:%M:%SZ')
-
-        # pull that bathymetry down.
-        cmtb_data = getDataTestBed(start_time, start_time + DT.timedelta(days=0, hours=0, minutes=1), THREDDS)
-        bathy_data = cmtb_data.getBathyIntegratedTransect()
-    else:
-        # i already have pulled it so there is no reason to get it again
-        bathy_data = bathy
-
-    # now i interpolate
+    # now interpolate
     gridX = bathy_data['xFRF']
     gridY = bathy_data['yFRF']
     elevation = bathy_data['elevation']
     stime = bathy_data['time']
-    # get me a grid!!!!
     xGrid, yGrid = np.meshgrid(gridX, gridY)
 
-    # interpolate to it like a boss.
     # reshape my DEM into a list of points
     xPts = xGrid.reshape((1, xGrid.shape[0] * xGrid.shape[1]))[0]
     yPts = yGrid.reshape((1, yGrid.shape[0] * yGrid.shape[1]))[0]
@@ -1154,24 +1156,19 @@ def interpIntegratedBathy4UnstructGrid(ugridDict, THREDDS='FRF', forcedSurveyDat
     # do the interpolation
     newElevation = griddata(points, values, (x, y), method='linear')
 
-    # this elevation is in meters
-    # do I need to convert back?
+    # this elevation is in meters do I need to convert back?
     if feetFlag:
         # convert back to ft
         newElevation = 3.28084 * newElevation
-    else:
-        pass
 
-    # put this stuff in my return dict and declare glorious victory?
-    out = {}
-    out['z'] = newElevation
-    out['surveyDate'] = stime
+    # put this stuff in my return dict
+    out = {'z': newElevation, 'surveyDate': stime}
 
     return out
 
 def convertGridNodes2ncsp(x0, y0, azi, xPos, yPos):
-    """this function is used to convert the cms grid nodes from the CMS convention in the .tel file to NCSP so
-
+    """This function is used to convert the cms grid nodes from the CMS convention in the .tel file to NCSP.
+    
     you can interpolate our gridded bathymetry onto it.
 
     Args:
@@ -1186,7 +1183,6 @@ def convertGridNodes2ncsp(x0, y0, azi, xPos, yPos):
             northing: 1D np.array of the NC stateplane northing of the grid nodes
 
     """
-
     # calculating change in alongshore coordinate for northing and easting
     # given the associated dx dy
     E_j = yPos * np.cos(np.deg2rad(azi + 90))
