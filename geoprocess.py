@@ -231,7 +231,7 @@ def LatLon2ncsp(lon, lat):
     """
     EPSG = 3358  # taken from spatialreference.org/ref/epsg/3358
     # NC stateplane NAD83
-    spNC = pyproj.Proj("epsg:{}".format(EPSG))
+    spNC = pyproj.Proj(init="epsg:{}".format(EPSG))
     spE, spN = spNC(lon,lat)
 
     # epsgLL =  4269 # 4326
