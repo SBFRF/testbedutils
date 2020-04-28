@@ -10,9 +10,8 @@ documented 12/2/17
 """
 import numpy as np
 import datetime as DT
-import warnings
 import netCDF4 as nc
-import math
+import math, warnings, os
 from dateutil.relativedelta import relativedelta
 
 ########################################
@@ -63,24 +62,62 @@ def reduceDict(dictIn, idxToKeep, exemptList=None):
 
     """
     assert 'time' in dictIn, 'This function must have a variable "time"'
+    if np.size(idxToKeep) == 0:
+        return None
     if exemptList == None:
         exemptList = ['time', 'name', 'xFRF', 'yFRF', 'xm', 'ym']
     idxToKeep = np.array(idxToKeep, dtype=int) # force data to integer type
     dictOut = dictIn.copy()
     for key in dictIn:
-        # if things are longer than the indicies of interest and not 'time'
+        # if things are longer than the indices of interest and not 'time'
         # print 'key %s size %d' %(key, np.size(dictIn[key], axis=0))
         try:
-            if key not in exemptList and dictIn[key].dtype.kind not in ['U', 'S'] and np.size(dictIn[key],
-                                                                                              axis=0) == len(
-                    dictIn['time']):
+            if key not in exemptList and dictIn[key].dtype.kind not in ['U', 'S'] and np.size(dictIn[key], axis=0) == np.size(dictIn['time']):
                 # then reduce
                 dictOut[key] = dictIn[key][idxToKeep]  # reduce variable
-                # print 'key %s Made it past test and new size %d' %(key, len(dictIn[key]))
+                #
         except (IndexError, AttributeError):
             pass  # this passes for single number (not arrays), and attribute error passes for single datetime objects
-    dictOut['time'] = dictIn['time'][idxToKeep]  # # once the rest are done finally reduce 'time'
+    if np.size(dictIn['time']) == 1 and np.size(idxToKeep) == 1:
+        dictOut['time'] == dictIn['time']
+    else:
+        dictOut['time'] = dictIn['time'][idxToKeep]  # # once the rest are done finally reduce 'time'
     return dictOut
+
+def removeMaskedDataFromDictionary(dictIn):
+    """ removes masked data from dictionary
+    in development
+
+    """
+    warnings.warn('check that this is ready for use')
+    if isinstance(dictIn, np.ma.MaskedArray):   # then operate on it
+        # first loop through find everything that has same dimension
+        dictOut = {}
+        for key, value in dictIn.items():
+            if isinstance(value, np.ndarray):
+                shapes = np.array([x.shape for x in dictIn.values()])
+                maxDimension = shapes.max()
+
+
+                # if wBinObsLocal[key].mask.any():  # if the masks are true
+                #     print('    Found Masked data in observations... Removing')
+                #     # last remove from where found
+                #     for key2 in wBinObsLocal.keys():
+                #         if key is not 'time' and key2 in set(wBinObsLocal.keys()).intersection(
+                #                 wBinHP):  # ['name', 'wavefreqbin', 'xFRF', 'yFRF', 'lat', 'lon', 'depth', 'wavedirbin', 'qcFlagE', 'qcFlagD', 'a1', 'b1', 'a2', 'b2']:
+                #             try:  # to do it for multidimensions eg dWED
+                #                 wBinObsLocal[key2] = np.array(
+                #                     wBinObsLocal[key2][~wBinObsLocal[key].mask.any(axis=(1, 2))])
+                #             except(np.core._internal.AxisError):
+                #                 wBinObsLocal[key2] = np.array(wBinObsLocal[key2][~wBinObsLocal[key].mask.any()])
+                #     # then remove time from wBinObsLocal
+                #     # wBinObsLocal['time'] = wBinObsLocal['time'][~wBinObsLocal[key].mask.any(axis=(1, 2))]
+                # wBinObsLocal[key] = np.array(wBinObsLocal[key])
+                #
+
+        return dictOut
+    else:
+        return dictIn
 
 class Bunch(object):
     """allows user to access dictionary data from 'object'
@@ -168,27 +205,33 @@ def statsBryant(observations, models):
             'residuals': model - observations
 
     """
+
+    # convert masked values to nans! # this way you can use
+    # the logic for nans and you won't hit the issues with masked arrays..
+    observations = np.ma.filled(observations, np.nan)
+    models = np.ma.filled(models, np.nan)
+
     obsNaNs = np.argwhere(np.isnan(observations)).squeeze()
     modNaNs = np.argwhere(np.isnan(models)).squeeze()
-    if type(observations) == np.ma.masked_array or type(models) == np.ma.masked_array:
+    if isinstance(observations, np.ma.masked_array) or isinstance(models, np.ma.masked_array):
         raise NotImplementedError('this handles masked arrays poorly, fix or remove before use')
-    if len(obsNaNs) > 0:
-        warnings.warn('warning found nans in bryant stats')
+    if np.size(obsNaNs) > 0:
+        warnings.warn('warning found nans in bryant stats, removing compared data')
         observations = np.delete(observations, obsNaNs)
         models = np.delete(models, obsNaNs)  # removing corresponding model data, that cannot be compared
         modNaNs = np.argwhere(np.isnan(models))
-        if len(modNaNs) > 0:
+        if np.size(modNaNs) > 0:
             observations = np.delete(observations, modNaNs)
             models = np.delete(models, modNaNs)  # removing c
-    elif len(modNaNs) > 0:
-        warnings.warn('warning found nans in bryant stats')
+    elif np.size(modNaNs) > 0:
+        warnings.warn('warning found nans in bryant stats, removing compared data')
         models = np.delete(models, modNaNs)
         observations = np.delete(observations, modNaNs, 0)
         obsNaNs = np.argwhere(np.isnan(observations))
-        if len(obsNaNs) > 0:
+        if np.size(obsNaNs) > 0:
             observations = np.delete(observations, obsNaNs)
             models = np.delete(models, obsNaNs)  # removing cor
-    assert len(observations) == len(models), 'these data must be the same length'
+    assert np.size(observations) == np.size(models), 'these data must be the same length'
 
     residuals = models - observations
     bias = np.nansum(residuals) / len(residuals)
@@ -236,6 +279,36 @@ def statsBryant(observations, models):
 
     return stats
 
+def makeMovie(ofname, images, fps=5):
+    """make movies from list of images
+    
+    Args:
+        ofname:  output file name
+        images: list of images
+
+    Returns:
+        None, will make a movie in types
+
+    needs openCV, can install with pip install opencv-python
+
+    Refrences:
+        https://stackoverflow.com/questions/30509573/writing-an-mp4-video-using-python-opencv
+
+    """
+    import cv2
+    video_name = ofname
+    if ofname.split('.')[-1].lower() in ['mp4']:
+        forcc = cv2.VideoWriter_fourcc(*'mp4v')
+    else:
+        forcc = 0
+    frame = cv2.imread(images[0])
+    height, width, layers = frame.shape
+    video = cv2.VideoWriter(video_name, forcc, fps, (width, height))
+    for image in images:
+        video.write(cv2.imread(image))
+    cv2.destroyAllWindows()
+    video.release()
+
 def makegif(flist, ofname, size=None, dt=0.5):
     """This function uses imageio to create gifs from a list of images
         requires imageio library
@@ -268,6 +341,31 @@ def makegif(flist, ofname, size=None, dt=0.5):
         images.append(imageio.imread(filename))
     imageio.mimwrite(ofname, images, duration=dt)
 
+def myTarMaker(tarOutFile, fileList, **kwargs):
+    """ makes a tarball file with a file name and list of files
+
+    Args:
+        tarOutFile (str): file output name/location
+        fileList (list): list of files to put into tarbball
+
+    Keyword Args:
+          'compressionString': denotes type of compression to write with (default='w:gz', write with gzip)
+          'removeFiles' (bool): Denotes whether to remove files or not after taring
+
+    Returns:
+        a tarball written to tarOutFile location
+
+    """
+    import tarfile
+    compressionString = kwargs.get('compressionString',  "w:gz")
+    removeFiles = kwargs.get('removeFiles', True)
+    with tarfile.open(tarOutFile, compressionString) as tar:
+        for fileName in fileList:
+            tar.add(fileName, arcname=os.path.split(fileName)[-1])
+
+    if removeFiles:
+        [os.remove(ff) for ff in fileList]
+
 ########################################
 #  following functions deal with averaging
 ########################################
@@ -280,14 +378,20 @@ def baseRound(x, base=5, **kwargs):
       base: this is the value by which x is rounded to a multiple of
     ie base = 10  x = [4, 8, 2, 12]  returns [0,10,0,10] (Default value = 5)
 
+    Keyword Args:
+        'floor': will force a round down
+        'ceil': will force a  round up
+
     Returns:
       np.array of floating point numbers rounded to a multiple of base
 
     """
     x = np.array(x, dtype=float)
-    if 'floor' in kwargs and kwargs['floor'] == True:
+    floor=kwargs.get('floor', False)
+    ceil = kwargs.get('ceil', False)
+    if floor is True:
         return base * np.floor(x/base)
-    elif 'ceil' in kwargs and kwargs['ceil'] == True:
+    elif ceil is True:
         return base * np.ceil(x/base)
     else:
         return base * np.round(x/base)
@@ -404,13 +508,13 @@ def createDateList(start, end, delta):
         yield curr
         curr += delta
 
-def whatIsYesterday(now=DT.date.today(), stringOut=True, days=1):
+def whatIsYesterday(now=DT.date.today(), stringOut=False, days=1):
     """this function finds what yesterday's date string is in the format
     of yyyy-mm-dd
 
     Args:
         now: the date to start counting backwards from (default = right now)
-        stringOut (bool): calls for string output (default = True) false returns Datetime object
+        stringOut (bool): a format to convert the string as output (default=False returns datetime)
         days (int): how many days to count backwards from (Default = 1)
 
     Returns:
@@ -420,8 +524,8 @@ def whatIsYesterday(now=DT.date.today(), stringOut=True, days=1):
     """
 
     yesterday = now - DT.timedelta(days)
-    if stringOut == True:
-        yesterday = DT.date.strftime(yesterday, '%Y-%m-%d')
+    if stringOut is not False:
+        yesterday = DT.date.strftime(yesterday, stringOut)
     return yesterday
 
 def timeMatch(obs_time, obs_data, model_time, model_data):
@@ -429,6 +533,7 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
     This has been removed from the IMEDS package to simplify use.
     This method returns the matching model data to the closest obs point.
     
+
     similar to time match imeds
     
     Time Matching is done by creating a threshold by taking the median of the difference of each time
@@ -436,31 +541,42 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
        a small, arbitrary (as far as I know) factor is then subtracted from that minimum to remove the possiblity
        of matching a time that is exactly half of the sampling interval.
 
+    TODO: This could be improved in speed, long lists take a while. see references below for ideas
+
     Args:
       obs_time: observation times, in
-      obs_data: matching observation data, any shape
+      obs_data: matching observation data, any shape, can be None: will create indicies corresponding to obs_time
       model_time: modeling time
-      model_data: modeling data (any shape)
+      model_data: modeling data (any shape) can be None: will create indicies corresponding to obs_time
 
     Returns:
       time, (as float)
       obs_data_s: data as input
       model_data_s: data as input
 
+    Refrences:
+        https://stackoverflow.com/questions/1388818/how-can-i-compare-two-lists-in-python-and-return-matches
+        https://stackoverflow.com/questions/10367020/compare-two-lists-in-python-and-return-indices-of-matched-values
+        https://stackoverflow.com/questions/16685384/finding-the-indices-of-matching-elements-in-list-in-python
     """
 
-    # try to convert it from datetime to epochtime
-    # this will fail if it already is in epochtime, so it wont do anything.
+    if obs_data is None:
+        obs_data = np.arange(len(obs_time), dtype=int)
+    if model_data is None:
+        model_data = np.arange(len(model_time), dtype=int)
+
+
     dt_check = False
-    try:
+    try:  # try to convert from datetime units (if fails, assume it's already numeric)
         timeunits = 'seconds since 1970-01-01 00:00:00'
         obs_time_n = nc.date2num(obs_time, timeunits)
         del obs_time
         obs_time = obs_time_n
         del obs_time_n
+        dt_check = True
     except:
         pass
-    try:
+    try:  # try to convert from datetime units (if fails, assume it's already numeric)
         timeunits = 'seconds since 1970-01-01 00:00:00'
         model_time_n = nc.date2num(model_time, timeunits)
         del model_time
@@ -473,9 +589,7 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
     assert type(obs_time[0]) != DT.datetime, 'time in must be numeric, try epoch!'
     assert type(model_time[0]) != DT.datetime, 'time in must be numeric, try epoch!'
 
-    time = np.array([])
-    obs_data_s = np.array([])
-    model_data_s = np.array([])
+    time, obs_data_s, model_data_s = [], [], []  # working as lists (faster than numpy append)
     # 43 seconds here makes it 43 seconds less than 1/2 of smallest increment
     threshold = min(np.median(np.diff(obs_time)) / 2.0 - 43,
                     np.median(np.diff(model_time)) / 2.0 - 43)
@@ -503,12 +617,12 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
         if (np.isnan(obs_data[indx]).all() or np.isnan(data).all()):
             continue
 
-        time = np.append(time, record)
-        obs_data_s = np.append(obs_data_s, obs_data[indx])
-        model_data_s = np.append(model_data_s, data)
+        time.append(record)  # (faster than numpy append)
+        obs_data_s.append(obs_data[indx])
+        model_data_s.append(data)
 
     # if I was handed a datetime, convert back to datetime
-    if dt_check:
+    if dt_check and len(time) > 0:
         timeunits = 'seconds since 1970-01-01 00:00:00'
         calendar = 'gregorian'
         time_n = nc.num2date(time, timeunits, calendar)
@@ -516,7 +630,7 @@ def timeMatch(obs_time, obs_data, model_time, model_data):
         time = time_n
         del time_n
 
-    return time, obs_data_s, model_data_s
+    return np.array(time), np.array(obs_data_s), np.array(model_data_s)
 
 def timeMatch_altimeter(altTime, altData, modTime, modData, window=30 * 60):
     """this function will loop though variable modTim and find the closest value
@@ -529,7 +643,7 @@ def timeMatch_altimeter(altTime, altData, modTime, modData, window=30 * 60):
         altTime: altimeter time - tested as epoch (might work in datetime)
         altData: altimeter data, some/any floating (int?) value
         modTime: base time to match
-        modData: data to be paired (could be indicies)
+        modData: data to be paired (could be indices)
         window: time in seconds (or time delta, if input as datetimes) (Default value = 30 * 60)
 
     Returns:
@@ -576,6 +690,15 @@ def timeMatch_altimeter(altTime, altData, modTime, modData, window=30 * 60):
             dataout.append(altData[idx])
             timeout.append(modTime[tt])
             modout.append(modData[tt])
+
+    # if I was handed a datetime, convert back to datetime
+    if dt_check:
+        timeunits = 'seconds since 1970-01-01 00:00:00'
+        calendar = 'gregorian'
+        timeout_n = nc.num2date(timeout, timeunits, calendar)
+        del timeout
+        timeout = timeout_n
+        del timeout_n
 
     return np.array(timeout), np.array(dataout), np.array(modout)
 

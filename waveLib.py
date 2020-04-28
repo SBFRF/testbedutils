@@ -1,4 +1,3 @@
-'documented SB 12/2/17'
 import numpy as np
 from matplotlib import pyplot as plt
 from . import sblib as sb
@@ -8,7 +7,7 @@ from . import anglesLib
 
 def timeseriesPUV(p, u, v, t, waterDepth, gaugeDepth):
     """The goal with this function is to create time series anaylysis work flow
-         runs welch method fft with 512 record segments, with 1/4 overlab and 5 freq bin band averaging
+         runs welch method fft with 512 record segments, with 1/4 overlabpand 5 freq bin band averaging
     
     corrects pressure spectra to surface spectra using pressure response function
     
@@ -48,9 +47,9 @@ def timeseriesPUV(p, u, v, t, waterDepth, gaugeDepth):
     [f1, Sv] = welch(x=v, window='hanning', fs=Fsamp, nperseg=nseg, noverlap=overlap, nfft=None, return_onesided=True,
                      detrend='linear')
     # create cross spectral power across the 3
-    [f1, CrossPU] = csd(y=pDemeaned, x=u, fs=Fsamp, nperseg=nseg, noverlap=overlap, return_onesided=True,
+    [_, CrossPU] = csd(y=pDemeaned, x=u, fs=Fsamp, nperseg=nseg, noverlap=overlap, return_onesided=True,
                         window='hann')
-    [f1, CrossPV] = csd(y=pDemeaned, x=v, fs=Fsamp, nperseg=nseg, noverlap=overlap, return_onesided=True,
+    [_, CrossPV] = csd(y=pDemeaned, x=v, fs=Fsamp, nperseg=nseg, noverlap=overlap, return_onesided=True,
                         window='hann')
     [f1, CrossUV] = csd(y=v, x=u, fs=Fsamp, nperseg=nseg, noverlap=overlap, return_onesided=True,
                         window='hann')
@@ -71,19 +70,19 @@ def timeseriesPUV(p, u, v, t, waterDepth, gaugeDepth):
     #  Beginning to Setup For Band Averaging
     dk = int(np.floor(bave / 2))
 
-    ki = 0
+    # band averaging
     freq, SpAve, SuAve, SvAve, CrossPUave, CrossPVave, CrossUVave = [], [], [], [], [], [], []
     for kk in range(dk + 1, len(Sp) - dk, bave):
         avgIdxs = np.linspace(kk - dk, kk + dk, num=int((kk + dk) - (kk - dk) + 1), endpoint=True, dtype=int)
-        freq = np.append(freq, f1[int(kk)])  # taking the first frequency for the bin label
+        freq.append(f1[int(kk)])                            # taking the first frequency for the bin label
         # bin averaging frequency spectra across bave frequency bins
-        SpAve.append(np.sum(Sp[avgIdxs]) / bave)
-        SuAve.append(np.sum(Su[avgIdxs]) / bave)
-        SvAve.append(np.sum(Sv[avgIdxs]) / bave)
+        SpAve.append(np.sum(Sp[avgIdxs]) / (bave+1))
+        SuAve.append(np.sum(Su[avgIdxs]) / (bave+1))
+        SvAve.append(np.sum(Sv[avgIdxs]) / (bave+1))
         # bin averaging cross correlations
-        CrossPUave.append(np.sum(CrossPU[avgIdxs]) / bave)  # Press - FRF X
-        CrossPVave.append(np.sum(CrossPV[avgIdxs]) / bave)  # Press - FRF Y
-        CrossUVave.append(np.sum(CrossUV[avgIdxs]) / bave)  # FRF X - FRF Y
+        CrossPUave.append(np.sum(CrossPU[avgIdxs]) / (bave+1))  # Press - FRF X
+        CrossPVave.append(np.sum(CrossPV[avgIdxs]) / (bave+1))  # Press - FRF Y
+        CrossUVave.append(np.sum(CrossUV[avgIdxs]) / (bave+1))  # FRF X - FRF Y
     # convert back to Numpy array
     freq = np.array(freq)
     SpAve = np.array(SpAve)
@@ -117,6 +116,11 @@ def timeseriesPUV(p, u, v, t, waterDepth, gaugeDepth):
     # mlmSpec = mlm(freqs=freq, dirs=np.arange(0,360,5), c11=SpAve, c22=SuAve, c33=SvAve, c23=np.real(CrossUVave), q12=np.imag(CrossPUave), q13=np.imag(CrossPVave))
 
     return fspec, a1interp, b1interp, a2interp, b2interp
+
+def UrsellNumber(Tp, Hs, depth):
+    """calculates ursell number """
+    L, _, _ = dispersion(depth, Tp)
+    return Hs*L**2/(depth**3)
 
 def qkhfs(w, h):
     """Quick iterative calculation of kh in gravity-wave dispersion relationship
@@ -387,7 +391,7 @@ def dispersion( h, T):
 
 
     """
-    assert h > 0, 'Water depth must be >0, positive downward convention'
+    assert (np.array(h) > 0).all(), 'Water depth must be >0, positive downward convention'
     # set vars
     g = 9.8  # gravity
     residThresh = 0.0001  # threshold for convergence  # hold to 3 decimal places
@@ -407,8 +411,78 @@ def dispersion( h, T):
 
     return L, c, n
 
+def timeSeriesAnalysis1D(time, eta, **kwargs):
+    """process 1D timeserise analysis, function will demean data by default.  It can operate on
+    2D spatial surface elevation data, but will only do 1D analysis (not puv/2D directional waves)
+    for frequency band averaging, will label with band center
+
+    Args:
+        time: time (datetime object)
+        eta: surface timeseries
+
+        **kwargs:
+            'windowLength': window length for FFT, units are minutes (Default = 10 min)
+            'overlap': overlap of windows for FFT, units are percentage of window length (Default=0.75)
+            'bandAvg': number of bands to average over
+            'timeAx' (int): a number defining which axis in eta is time (Default = 0)
+            'returnSetup' (bool): will calculate and return setup (last postion)  (Default = False)
+
+    Returns:
+        fspec (array): array of power spectra, dimensioned by [space, frequency]
+        frqOut (array): array of frequencys associated with fspec
+
+    Raises:
+        Warnings if not all bands are processed (depending on size of freqeuency bands as output by FFT
+            and band averaging chosen, function will neglect last few (high frequency) bands
+
+    TODO:
+        can add surface correction for pressure data
+
+    """
+    from scipy.signal import welch
+    import warnings
+    import datetime as DT
+    assert isinstance(time, np.ndarray), 'Must be input as an array'
+    assert isinstance(time[0], DT.datetime), 'time must be in datetime'
+    ## kwargs below
+    nPerSeg = kwargs.get('WindowLength', 10)  # window length (10 minutes in seconds)
+    overlapPercentage = kwargs.get('overlap', 3 / 4)  # 75% overlap per segment
+    bandAvg = kwargs.get('bandAvg', 6)  # average 6 bands
+    myAx = kwargs.get('timeAx', 0)  # time dimension of eta
+    overlap = nPerSeg * overlapPercentage
+    ## preprocessing steps
+    etaDemeaned = np.nan_to_num(eta - np.mean(eta, axis=0))
+
+    # etaDemeaned = np.ma.masked_array(etaD, mask=np.isnan(eta).data, fill_value=-999)   # demean surface time series
+    assert eta.shape[myAx] == time.shape[0], "axis selected for eta doesn't match time"
+    freqSample = 1/np.median(np.diff(time)).total_seconds()
+
+    freqsW, fspecW = welch(x=etaDemeaned, window='hanning', fs=freqSample, nperseg=nPerSeg*60, noverlap=overlap,
+                           nfft=None, return_onesided=True, detrend='linear', axis=myAx)
+    # remove first index of array (DC components)--?
+    freqW = freqsW[1:]
+    fspecW = fspecW[1:]
+    ## TODO: add surface correction here
+
+    # initalize for band averaging
+    # dk = np.floor(bandAvg/2).astype(int)  # how far to look on either side of band of interest
+    frqOut, fspec = [], []
+    for kk in range(0, len(freqsW) - bandAvg, bandAvg):
+        avgIdxs = np.linspace(kk, kk + bandAvg - 1, num=bandAvg).astype(int)
+        frqOut.append(freqW[avgIdxs].sum(axis=myAx) / bandAvg)  # taking average of freq for label (band centered label)
+        fspec.append(fspecW[avgIdxs].sum(axis=myAx) / bandAvg)
+    if max(avgIdxs) < len(freqW):  # provide warning that we're not capturing all energy
+        warnings.warn('neglected {} freq bands (at highest frequency)'.format(len(freqW) - max(avgIdxs)))
+
+    frqOut = np.array(frqOut).T
+    fspec = np.array(fspec).T
+    # output as
+    fspec = np.ma.masked_array(fspec, mask=np.tile((fspec == 0).all(axis=1), (frqOut.size, 1)).T)
+    return fspec, frqOut
+
 def stats1D(fspec, frqbins, lowFreq=0.05, highFreq=0.5):
-    """Calculates bulk statistics from a 1 dimenti
+    """Calculates bulk statistics from a 1 dimentional spectra, calculated as inclusive with
+        high/low frequency cuttoff
 
     Args:
       fspec: frequency spectra
@@ -435,13 +509,16 @@ def stats1D(fspec, frqbins, lowFreq=0.05, highFreq=0.5):
 
     """
     assert fspec.shape[-1] == len(frqbins), '1D stats need a 1 d spectra'
-
+    if highFreq is None:
+        highFreq = np.max(frqbins)
+    if lowFreq is None:
+        lowFreq = np.min(frqbins)
     frqbins = np.array(frqbins)
 
     df = np.diff(np.append(frqbins[0], frqbins), n=1)
 
-    # truncating spectra to sea/swell band
-    [idx, _] = sb.findbtw(frqbins, lowFreq, highFreq, type=3)
+    # truncating spectra as useful
+    idx = np.argwhere((frqbins >= lowFreq) & (frqbins <= highFreq)).squeeze()
 
     m0 = np.sum(fspec[:, idx] * df[idx], axis=1)  # 0th momment
     m1 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx], axis=1)  # 1st moment
@@ -466,25 +543,28 @@ def stats1D(fspec, frqbins, lowFreq=0.05, highFreq=0.5):
              'Tave': Tm01,
              'sprdF': sprdF,
              'Tm10': Tm10,
-             'meta': meta
-             }
+             'meta': meta}
 
     return stats
 
 def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
-    """this function will calculate the mean direction from a full spectrum
-    only calculates on one 2D spectrum at a time
+    """this function will calculate the bulk statistics from 2D directional energy spectrum, to get directional
+    properties, the a's/b's are generated from the 2D directional spectra input.
+
     defaults to 0.05 hz to 0.5 hz frequency for the statistics
     
-    Code Translated by Spicer Bak from: fd2BulkStats.m written by Kent Hathaway, and adapted
-    References:
-        USACE Wave Information Study (WIS) website
+    Code Translated by Spicer Bak from: fd2BulkStats.m written by Kent Hathaway, and adapted in python
+
 
     Args:
       spec (array):  this is a 2d spectral inputshaped by [time, freq, dir]
+
       frqbins: Frequency vector (not assumed constant)
+
       dirbins: an array of direction bins associated with the 2d spec
+
       lowFreq: low frequency cutoff for the spectral stat's calculation (Default value = 0.05)
+
       highFreq: high frequency cutoff for the spectral stat's calculation (Default value = 0.5)
 
     Returns:
@@ -498,24 +578,45 @@ def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
 
            'Tave':  -- Tm01   Average period, frequency sprectra weighted, from first moment (Tm0,1)
 
-           'Dmp':   Mean direction at the peak frequency
-
-           'Dp':   Peak direction at the peak frequency
-
-           'Dm':   Mean wave direction
+           'Tm10': Mean Absolute wave Period from -1 moment
 
            'sprdF':  Freq-spec spread (m0*m4 - m2^2)/(m0*m4)  (one definition)
 
-           'sprdD':  Directional spread (m0*m4 - m2^2)/(m0*m4)  (one definition, Kuik 1988, buoys), total sea-swell
+           'Dp':   Peak direction at the peak frequency
 
-           'sprdDhp':  half-power direction width in direction spectra at peak freq (not currently incorporated)Input:
+           'Dm':   Mean wave direction - vector averaged mean direction, see below
+                (http://wis.usace.army.mil/pdf/WIS_OneLine_format_20170406.pdf)
 
-           'Tm10': Mean Absolute wave Period from -1 moment
+           'Dm2':  Mean wave direction - as above, but using b2,a2
 
-           'vecAvgMeanDir': vector averaged mean direction (should be the same as Dm - could be checked and removed)
-                taken from wis website
+           'Dspec1': mean direction as function of frequency, from arctan(b1/a1)
 
-           'meta': expanded variable name/descriptions
+           'Dspec2': mean direction as function of frequency, from arctan(b2/a2)
+
+           'sprdD':  Directional spread  (one definition, Kuik 1988, buoys), total sea-swell
+
+           'spreadD_kuik_m1': directional spread from circular moments (eq 24)
+
+           'spreadD_kuik_m2': directional spread from circular moments (eq 27)
+
+            "spreadD_f":  [t x Freq] array of spread at each frequency (eq 4b orielly/24 kuik)
+
+            "skewnessD_f: [t x freq] array of skewness at each frequency (eq 4c orielly/25 kuik)
+
+            "kurtosisD_f: [t x freq] array of kurtosis at each frequency (eq 4d orielly/26 kuik)
+
+           'meta': directions to see this help
+
+    References:
+        Kuik 1988, "A method for the Routine Analysis of Pitch-and-Roll Buoy Wave Data" Journal of
+            Physical Oceanography. Volume 18, p 1020 - 1034.
+            https://journals.ametsoc.org/doi/pdf/10.1175/1520-0485%281988%29018%3C1020%3AAMFTRA%3E2.0.CO%3B2
+
+        O'Reilley, W. C, T.H.C Herbers, R. J. Seymour, R. T. Guza, 1996 "A comparison of Directional Buoy and Fixed
+            Platform Measurements of Pacific Swell", Journal of Atmospheric and Oceanic Technology. Vol 13, p231 - 238;
+            https://journals.ametsoc.org/doi/pdf/10.1175/1520-0426%281996%29013%3C0231%3AACODBA%3E2.0.CO%3B2
+
+        USACE Wave Information Study (WIS) website: http://wis.usace.army.mil/pdf/WIS_OneLine_format_20170406.pdf
 
     """
     assert type(frqbins) in [np.ndarray, np.ma.MaskedArray], 'the input frqeuency bins must be a numpy array'
@@ -527,119 +628,118 @@ def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
         return 0
     assert spec.shape[1] == frqbins.shape[0], 'The spectra must be dimensioned [t,freq, direciton]'
     assert spec.shape[2] == dirbins.shape[0], 'The spectra must be dimensioned [t,freq, direciton]'
+    assert (spec > 0).all(), "spectra have fill values in place, correct spectra before proceeding"
+    ####################################################################################################################
+
+    ## bug for non-directional wave spectra
+    if dirbins.size == 4:
+        raise  NotImplementedError ("there's a bug in here for non-directional 2d spectra calculations")
     frqbins = np.array(frqbins)
     dirbins = np.array(dirbins)
 
     # finding delta freqeucny (may change as in CDIP spectra)
-    # frq = np.array(np.zeros(len(frqbins) + 1))  # initializing frqbin bucket
-    # # frq[0] = frqbins[0]
-    # # frq[1:] = frqbins
-    # # df = np.diff(frq, n=1)  # change in frequency banding
     df = np.diff(np.append(frqbins[0], frqbins), n=1)
-    dd = np.abs(np.median(np.diff(dirbins)))  # dirbins[2] - dirbins[1]  # assume constant directional bin size
     # finding delta degrees
+    dd = np.abs(np.median(np.diff(dirbins)))  # dirbins[2] - dirbins[1]  # assume constant directional bin size
+    Drad = np.deg2rad(dirbins)  # making a radian degree bin
     # frequency spec
     fspec = np.sum(spec, axis=2) * dd  # fd spectra - sum across the frequcny bins to leave 1 x n-frqbins
-    # doing moments over 0.05 to 0.33 Hz (3-20s waves) (mainly for m4 sake)
-    [idx, vals] = sb.findbtw(frqbins, lowFreq, highFreq, type=3)
 
-    m0 = np.sum(fspec * df, axis=1)  # 0th moment
-    m1 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx], axis=1)  # 1st moment
-    m2 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx] ** 2, axis=1)  # 2nd moment
-    # m3 = np.sum(fSpecOut[:, idx] * df[idx] * frqbins[idx] ** 3, axis=1)  # 3rd moment
-    m4 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx] ** 4, axis=1)  # 4th moment
-    m11 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx] ** -1, axis=1)  # negitive one moment
+
+    # doing moments over 0.05 to 0.33 Hz (3-20s waves) (mainly for m4 sake)
+    idx = np.argwhere((frqbins >= lowFreq) & (frqbins <=highFreq)).squeeze()
+
+    m0 = np.sum(fspec[:, idx] * df[idx], axis=1)                            # 0th moment
+    m1 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx], axis=1)             # 1st moment
+    m2 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx] ** 2, axis=1)        # 2nd moment
+    # m3 = np.sum(fSpecOut[:, idx] * df[idx] * frqbins[idx] ** 3, axis=1)   # 3rd moment
+    m4 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx] ** 4, axis=1)        # 4th moment
+    m11 = np.sum(fspec[:, idx] * df[idx] * frqbins[idx] ** -1, axis=1)      # negitive one moment
 
     # sigwave height
     Hm0 = 4 * np.sqrt(m0)
     # period stuff
-    ipf = fspec.argmax(axis=1)  # indix of max frequency
-    Tp = 1 / frqbins[ipf]  # peak period
-    Tm02 = np.sqrt(m0 / m2)  # mean period
-    Tm01 = m0 / m1  # average period - cmparible to TS Tm
+    ipf = fspec.argmax(axis=1)           # index of max frequency
+    Tp = 1 / frqbins[ipf]                # peak period
+    Tm02 = np.sqrt(m0 / m2)              # mean period
+    Tm01 = m0 / m1                       # average period - comparible to TS Tm
     Tm10 = m11 / m0
-    # directional stuff
-    Ds = np.sum(spec * np.tile(df, (len(dirbins), 1)).T, axis=1)  # directional spectra
-    Dsp = []
-    for ii in range(0, len(ipf)):
-        Dsp.append(spec[ii, ipf[ii], :])  # direction spectra at peak-f
-    Dsp = np.array(Dsp)
-    idp = Dsp.argmax(axis=1)  # index of direction at peak frquency
-    Dp = dirbins[idp]  # peak direction
-
-    Drad = np.deg2rad(dirbins)  # making a radian degree bin
-    # mean wave direction (e.g. Kuik 1988, USACE WIS)
-    Xcomp = np.sum(np.sin(Drad) * Ds, axis=1) / np.sum(Ds * dirbins, axis=1)
-    Ycomp = np.sum(np.cos(Drad) * Ds, axis=1) / np.sum(Ds * dirbins, axis=1)
-    # Dm = np.rad2deg(np.arctan2(np.sum(np.sin(Drad) * Ds * dirbins, axis=1),
-    #                           np.sum(np.cos(Drad) * Ds * dirbins, axis=1)))  # converting back to degrees
-    Dm = np.rad2deg(np.arctan2(Xcomp, Ycomp))
-    for ii in range(0, np.size(Dm, axis=0)):
-        if Dm[ii] >= 360:
-            Dm[ii] = 360 - Dm[ii]
-        elif Dm[ii] < 0:
-            Dm[ii] = 360 + Dm[ii]
-            # Vector Dm (Hesser)
-    sint = np.sin(Drad)  # sine of dirbins
-    cost = np.cos(Drad)  # cosine of dirbins
-
-    sint2 = np.tile(sint, [len(frqbins), 1])  # 2d diretion size of the spectra
-    cost2 = np.tile(cost, [len(frqbins), 1])
-    delsq = np.tile(df, [len(dirbins), 1]).T
-
-    xsum = np.zeros(np.size(spec, axis=0))
-    ysum = np.zeros(np.size(spec, axis=0))
-    # summing across all directions
-    for ii in range(0, np.size(spec, axis=0)):
-        xsum[ii] = sum(np.sum(cost2 * delsq * spec[ii, :, :], axis=1))  # summing along directions, then
-        ysum[ii] = sum(np.sum(sint2 * delsq * spec[ii, :, :], axis=1))
-
-    vavgdir = np.arctan2(ysum, xsum)
-    vavgdir = np.rad2deg(vavgdir)
-    vavgdir = anglesLib.angle_correct(vavgdir)
-
-    # Mean direction at the peak frequency
-    Dmp = np.rad2deg(np.arctan2(np.sum(np.sin(Drad) * Dsp * dirbins, axis=1),
-                                np.sum(np.cos(Drad) * Dsp * dirbins, axis=1)))  # converting back to degrees
-    for ii in range(0, np.size(Dmp, axis=0)):
-        if Dmp[ii] >= 360:
-            Dmp[ii] = 360 - Dmp[ii]
-        elif Dmp[ii] < 0:
-            Dmp[ii] = 360 + Dmp[ii]
     # f-spec spread
-    sprdF = (m0 * m4 - m2 ** 2) / (m0 * m4)
+    sprdF = np.sqrt((m0 * m4 - m2 ** 2) / (m0 * m4))
+    ############### directional REDO ######### #    #  ####################################
+    angMat = np.tile(Drad, (len(frqbins), 1))   # angle array, directions for each frequency
+    # normalized direction spectra (per deg)
+    Ds_, DmrArr = np.ones_like(spec) * 1e-6, np.ones_like(spec) *1e-6
+    a1_, a2_, b1_, b2_ = np.ma.empty_like(fspec), np.ma.empty_like(fspec), np.ma.empty_like(fspec), np.ma.empty_like(fspec)   # initialize
+    for i in range(spec.shape[0]):  # loop through, there's probably a faster way to do this
+        Ds_[i] = spec[i]/np.tile(fspec[i], [len(dirbins), 1]).T
+        ## calculate a's and b's from 2D spectra
+        a1_[i] = (np.cos(angMat) * Ds_[i]).sum(axis=1) * dd      # a1(f)
+        b1_[i] = (np.sin(angMat) * Ds_[i]).sum(axis=1) * dd      # b1(f)
+        a2_[i] = (np.cos(2 * angMat) * Ds_[i]).sum(axis=1) * dd  # a2(f)
+        b2_[i] = (np.sin(2 * angMat) * Ds_[i]).sum(axis=1) * dd  # a2(f)
 
-    # fd-spec spread
-    sprdD = np.rad2deg(np.sqrt(2.0 * (1.0 - np.sqrt(Xcomp ** 2 + Ycomp ** 2))))
+    # mean directions as a function of frequency  (in Degrees)
+    Dspec = np.mod(np.rad2deg(np.arctan2(b1_, a1_)), 360)
+    Dspec2 = np.mod(np.rad2deg(np.arctan2(b2_, a2_))/2, 180)
 
-    ##### Exceprt from Kent's code for spreading - not sure how to handle
-    # fd-spec spread, do a linear interp to get closer to half-power
-    # % from the delta-deg increments
-    # hp = np.max(Dsp)/2;
-    # ihp=find(Dsp > hp);
-    #
-    #  % Left (d1) and right (d2) interps: Y=Dir, X=E
-    # d1=interp1([Dsp(ihp(1)-1) Dsp(ihp(1)+1)], [dwdir(ihp(1)-1) dwdir(ihp(1)+1)], hp);
-    # d2=interp1([Dsp(ihp(end)-1) Dsp(ihp(end)+1)], [dwdir(ihp(end)-1) dwdir(ihp(end)+1)], hp);
-    # sprdDhp = d2 - d1;
+    #circular Moments Kuik '88
+    # for r in range(Dspec.shape[0]):                             # looping, but should be faster way to do it with tile
+    #     DmrArr[r] = np.tile(np.deg2rad(Dspec[r]), (len(dirbins) , 1)).T
+    # model free directional parameters (o'reiley 1996)/circular moments kuik 88
+    m1_c = np.sqrt(a1_ **2 + b1_**2)
+    m2_c = a2_*np.cos(2*np.deg2rad(Dspec)) + b2_*np.sin(2*np.deg2rad(Dspec))
+    n2_c = b2_*np.cos(2*np.deg2rad(Dspec)) - a2_*np.sin(2*np.deg2rad(Dspec))
 
-    # wrapping up data into dictionary
 
-    meta = 'Tp - peak period, Tm - mean period, Tave - average period, comparable to Time series mean period, Dp - peak direction, Dm - mean direction, Dmp - mean direction at peak frequency, vavgdir - Vector Averaged Mean Direction,sprdF - frequency spread, sprdD - directional spread'
+    # Frequency integrated a/bs
+    a1b = (a1_[:, idx] * fspec[:, idx] * df[idx]).sum(axis=1)/m0
+    b1b = (b1_[:, idx] * fspec[:, idx] * df[idx]).sum(axis=1)/m0
+    a2b = (a2_[:, idx] * fspec[:, idx] * df[idx]).sum(axis=1)/m0
+    b2b = (b2_[:, idx] * fspec[:, idx] * df[idx]).sum(axis=1)/m0
+
+    # mean wave angle, energy integrated, calculated from a's and b's
+    Dm_ = np.mod(np.rad2deg( np.arctan2(b1b, a1b)), 360)                # off by about 5 from kent's matlab scripts
+    Dm2_ = np.mod(0.5 * np.rad2deg(np.arctan2(b2b, a2b)), 360)
+    Dp = dirbins[np.argmax(spec.sum(axis=1), axis=1)]
+    # calculate mean direction from only a/b info (no moments)
+    # weights = fspec.T/fspec.max(axis=1).T
+    # dm_rad = np.arctan2(b1_*weights, a1_*weights).sum(axis=1)
+    # dm_deg = np.mod(np.rad2deg(dm_rad), 360)
+    # np.mod(np.rad2deg(np.arctan2((b1_ * fspec), (a1_ * fspec))), 360)
+    # Dm_ab = (Dspec * fspec).sum(axis=1)/dd
+
+
+    # Directional Spreads
+    sprdD =        np.rad2deg(np.sqrt(2 * (1-np.sqrt(a1b**2 + b1b**2))))       # integrated spread across all freqs
+    sprdD_kuikm1 = np.rad2deg(np.sqrt(2 * (1-m1)   ))                # spread at peak eq 24 kuik '88
+    sprdD_kuikm2 = np.rad2deg(np.sqrt(    (1-m2)/2 ))                # spread at peak eq 27 kuik '88
+
+    # frequency dependant spread, skewness, asymetry characteristics
+    spreadD_f = np.rad2deg(np.sqrt(2*(1-m1_c)))
+    skewnessD_f = -n2_c/ ((1-m2_c/2)**(3/2))
+    # kurtosisD_f = 6 - 8*m1_c + 2*m2_c/(2*(1-m1))*2
+
+    meta = 'See help on this function for explanation of output'
     stats = {'Hm0': Hm0,
              'Tp': Tp,
              'Tm': Tm02,
              'Tave': Tm01,
-             'Dp': Dp,
-             'Dm': Dm,
-             'Dmp': Dmp,
-             'VecAvgMeanDir': vavgdir,
-             'sprdF': sprdF,
-             'sprdD': sprdD,
              'Tm10': Tm10,
-             'meta': meta
-             }
-    # print meta
+             'Dp': Dp,
+             'Dm': Dm_,
+             'Dm2': Dm2_,
+             'Dspec1': Dspec,
+             'Dspec2': Dspec2,
+             'spreadF': sprdF,
+             'spreadD': sprdD,
+             'spreadDP_m1': sprdD_kuikm1,
+             'spreadDP_m2': sprdD_kuikm2,
+             "spreadD_f": spreadD_f,
+             "skewnessD_f": skewnessD_f,
+             # "kurtosisD_f": kurtosisD_f,
+             'meta': meta}
+
     return stats
 
 def fSpecPeaksValleys(spec1d, wavefreqbin):
@@ -877,7 +977,7 @@ def findidxSeaSwell(spec1d, dspec, wavefreqbin, windSpeed, windDir, depth, plotf
       plotfname: return: an index corresponding to (Default value = None)
       windSpeed: param windDir:
       depth: returns: an index corresponding to
-      windDir: 
+      windDir:
 
     Returns:
       an index corresponding to
@@ -962,7 +1062,6 @@ def findidxSeaSwell(spec1d, dspec, wavefreqbin, windSpeed, windDir, depth, plotf
         # Swell.append(swellfspec)
         outidxs.append(idx2separate)
     return outidxs
-
 
 def decompose2Dspec(spec, wavefreqbin):
     """
