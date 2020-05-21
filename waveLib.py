@@ -628,7 +628,7 @@ def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
         return 0
     assert spec.shape[1] == frqbins.shape[0], 'The spectra must be dimensioned [t,freq, direciton]'
     assert spec.shape[2] == dirbins.shape[0], 'The spectra must be dimensioned [t,freq, direciton]'
-    assert (spec > 0).all(), "spectra have fill values in place, correct spectra before proceeding"
+    assert (spec >= 0).all(), "spectra have fill values in place, correct spectra before proceeding"
     ####################################################################################################################
 
     ## bug for non-directional wave spectra
