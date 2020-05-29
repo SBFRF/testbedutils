@@ -628,7 +628,7 @@ def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
         return 0
     assert spec.shape[1] == frqbins.shape[0], 'The spectra must be dimensioned [t,freq, direciton]'
     assert spec.shape[2] == dirbins.shape[0], 'The spectra must be dimensioned [t,freq, direciton]'
-    assert (spec > 0).all(), "spectra have fill values in place, correct spectra before proceeding"
+    assert (spec >= 0).all(), "spectra have fill values in place, correct spectra before proceeding"
     ####################################################################################################################
 
     ## bug for non-directional wave spectra
@@ -699,7 +699,7 @@ def waveStat(spec, frqbins, dirbins, lowFreq=0.05, highFreq=0.5):
     b2b = (b2_[:, idx] * fspec[:, idx] * df[idx]).sum(axis=1)/m0
 
     # mean wave angle, energy integrated, calculated from a's and b's
-    Dm_ = np.mod(np.rad2deg( np.arctan2(b1b, a1b)), 360)                # off by about 5 from kent's matlab scripts
+    Dm_ = np.mod(np.rad2deg(np.arctan2(b1b, a1b)), 360)                # off by about 5 from kent's matlab scripts
     Dm2_ = np.mod(0.5 * np.rad2deg(np.arctan2(b2b, a2b)), 360)
     Dp = dirbins[np.argmax(spec.sum(axis=1), axis=1)]
     # calculate mean direction from only a/b info (no moments)

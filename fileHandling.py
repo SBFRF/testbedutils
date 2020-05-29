@@ -42,10 +42,10 @@ def logFileLogic(outDataBase, version_prefix, startTime, endTime, log=True):
         log(bool): turn logs on or not (default=True)
 
     Returns:
-
+        the log file name if log is true
     """
-    LOG_FILENAME =os.path.join(outDataBase, 'logs/cmtb_BatchRun_Log_{}_{}_{}.log'.format(version_prefix, startTime, endTime))
     if log is True:
+        LOG_FILENAME =os.path.join(outDataBase, 'logs/cmtb_BatchRun_Log_{}_{}_{}.log'.format(version_prefix, startTime, endTime))
         try:
             logging.basicConfig(filename=LOG_FILENAME, level=logging.DEBUG)
         except IOError:
@@ -53,8 +53,8 @@ def logFileLogic(outDataBase, version_prefix, startTime, endTime, log=True):
             logging.basicConfig(filename=LOG_FILENAME, level=logging.DEBUG)
         logging.debug('\n-------------------\nTraceback Error Log for:\n\nSimulation Started: %s\n-------------------\n'
                   % (DT.datetime.now()))
-    # ____________________________________________________________
-    return LOG_FILENAME
+
+        return LOG_FILENAME
 
 def displayStartInfo(projectStart, projectEnd, version_prefix, LOG_FILENAME, model):
     print('\n-\n-\nMASTER WorkFLOW for {} SIMULATIONS\n-\n-\n'.format(model))
