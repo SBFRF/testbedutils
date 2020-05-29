@@ -90,6 +90,7 @@ def checkVersionPrefix(model, inputDict):
     # now do model specific checks
     cmsStrings = ['base', 'base_fbase', 'base_fbase_mbase']
     ww3Strings = ['base']
+    funwaveStrings = ['base', 'freq']
     stwaveStrings= ['HP', 'FP', 'CB', 'CBKF']
     swashStrings = ['base', 'ts']
     ######### now do model specific Checks
@@ -101,6 +102,8 @@ def checkVersionPrefix(model, inputDict):
         modelList = stwaveStrings
     elif model.lower() in ['swash']:
         modelList = swashStrings
+    elif model.lower() in ['funwave']:
+        modelList = funwaveStrings
     else:
         raise NotImplementedError('Check model is programmed')
     checkString = 'Your model is not in version Prefix list {}'.format(modelList)
