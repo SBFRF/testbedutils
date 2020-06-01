@@ -193,9 +193,9 @@ def ncsp2LatLon(spE, spN):
     EPSG = 3358  # taken from spatialreference.org/ref/epsg/3358
     # NC stateplane NAD83
     spNC = pyproj.Proj("epsg:{}".format(EPSG))
-    LL = pyproj.CRS(proj='latlon', datum='WGS84')#pyproj.Proj('epsg:{}'.format(epsgLL))  # epsg for NAD83 projection
+    LL = pyproj.CRS(proj='latlon', datum='WGS84') #pyproj.Proj('epsg:{}'.format(epsgLL))  # epsg for NAD83 projection
     lon, lat = pyproj.transform(spNC, LL, spE, spN)
-
+    # https://pyproj4.github.io/pyproj/stable/gotchas.html#axis-order-changes-in-proj-6
     return  {'lon': lon, 'lat': lat, 'StateplaneE': spE, 'StateplaneN': spN}
 
 def LatLon2ncsp(lon, lat):
@@ -242,7 +242,7 @@ def LatLon2ncsp(lon, lat):
     return ans
 
 def FRFcoord(p1, p2, coordType=None):
-    """updated FRF coord in python, using kent's original code as guide but converting pyproj for all
+    """Updated FRF coord in python, using kent's original code as guide but converting pyproj for all
     conversions between state plane and Lat Lon,  Then all conversions between stateplane and
     FRF coordinates are done using kents original geometry.  Can force input to specfic coordinate type using coordType
     argument. Default will guess
