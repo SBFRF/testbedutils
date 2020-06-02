@@ -129,13 +129,13 @@ def checkVersionPrefix(model, inputDict):
     ww3Strings = ['base']
     funwaveStrings = ['base', 'freq']
     swashStrings = ['base', 'ts']
-    stwaveStrings = ['HP',        # half plane (operational)
-                     'FP',        # full plan (operational)
-                     'CB',        # cbathy Operational
-                     'CBHP',      # Half plane run at 10 m (experimental)
-                     'CBThresh',  # RESERVED for operational Cbathy study results (expermiental)
-                     'CBT2',      # Run cbathy with threshold, outside kalman filter (expermental)
-                     'CBT1']      # run cbathy with threshold, inside kalman filter ( experimental)
+    stwaveStrings = ['hp',        # half plane (operational)
+                     'fp',        # full plan (operational)
+                     'cb',        # cbathy Operational
+                     'cbhp',      # Half plane run at 10 m (experimental)
+                     'cbthresh',  # RESERVED for operational Cbathy study results (expermiental)
+                     'cbt2',      # Run cbathy with threshold, outside kalman filter (expermental)
+                     'cbt1']      # run cbathy with threshold, inside kalman filter ( experimental)
     ######### now do model specific Checks
     if model.lower() in ['cms']:
         modelList = cmsStrings
