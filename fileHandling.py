@@ -49,7 +49,7 @@ def logFileLogic(outDataBase, version_prefix, startTime, endTime, log=True):
         try:
             logging.basicConfig(filename=LOG_FILENAME, level=logging.DEBUG)
         except IOError:
-            os.makedirs(outDataBase+'logs')
+            os.makedirs(os.path.join(outDataBase, 'logs'))
             logging.basicConfig(filename=LOG_FILENAME, level=logging.DEBUG)
         logging.debug('\n-------------------\nTraceback Error Log for:\n\nSimulation Started: %s\n-------------------\n'
                   % (DT.datetime.now()))
