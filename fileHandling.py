@@ -49,8 +49,8 @@ def logFileLogic(outDataBase, version_prefix, startTime, endTime, log=True):
         LOG_FILENAME =os.path.join(outDataBase, 'logs/cmtb_BatchRun_Log_{}_{}_{}.log'.format(version_prefix, startTime, endTime))
         try:
             logging.basicConfig(filename=LOG_FILENAME, level=logging.DEBUG)
-        except IOError:
-            os.makedirs(outDataBase+'logs')
+        except (IOError, FileNotFoundError):
+            os.makedirs(os.path.join(outDataBase,'logs'))
             logging.basicConfig(filename=LOG_FILENAME, level=logging.DEBUG)
         logging.debug('\n-------------------\nTraceback Error Log for:\n\nSimulation Started: %s\n-------------------\n'
                   % (DT.datetime.now()))
@@ -129,6 +129,7 @@ def checkVersionPrefix(model, inputDict):
     ww3Strings = ['base']
     funwaveStrings = ['base', 'freq']
     swashStrings = ['base', 'ts']
+    funwaveStrings = ['base', 'freq']
     stwaveStrings = ['hp',        # half plane (operational)
                      'fp',        # full plan (operational)
                      'cb',        # cbathy Operational
