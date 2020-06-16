@@ -229,11 +229,13 @@ def LatLon2ncsp(lon, lat):
         'StateplaneN': NC stateplane
 
     """
-    EPSG = 3358  # taken from spatialreference.org/ref/epsg/3358
+    EPSGFrom =6318   # taken from spatialreference.org/ref/epsg/3358
     # NC stateplane NAD83
-    spNC = pyproj.Proj(init="epsg:{}".format(EPSG))
-    spE, spN = spNC(lon,lat)
-
+    # spNC = pyproj.Proj(init="epsg:{}".format(EPSG))
+    # spE, spN = spNC(lon,lat)
+    EPSGto = 3358
+    trans = pyproj.Transformer.from_crs(EPSGFrom, EPSGto)
+    spE, spN = trans.transform(lon, lat)
     # epsgLL =  4269 # 4326
     # LL = pyproj.Proj('epsg:{}'.format(epsgLL))  # epsg for NAD83 projection
     # replaced below transform with direct conversion above
