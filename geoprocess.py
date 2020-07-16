@@ -234,7 +234,7 @@ def LatLon2ncsp(lon, lat):
     # spNC = pyproj.Proj(init="epsg:{}".format(EPSG))
     # spE, spN = spNC(lon,lat)
     EPSGto = 3358
-    trans = pyproj.Transformer.from_crs(EPSGFrom, EPSGto)
+    trans = pyproj.Transformer.from_crs(EPSGFrom, EPSGto,always_xy=True)
     spE, spN = trans.transform(lon, lat)
     # epsgLL =  4269 # 4326
     # LL = pyproj.Proj('epsg:{}'.format(epsgLL))  # epsg for NAD83 projection
@@ -315,7 +315,6 @@ def FRFcoord(p1, p2, coordType=None):
             SP:  p1 = 902307.92; 	p2 = 274771.22;
 
     """
-
     # convert list to array if needed
     if isinstance(p1, list):
         p1 = np.asarray(p1)
