@@ -31,7 +31,7 @@ def makeTDSfileStructure(Thredds_Base, fldrArch, datestring, field):
 
     return netCDFfileOutput
 
-def logFileLogic(outDataBase, version_prefix, startTime, endTime, log=True):
+def logFileLogic(outDataBase, version_prefix, startTime, endTime,log=True):
     """Checks and makes log file
 
     Args:
@@ -44,12 +44,14 @@ def logFileLogic(outDataBase, version_prefix, startTime, endTime, log=True):
     Returns:
 
     """
+
+    ## TODO Spicer: this is where I'm getting my error message.
     LOG_FILENAME =os.path.join(outDataBase, 'logs/cmtb_BatchRun_Log_{}_{}_{}.log'.format(version_prefix, startTime, endTime))
     if log is True:
         try:
             logging.basicConfig(filename=LOG_FILENAME, level=logging.DEBUG)
         except IOError:
-            os.makedirs(outDataBase+'logs')
+            os.makedirs(os.path.join(outDataBase,'logs'))
             logging.basicConfig(filename=LOG_FILENAME, level=logging.DEBUG)
         logging.debug('\n-------------------\nTraceback Error Log for:\n\nSimulation Started: %s\n-------------------\n'
                   % (DT.datetime.now()))
@@ -80,6 +82,7 @@ def checkVersionPrefix(model, inputDict):
     # first check Flow Flags, and morph flags, otherwise set version prefix with just wave
 
     version_prefix = inputDict['modelSettings'].get('version_prefix', 'base').lower()
+
     if 'flowSettings' in inputDict.keys():
         flowFlag = inputDict['flowSettings'].get('flowFlag', False)
         morphFlag = inputDict['morphSettings'].get('morphFlag', False)
@@ -92,6 +95,7 @@ def checkVersionPrefix(model, inputDict):
     ww3Strings = ['base']
     stwaveStrings= ['HP', 'FP', 'CB', 'CBKF']
     swashStrings = ['base', 'ts']
+    funwaveStrings = ['base','freq'] #TODO Gaby: check if you have to add more
     ######### now do model specific Checks
     if model.lower() in ['cms']:
         modelList = cmsStrings
@@ -101,6 +105,8 @@ def checkVersionPrefix(model, inputDict):
         modelList = stwaveStrings
     elif model.lower() in ['swash']:
         modelList = swashStrings
+    elif model.lower() in ['funwave']:
+        modelList = funwaveStrings
     else:
         raise NotImplementedError('Check model is programmed')
     checkString = 'Your model is not in version Prefix list {}'.format(modelList)
