@@ -193,9 +193,9 @@ def ncsp2LatLon(spE, spN):
     EPSG = 3358  # taken from spatialreference.org/ref/epsg/3358
     # NC stateplane NAD83
     spNC = pyproj.Proj("epsg:{}".format(EPSG))
-    LL = pyproj.CRS(proj='latlon', datum='WGS84')#pyproj.Proj('epsg:{}'.format(epsgLL))  # epsg for NAD83 projection
+    LL = pyproj.CRS(proj='latlon', datum='WGS84') #pyproj.Proj('epsg:{}'.format(epsgLL))  # epsg for NAD83 projection
     lon, lat = pyproj.transform(spNC, LL, spE, spN)
-
+    # https://pyproj4.github.io/pyproj/stable/gotchas.html#axis-order-changes-in-proj-6
     return  {'lon': lon, 'lat': lat, 'StateplaneE': spE, 'StateplaneN': spN}
 
 def LatLon2ncsp(lon, lat):
@@ -229,11 +229,13 @@ def LatLon2ncsp(lon, lat):
         'StateplaneN': NC stateplane
 
     """
-    EPSG = 3358  # taken from spatialreference.org/ref/epsg/3358
+    EPSGFrom =6318   # taken from spatialreference.org/ref/epsg/3358
     # NC stateplane NAD83
-    spNC = pyproj.Proj(init="epsg:{}".format(EPSG))
-    spE, spN = spNC(lon,lat)
-
+    # spNC = pyproj.Proj(init="epsg:{}".format(EPSG))
+    # spE, spN = spNC(lon,lat)
+    EPSGto = 3358
+    trans = pyproj.Transformer.from_crs(EPSGFrom, EPSGto,always_xy=True)
+    spE, spN = trans.transform(lon, lat)
     # epsgLL =  4269 # 4326
     # LL = pyproj.Proj('epsg:{}'.format(epsgLL))  # epsg for NAD83 projection
     # replaced below transform with direct conversion above
@@ -242,7 +244,7 @@ def LatLon2ncsp(lon, lat):
     return ans
 
 def FRFcoord(p1, p2, coordType=None):
-    """updated FRF coord in python, using kent's original code as guide but converting pyproj for all
+    """Updated FRF coord in python, using kent's original code as guide but converting pyproj for all
     conversions between state plane and Lat Lon,  Then all conversions between stateplane and
     FRF coordinates are done using kents original geometry.  Can force input to specfic coordinate type using coordType
     argument. Default will guess
@@ -313,7 +315,6 @@ def FRFcoord(p1, p2, coordType=None):
             SP:  p1 = 902307.92; 	p2 = 274771.22;
 
     """
-
     # convert list to array if needed
     if isinstance(p1, list):
         p1 = np.asarray(p1)
@@ -325,8 +326,8 @@ def FRFcoord(p1, p2, coordType=None):
         LL2 = (np.floor(p2) == 36).all()
         SP1 = (p1 > 800000).all()
         SP2 = (p2 > 200000).all()
-        UTM1 = (p1 > 300000).all()
-        UTM2 = (p2 > 1000000).all()
+        # UTM1 = (p1 > 300000).all()
+        # UTM2 = (p2 > 1000000).all()
         FRF1 = (p1 > -10000).all() and (p1 < 10000).all()
         FRF2 = (p2 > -10000).all() and (p2 < 10000).all()
     else:
@@ -334,8 +335,8 @@ def FRFcoord(p1, p2, coordType=None):
         LL2 = np.floor(p2) == 36
         SP1 = p1 > 800000
         SP2 = p2 > 200000
-        UTM1 = p1 > 300000
-        UTM2 = p2 > 1000000
+        # UTM1 = p1 > 300000
+        # UTM2 = p2 > 1000000
         FRF1 = (p1 > -10000) and (p1 < 10000)
         FRF2 = (p2 > -10000) and (p2 < 10000)
 
@@ -343,31 +344,34 @@ def FRFcoord(p1, p2, coordType=None):
     if LL1 and LL2 or coordType in ['LL', 'geographic', 'LatLon']:  # lat/lon input
         sp = LatLon2ncsp(p1, p2)  # convert from lon/lat to state plane
         frf = ncsp2FRF(sp['StateplaneE'], sp['StateplaneN'])  # convert from nc state plane to FRF coords
-        utm = LatLon2utm(p2, p1)  # convert to utm from lon/lat
+        # utm = LatLon2utm(p2, p1)  # convert to utm from lon/lat
         coordsOut = {'xFRF': frf['xFRF'], 'yFRF': frf['yFRF'], 'StateplaneE': sp['StateplaneE'],
-                     'StateplaneN': sp['StateplaneN'], 'Lat': p2, 'Lon': p1, 'utmE': utm['utmE'], 'utmN': utm['utmN']}
+                     'StateplaneN': sp['StateplaneN'], 'Lat': p2, 'Lon': p1,}
+                    #'utmE': utm['utmE'], 'utmN': utm['utmN']}
 
     elif SP1 and SP2 or coordType in ['spnc', 'ncsp']:  # state plane input
         frf = ncsp2FRF(p1, p2)     # convert state plane to FRF
         ll = ncsp2LatLon(p1, p2)  # convert state plane to Lat Lon
-        utm = LatLon2utm(ll['lat'], ll['lon'])
+        # utm = LatLon2utm(ll['lat'], ll['lon'])
         coordsOut = {'xFRF': frf['xFRF'], 'yFRF': frf['yFRF'], 'StateplaneE': p1,
-                     'StateplaneN': p2, 'Lat': ll['lat'], 'Lon': ll['lon'], 'utmE': utm['utmE'], 'utmN': utm['utmN']}
-
-    elif UTM1 and UTM2:  # UTM input
-        ll = utm2LatLon(p1, p2, 18, 'S')
-        sp = LatLon2ncsp(ll['lon'], ll['lat'])
-        frf = ncsp2FRF(sp['StateplaneE'], sp['StateplaneN'])
-        coordsOut = {'xFRF': frf['xFRF'], 'yFRF': frf['yFRF'], 'StateplaneE': sp['StateplaneE'],
-                     'StateplaneN': sp['StateplaneN'], 'Lat': ll['lat'], 'Lon': ll['lon'], 'utmE': p1, 'utmN': p2}
+                     'StateplaneN': p2, 'Lat': ll['lat'], 'Lon': ll['lon']}
+                      # , 'utmE': utm['utmE'], 'utmN': utm['utmN']}
+    #
+    # elif UTM1 and UTM2:  # UTM input
+    #     ll = utm2LatLon(p1, p2, 18, 'S')
+    #     sp = LatLon2ncsp(ll['lon'], ll['lat'])
+    #     frf = ncsp2FRF(sp['StateplaneE'], sp['StateplaneN'])
+    #     coordsOut = {'xFRF': frf['xFRF'], 'yFRF': frf['yFRF'], 'StateplaneE': sp['StateplaneE'],
+    #                  'StateplaneN': sp['StateplaneN'], 'Lat': ll['lat'], 'Lon': ll['lon'],} # 'utmE': p1, 'utmN': p2}
 
     elif (FRF1 and FRF2) or coordType in ['FRF']:  # FRF input
         # this is FRF in
         sp = FRF2ncsp(p1, p2)
         ll = ncsp2LatLon(sp['StateplaneE'], sp['StateplaneN'])
-        utm = LatLon2utm(ll['lat'], ll['lon'])
+        # utm = LatLon2utm(ll['lat'], ll['lon'])
         coordsOut = {'xFRF': p1, 'yFRF': p2, 'StateplaneE': sp['StateplaneE'],
-                     'StateplaneN': sp['StateplaneN'], 'Lat': ll['lat'], 'Lon': ll['lon'], 'utmE': utm['utmE'], 'utmN': utm['utmN']}
+                     'StateplaneN': sp['StateplaneN'], 'Lat': ll['lat'], 'Lon': ll['lon'],}
+                      # 'utmE': utm['utmE'], 'utmN': utm['utmN']}
 
     else:
         print('<<ERROR>> testbedUtils Geoprocess FRF coord Cound not determine input type, returning NaNs')
@@ -391,7 +395,7 @@ def utm2LatLon(utmE, utmN, zn, zl):
         lon:  coordinates of the utm input points
 
     """
-
+    raise NotImplementedError('UTM was removed from this package')
     # check to see if points are...
     assert np.size(utmE) == np.size(utmN), 'utm2LatLon error: UTM point vectors must be equal lengths'
 
@@ -439,6 +443,7 @@ def LatLon2utm(lat, lon):
          zl - zone letter of each point
 
     """
+    raise NotImplementedError('UTM was removed from this package')
     import utm
 
     # check to see if points are...
@@ -450,16 +455,16 @@ def LatLon2utm(lat, lon):
 
     df['lat'] = lat
     df['lon'] = lon
-    try:
-        df['utm'] = df.apply(lambda x: utm.from_latlon(x.lat, x.lon), axis=1)
-    except:
-        df['utm'] = utm.from_latlon(df.lat.values, df.lon.values)
-
-    utmE, utmN, zn, zl = list(zip(*np.asarray(df['utm'])))
+    # try:
+    #     df['utm'] = df.apply(lambda x: utm.from_latlon(x.lat, x.lon), axis=1)
+    # except:
+    #     df['utm'] = utm.from_latlon(df.lat.values, df.lon.values)
+    #
+    # utmE, utmN, zn, zl = list(zip(*np.asarray(df['utm'])))
 
     return_dict = {}
-    return_dict['utmE'] = np.asarray(utmE)
-    return_dict['utmN'] = np.asarray(utmN)
+    # return_dict['utmE'] = np.asarray(utmE)
+    # return_dict['utmN'] = np.asarray(utmN)
     return_dict['zn'] = np.asarray(zn)
     return_dict['zl'] = np.asarray(zl)
 
@@ -481,6 +486,8 @@ def utm2ncsp(utmE, utmN, zn, zl):
           northing - ncsp northing
 
     """
+    raise NotImplementedError('UTM was removed from this package')
+
     import utm
 
     # so, all this does it go through Lat/Lon to get to ncsp..
@@ -534,7 +541,8 @@ def ncsp2utm(easting, northing):
 
     """
     # all this does it go through lat/lon to get to utm...
-
+    raise NotImplementedError('UTM was removed from this package')
+    
     assert np.shape(easting) == np.shape(northing), 'ncsp2utm Error: northing and easting vectors must be same length'
 
     ll_dict = ncsp2LatLon(easting, northing)
