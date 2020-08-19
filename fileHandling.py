@@ -1,4 +1,6 @@
-mport os, logging
+"""This is a library that is responsible for moving files around and creating output to make the workflows more
+ streamlined"""
+import os, logging
 import datetime as DT
 
 def makeCMTBfileStructure(path_prefix, date_str):
@@ -41,7 +43,7 @@ def logFileLogic(outDataBase, version_prefix, startTime, endTime,log=True):
     """
 
     ## TODO Spicer: this is where I'm getting my error message.
-    LOG_FILENAME =os.path.join(outDataBase, 'logs/cmtb_BatchRun_Log_{}_{}_{}.log'.format(version_prefix, startTime, endTime))
+    LOG_FILENAME = os.path.join(outDataBase, 'logs/cmtb_BatchRun_Log_{}_{}_{}.log'.format(version_prefix, startTime, endTime))
     if log is True:
         try:
             logging.basicConfig(filename=LOG_FILENAME, level=logging.DEBUG)
