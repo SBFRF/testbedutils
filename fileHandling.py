@@ -1,4 +1,4 @@
-mport os, logging
+import os, logging
 import datetime as DT
 
 def makeCMTBfileStructure(path_prefix, date_str):
@@ -107,8 +107,8 @@ def checkVersionPrefix(model, inputDict):
     # run assertion check
     assert version_prefix.lower() in modelList, checkString
 
-    return version_prefiximport os, logging
-import datetime as DT
+    return version_prefix
+    
 
 def makeCMTBfileStructure(path_prefix, date_str):
     """checks and makes sure there is a folder structure that can beused for file storage"""
