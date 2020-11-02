@@ -1,5 +1,47 @@
+"""This is a library that is responsible for moving files around and creating output to make the workflows more
+ streamlined"""
+
 import os, logging
 import datetime as DT
+import numpy as np
+
+def createTimeInfo(startTime, endTime, simulationDuration=24):
+    """Creates time info for runs.  will
+
+    Args:
+        startTime: datetime or string input for start of project.  If $ will assume it's today's runs.
+        endTime: datetime or string input for s
+        simulationDuration: duration of each simulation in hours (default=24).
+
+    Returns:
+        dateStartList = a list of datetime starts for each run to pre/post processing scripts
+        dateStringList = a list of datestrings for input to pre-processing scripts
+        projectStart = start time in datetime
+        projectEnd = end time in datetime
+
+    """
+    if startTime == '$':  # this signifies daily or "live" run
+        endTime = DT.datetime.now().strftime('%Y-%m-%dT00:00:00Z')
+        startTime = (DT.datetime.strptime(endTime, '%Y-%m-%dT00:00:00Z') - DT.timedelta(seconds=simulationDuration * 60)
+                     ).strftime('%Y-%m-%dT00:00:00Z')
+    try:
+        projectEnd = DT.datetime.strptime(endTime, '%Y-%m-%dT%H:%M:%SZ')
+        projectStart = DT.datetime.strptime(startTime, '%Y-%m-%dT%H:%M:%SZ')
+    except TypeError:  # if input date was parsed as datetime
+        projectEnd = endTime
+        projectStart = startTime
+    # This is the portion that creates a list of simulation end times
+    dt_DT = DT.timedelta(0, simulationDuration * 60 * 60)  # timestep in datetime
+    # make List of Datestring items, for simulations
+    dateStartList = [projectStart]
+    dateStringList = [dateStartList[0].strftime("%Y-%m-%dT%H:%M:%SZ")]
+
+    for i in range(int(np.ceil((projectEnd - projectStart).total_seconds() / dt_DT.total_seconds())) - 1):
+        dateStartList.append(dateStartList[-1] + dt_DT)
+        dateStringList.append(dateStartList[-1].strftime("%Y-%m-%dT%H:%M:%SZ"))
+
+    return dateStartList, dateStringList, projectStart, projectEnd
+
 
 def makeCMTBfileStructure(path_prefix, date_str):
     """checks and makes sure there is a folder structure that can beused for file storage"""
@@ -41,7 +83,7 @@ def logFileLogic(outDataBase, version_prefix, startTime, endTime,log=True):
     """
 
     ## TODO Spicer: this is where I'm getting my error message.
-    LOG_FILENAME =os.path.join(outDataBase, 'logs/cmtb_BatchRun_Log_{}_{}_{}.log'.format(version_prefix, startTime, endTime))
+    LOG_FILENAME = os.path.join(outDataBase, 'logs/cmtb_BatchRun_Log_{}_{}_{}.log'.format(version_prefix, startTime, endTime))
     if log is True:
         try:
             logging.basicConfig(filename=LOG_FILENAME, level=logging.DEBUG)
@@ -108,7 +150,6 @@ def checkVersionPrefix(model, inputDict):
     assert version_prefix.lower() in modelList, checkString
 
     return version_prefix
-    
 
 def makeCMTBfileStructure(path_prefix, date_str):
     """checks and makes sure there is a folder structure that can beused for file storage"""
