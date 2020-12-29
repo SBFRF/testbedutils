@@ -73,7 +73,6 @@ def logFileLogic(outDataBase, version_prefix, startTime, endTime,log=True):
     Returns:
     """
 
-    ## TODO Spicer: this is where I'm getting my error message.
     LOG_FILENAME = os.path.join(outDataBase, 'logs/cmtb_BatchRun_Log_{}_{}_{}.log'.format(version_prefix, startTime, endTime))
     if log is True:
         try:
