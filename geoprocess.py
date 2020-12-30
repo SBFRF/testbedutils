@@ -550,5 +550,19 @@ def ncsp2utm(easting, northing):
 
     return utm_dict
 
-
-
+if __name__ == "__main__":
+    import sys
+    args=sys.argv
+    # opts, args = getopt.getopt(sys.argv[1:], "h", ["help"])
+    acceptableCoordTypes = ['LL', 'geographic', 'LatLon', 'spnc', 'ncsp', 'FRF']
+    lon = float(args[1])
+    lat = float(args[2])
+    if len(args) == 4:
+        coordType = args[3]
+    else:
+        coordType = 'LatLon'
+    assert coordType in acceptableCoordTypes, 'coord type must be in {}'.format(acceptableCoordTypes)
+    print(' converting {} {} of type {}'.format(lon, lat, coordType))
+    coord = FRFcoord(lon, lat, coordType=coordType)
+    for key, var in  coord.items():
+        print('{}: {}'.format(key, var))
